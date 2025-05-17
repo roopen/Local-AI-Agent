@@ -7,15 +7,24 @@ namespace Local_AI_Agent.News
 {
     internal class NewsService(IHttpClientFactory httpClientFactory)
     {
-        [KernelFunction, Description("Get current summaries of latest news from all sources. If this is used, none of the other news functions are required.")]
+        private List<string> cachedNews = [];
+
+        [KernelFunction, Description(
+            "Get current summaries of latest news from all sources. " +
+            "If this is used, none of the other news functions are required. ")]
         public async Task<IEnumerable<string>> GetNewsAsync()
         {
             Console.WriteLine("NewsService: GetNewsAsync called");
 
-            IEnumerable<string> newsFromYle = await GetNewsFromYleAsync();
-            IEnumerable<string> newsFromFox = await GetNewsFromFoxNewsAsync();
+            if (cachedNews.Count is 0)
+            {
+                IEnumerable<string> newsFromYle = await GetNewsFromYleAsync();
+                IEnumerable<string> newsFromFox = await GetNewsFromFoxNewsAsync();
 
-            return newsFromYle.Concat(newsFromFox);
+                cachedNews = newsFromYle.Concat(newsFromFox).ToList();
+            }
+
+            return cachedNews;
         }
 
         [KernelFunction, Description("Get current summaries of latest news from the Finnish YLE.")]
@@ -59,27 +68,6 @@ namespace Local_AI_Agent.News
             using XmlReader reader = XmlReader.Create(stream);
             SyndicationFeed feed = SyndicationFeed.Load(reader);
             return feed;
-        }
-    }
-
-    public class NewsItem
-    {
-        public readonly DateTimeOffset PublishDate;
-        public readonly string Title;
-        public readonly string? Summary;
-        public readonly string? Content;
-
-        public NewsItem(SyndicationItem syndicationItem)
-        {
-            Title = syndicationItem.Title.Text;
-            Content = syndicationItem.Content?.ToString();
-            Summary = syndicationItem.Summary?.Text;
-            PublishDate = syndicationItem.PublishDate;
-        }
-
-        public override string ToString()
-        {
-            return $"{Title} ({PublishDate})\n{Summary}\n{Content}";
         }
     }
 }

@@ -24,7 +24,7 @@ await StartAiChat(kernel);
 
 static async Task StartAiChat(Kernel kernel)
 {
-    ChatService chatService = new ChatService(
+    ChatService chatService = new(
         kernel.Services.GetService<IChatCompletionService>()!,
         kernel
     );
