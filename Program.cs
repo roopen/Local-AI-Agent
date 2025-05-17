@@ -1,9 +1,8 @@
 ﻿using Local_AI_Agent;
 using Local_AI_Agent.News;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
-using System.Text;
 
 IKernelBuilder kernelBuilder = Kernel.CreateBuilder()
     .AddOpenAIChatCompletion(
@@ -14,38 +13,20 @@ IKernelBuilder kernelBuilder = Kernel.CreateBuilder()
 
 kernelBuilder.Services.AddYleNewsClient();
 kernelBuilder.Services.AddFoxNewsClient();
+kernelBuilder.Services.AddSingleton<ChatService>();
 
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();
 
 Kernel kernel = kernelBuilder.Build();
 
-IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
+await StartAiChat(kernel);
 
-ChatHistory chatHistory = [];
-
-StringBuilder fullAssistantContent = new();
-
-while (true)
+static async Task StartAiChat(Kernel kernel)
 {
-    Console.Write("User: ");
-    string? input = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(input)) { break; }
-
-    chatHistory.AddUserMessage(input);
-
-    Console.WriteLine("Assistant: ");
-
-    await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-        chatHistory,
-        new OpenAIPromptExecutionSettings { ReasoningEffort = "high", FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() },
-        kernel)
-        .ConfigureAwait(false))
-    {
-        Console.Write(content.Content);
-        fullAssistantContent.Append(content.Content);
-    }
-
-    chatHistory.AddAssistantMessage(fullAssistantContent.ToString());
-    Console.WriteLine();
+    ChatService chatService = new ChatService(
+        kernel.Services.GetService<IChatCompletionService>()!,
+        kernel
+    );
+    await chatService.StartChat();
 }
