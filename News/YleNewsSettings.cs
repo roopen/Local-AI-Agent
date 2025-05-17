@@ -5,7 +5,7 @@ namespace Local_AI_Agent.News
     internal class YleNewsSettings : INewsClientSettings
     {
         public static string ClientName = "YleNewsClient";
-        public static string UserAgent = "Local-AI-Agent";
+        public static string UserAgent = "Mozilla/5.0";
         public static string BaseUrl = "https://yle.fi/";
 
         public static string MainHeadlinesUrl = "/rss/uutiset/paauutiset";

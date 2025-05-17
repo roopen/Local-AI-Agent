@@ -1,5 +1,6 @@
-﻿using Local_AI_Agent;
+﻿using Local_AI_Agent.Chat;
 using Local_AI_Agent.News;
+using Local_AI_Agent.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;

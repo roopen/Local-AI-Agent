@@ -4,16 +4,14 @@ namespace Local_AI_Agent.News
 {
     public class NewsItem
     {
-        public readonly DateTimeOffset PublishDate;
-        public readonly string Title;
-        public readonly string? Summary;
-        public readonly string? Content;
-        public readonly string? Link;
+        public DateTimeOffset PublishDate { get; }
+        public string Title { get; }
+        public string? Summary { get; }
+        public string? Link { get; }
 
         public NewsItem(SyndicationItem syndicationItem)
         {
             Title = syndicationItem.Title.Text;
-            Content = syndicationItem.Content?.ToString();
             Summary = syndicationItem.Summary?.Text;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
@@ -21,7 +19,8 @@ namespace Local_AI_Agent.News
 
         public override string ToString()
         {
-            return $"{Title} ({PublishDate})\n{Summary}\n{Content}\n";
+            string jsonString = System.Text.Json.JsonSerializer.Serialize(this);
+            return jsonString;
         }
     }
 }

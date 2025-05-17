@@ -61,7 +61,7 @@ namespace Local_AI_Agent.News
             return newsList;
         }
 
-        public static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
+        private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
         {
             Console.WriteLine($"NewsService: GetNews called with url: {newsClient.BaseAddress + url}");
             using Stream stream = await newsClient.GetStreamAsync(url);

@@ -4,12 +4,13 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using System.Text;
 
-namespace Local_AI_Agent
+namespace Local_AI_Agent.Chat
 {
     internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel)
     {
         private const string ChatSystemPrompt = "You are an AI assistant with access to news services. Your job is to find news that interest the user. " +
-            "When asked about news, default to listing the top news with each news article on a separate line. Mention the media behind the article. " +
+            "When asked about news, default to listing the top news. Use the following template for news reporting and fill information from the json response: " +
+            "**Category:** Title - Summary (Source) [Link] \n The news information will be in json format as follows: " +
             "Use what you know about what the user likes to find news articles and hide what the user dislikes. Keep your answers short and do not " +
             "mention what you are filtering for unless asked.";
 
@@ -18,6 +19,8 @@ namespace Local_AI_Agent
             ChatHistory chatHistory = [];
 
             StringBuilder fullAssistantContent = new();
+
+            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings();
 
             while (true)
             {
@@ -29,12 +32,7 @@ namespace Local_AI_Agent
 
                 await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
                     chatHistory,
-                    new OpenAIPromptExecutionSettings
-                    {
-                        ChatSystemPrompt = ChatSystemPrompt + GetUserPreferencesPrompt(),
-                        ReasoningEffort = ChatReasoningEffortLevel.High,
-                        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-                    },
+                    openAiSettings,
                     kernel)
                     .ConfigureAwait(false))
                 {
@@ -45,6 +43,17 @@ namespace Local_AI_Agent
                 chatHistory.AddAssistantMessage(fullAssistantContent.ToString());
                 Console.WriteLine();
             }
+        }
+
+        private static OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings()
+        {
+            return new OpenAIPromptExecutionSettings
+            {
+                ChatSystemPrompt = ChatSystemPrompt + GetUserPreferencesPrompt(),
+                ReasoningEffort = ChatReasoningEffortLevel.High,
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
+                Temperature = 0.3f,
+            };
         }
 
         /// <summary>
