@@ -2,7 +2,7 @@
 
 namespace Local_AI_Agent.News
 {
-    internal class YleNewsSettings
+    internal class YleNewsSettings : INewsClientSettings
     {
         public static string ClientName = "YleNewsClient";
         public static string UserAgent = "Local-AI-Agent";
@@ -13,7 +13,7 @@ namespace Local_AI_Agent.News
         public static string WorldNewsUrl = "/rss/t/18-34953/fi";
         public static string FinlandNewsUrl = "/rss/t/18-34837/fi";
 
-        public static List<string> GetYleNewsUrls()
+        public static List<string> GetNewsUrls()
         {
             return
             [

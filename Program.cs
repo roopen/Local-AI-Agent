@@ -13,6 +13,7 @@ IKernelBuilder kernelBuilder = Kernel.CreateBuilder()
     );
 
 kernelBuilder.Services.AddYleNewsClient();
+kernelBuilder.Services.AddFoxNewsClient();
 
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();

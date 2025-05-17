@@ -7,7 +7,16 @@ namespace Local_AI_Agent.News
 {
     internal class NewsService(IHttpClientFactory httpClientFactory)
     {
-        [KernelFunction, Description("Get current summaries of latest news from Finnish YLE.")]
+        [KernelFunction, Description("Get current summaries of latest news from all sources.")]
+        public async Task<IEnumerable<string>> GetNewsAsync()
+        {
+            IEnumerable<string> newsFromYle = await GetNewsFromYleAsync();
+            IEnumerable<string> newsFromFox = await GetNewsFromFoxNewsAsync();
+
+            return newsFromYle.Concat(newsFromFox);
+        }
+
+        [KernelFunction, Description("Get current summaries of latest news from the Finnish YLE.")]
         public async Task<IEnumerable<string>> GetNewsFromYleAsync()
         {
             Console.WriteLine("NewsService: GetNewsFromYleAsync called");
@@ -15,18 +24,36 @@ namespace Local_AI_Agent.News
             HttpClient httpClient = httpClientFactory.CreateClient(YleNewsSettings.ClientName);
             List<string> newsList = [];
 
-            foreach (string url in YleNewsSettings.GetYleNewsUrls())
+            foreach (string url in YleNewsSettings.GetNewsUrls())
             {
-                SyndicationFeed feed = await GetYleNews(httpClient, url);
+                SyndicationFeed feed = await GetNews(httpClient, url);
                 newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
             }
 
             return newsList;
         }
 
-        public static async Task<SyndicationFeed> GetYleNews(HttpClient yleClient, string url)
+        [KernelFunction, Description("Get current summaries of latest news from the American Fox News.")]
+        public async Task<IEnumerable<string>> GetNewsFromFoxNewsAsync()
         {
-            using Stream stream = await yleClient.GetStreamAsync(url);
+            Console.WriteLine("NewsService: GetNewsFromFoxNewsAsync called");
+
+            HttpClient httpClient = httpClientFactory.CreateClient(FoxNewsSettings.ClientName);
+            List<string> newsList = [];
+
+            foreach (string url in FoxNewsSettings.GetNewsUrls())
+            {
+                SyndicationFeed feed = await GetNews(httpClient, url);
+                newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
+            }
+
+            return newsList;
+        }
+
+        public static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
+        {
+            Console.WriteLine($"NewsService: GetNews called with url: {newsClient.BaseAddress + url}");
+            using Stream stream = await newsClient.GetStreamAsync(url);
             using XmlReader reader = XmlReader.Create(stream);
             SyndicationFeed feed = SyndicationFeed.Load(reader);
             return feed;
