@@ -8,11 +8,11 @@ namespace Local_AI_Agent.Chat
 {
     internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel)
     {
-        private const string ChatSystemPrompt = "You are an AI assistant with access to news services. Your job is to find news that interest the user. " +
-            "When asked about news, default to listing the top news. Use the following template for news reporting and fill information from the json response: " +
-            "**Category:** Title - Summary (Source) [Link] \n The news information will be in json format as follows: " +
-            "Use what you know about what the user likes to find news articles and hide what the user dislikes. Keep your answers short and do not " +
-            "mention what you are filtering for unless asked.";
+        private const string ChatSystemPrompt = "You are an AI assistant. " +
+            "When asked about news, you curate the current news according to user's preferences " +
+            "Use the following template for news reporting and fill information from the json response: \n" +
+            "**Category:** Title - Summary (Source) [Link] \n The news information will be in json format. " +
+            "Keep your answers short. Be willing to discuss any news with the user.";
 
         public async Task StartChat()
         {
