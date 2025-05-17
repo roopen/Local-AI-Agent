@@ -7,7 +7,7 @@ namespace Local_AI_Agent.News
 {
     internal class NewsService(IHttpClientFactory httpClientFactory)
     {
-        [KernelFunction, Description("Get current summaries of latest news.")]
+        [KernelFunction, Description("Get current summaries of latest news from Finnish YLE.")]
         public async Task<IEnumerable<string>> GetNewsFromYleAsync()
         {
             Console.WriteLine("NewsService: GetNewsFromYleAsync called");
