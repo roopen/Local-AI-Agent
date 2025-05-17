@@ -1,7 +1,5 @@
 ﻿using Local_AI_Agent;
 using Local_AI_Agent.News;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -14,15 +12,7 @@ IKernelBuilder kernelBuilder = Kernel.CreateBuilder()
         endpoint: new Uri("http://localhost:1234/v1/")
     );
 
-kernelBuilder.Services.AddHttpClient(YleNewsSettings.ClientName, (serviceProvider, client) =>
-{
-    YleNewsSettings settings = serviceProvider
-        .GetRequiredService<IOptions<YleNewsSettings>>().Value;
-
-    client.DefaultRequestHeaders.Add("User-Agent", settings.UserAgent);
-
-    client.BaseAddress = new Uri(settings.BaseUrl);
-});
+kernelBuilder.Services.AddYleNewsClient();
 
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();
