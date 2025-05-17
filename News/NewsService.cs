@@ -7,9 +7,11 @@ namespace Local_AI_Agent.News
 {
     internal class NewsService(IHttpClientFactory httpClientFactory)
     {
-        [KernelFunction, Description("Get current summaries of latest news from all sources.")]
+        [KernelFunction, Description("Get current summaries of latest news from all sources. If this is used, none of the other news functions are required.")]
         public async Task<IEnumerable<string>> GetNewsAsync()
         {
+            Console.WriteLine("NewsService: GetNewsAsync called");
+
             IEnumerable<string> newsFromYle = await GetNewsFromYleAsync();
             IEnumerable<string> newsFromFox = await GetNewsFromFoxNewsAsync();
 
