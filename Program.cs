@@ -1,26 +1,33 @@
 ﻿using Local_AI_Agent;
+using Local_AI_Agent.News;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Text;
 
-
-
 IKernelBuilder kernelBuilder = Kernel.CreateBuilder()
     .AddOpenAIChatCompletion(
-        modelId: "gemma-3-27b-it-abliterated", // Adjust based on the model you're using
-        apiKey: "", // LM Studio doesn't require an API key
+        modelId: "gemma-3-27b-it-abliterated",
+        apiKey: string.Empty,
         endpoint: new Uri("http://localhost:1234/v1/")
     );
 
+kernelBuilder.Services.AddHttpClient(YleNewsSettings.ClientName, (serviceProvider, client) =>
+{
+    YleNewsSettings settings = serviceProvider
+        .GetRequiredService<IOptions<YleNewsSettings>>().Value;
+
+    client.DefaultRequestHeaders.Add("User-Agent", settings.UserAgent);
+
+    client.BaseAddress = new Uri(settings.BaseUrl);
+});
+
 kernelBuilder.Plugins.AddFromType<TimeService>();
+kernelBuilder.Plugins.AddFromType<NewsService>();
 
 Kernel kernel = kernelBuilder.Build();
-
-OpenAIPromptExecutionSettings settings = new()
-{
-    ToolCallBehavior = ToolCallBehavior.EnableKernelFunctions
-};
 
 IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
@@ -30,7 +37,7 @@ StringBuilder fullAssistantContent = new();
 
 while (true)
 {
-    Console.Write("\nUser: ");
+    Console.Write("User: ");
     string? input = Console.ReadLine();
     if (string.IsNullOrWhiteSpace(input)) { break; }
 
@@ -49,4 +56,5 @@ while (true)
     }
 
     chatHistory.AddAssistantMessage(fullAssistantContent.ToString());
+    Console.WriteLine();
 }
