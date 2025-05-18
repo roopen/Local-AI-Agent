@@ -13,6 +13,7 @@ IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 
 kernelBuilder.Services.AddNewsClients();
 kernelBuilder.Services.AddSingleton<ChatService>();
+kernelBuilder.Services.AddSingleton<ChatContext>();
 kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
 IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
 
@@ -44,5 +45,29 @@ static async Task StartAiChat(Kernel kernel, AIOptions options)
         kernel,
         options
     );
-    await chatService.StartChat();
+
+    string userPreferencesPrompt = GetUserPreferencesPrompt();
+
+    List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
+    ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
+    chatContext.UserDislikes = bannedWords;
+
+    await chatService.StartChat(userPreferencesPrompt);
+}
+
+/// <summary>
+/// Attempts to read a user preferences prompt from ./UserPrompt.txt.
+/// </summary>
+static string GetUserPreferencesPrompt()
+{
+    if (!File.Exists("UserPrompt.txt"))
+    {
+        Console.WriteLine("UserPrompt.txt not found.");
+        return string.Empty;
+    }
+    else
+    {
+        Console.WriteLine("UserPrompt.txt found.");
+        return File.ReadAllText("UserPrompt.txt");
+    }
 }

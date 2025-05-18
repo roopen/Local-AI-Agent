@@ -5,7 +5,7 @@ using System.Xml;
 
 namespace LocalAIAgent.App.News
 {
-    internal class NewsService(IHttpClientFactory httpClientFactory, IEnumerable<INewsClientSettings> newsClientSettingsList)
+    internal class NewsService(IHttpClientFactory httpClientFactory, IEnumerable<INewsClientSettings> newsClientSettingsList, ChatContext chatContext)
     {
         private List<string> cachedNews = [];
 
@@ -37,11 +37,20 @@ namespace LocalAIAgent.App.News
                 foreach (string url in settings.GetNewsUrls())
                 {
                     SyndicationFeed feed = await GetNews(httpClient, url);
+                    FilterNewsArticles(feed);
                     newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
                 }
             }
 
             return newsList;
+        }
+
+        /// <summary>
+        /// Filters news articles based on user preferences. Reduces the amount of data main chat has to process.
+        /// </summary>
+        private void FilterNewsArticles(SyndicationFeed feed)
+        {
+            feed.Items = feed.Items.Where(item => chatContext.IsArticleRelevant(item)).ToList();
         }
 
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
