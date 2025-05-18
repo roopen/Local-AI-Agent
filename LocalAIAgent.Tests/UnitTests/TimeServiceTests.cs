@@ -3,7 +3,7 @@ using Moq;
 using NodaTime;
 using System.Globalization;
 
-namespace LocalAIAgent.Tests
+namespace LocalAIAgent.Tests.UnitTests
 {
     public class TimeServiceTests
     {

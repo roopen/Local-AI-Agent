@@ -10,8 +10,7 @@ namespace LocalAIAgent.App.News
         private List<string> cachedNews = [];
 
         [KernelFunction, Description(
-            "Get current summaries of latest news from all sources. " +
-            "If this is used, none of the other news functions are required. ")]
+            "Get current summaries of latest news from all sources.")]
         public async Task<IEnumerable<string>> GetNewsAsync()
         {
             Console.WriteLine("NewsService: GetNewsAsync called");
@@ -43,13 +42,6 @@ namespace LocalAIAgent.App.News
             }
 
             return newsList;
-        }
-
-        private NewsClientSettingsType GetNewsSettings<NewsClientSettingsType>()
-            where NewsClientSettingsType : class, INewsClientSettings
-        {
-            return newsClientSettingsList.FirstOrDefault(s => s is NewsClientSettingsType) as NewsClientSettingsType
-                ?? throw new Exception("NewsSettings not found in news client settings list.");
         }
 
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
