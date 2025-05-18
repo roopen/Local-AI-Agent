@@ -8,7 +8,7 @@ namespace LocalAIAgent.Tests
         public void TestGetCurrentTime()
         {
             // Arrange
-            TimeService timeService = new TimeService();
+            TimeService timeService = new();
             // Act
             string currentTime = timeService.GetCurrentTimeInUtc();
             // Assert
