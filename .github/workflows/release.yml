@@ -1,8 +1,11 @@
-name: .NET Core Desktop Console App
+name: Release Console App
 
 on:
   push:
     branches: [ "rel/*" ]
+
+permissions:
+  contents: write
 
 jobs:
 
@@ -18,18 +21,38 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Extract version from branch name
+      run: |
+          BRANCH_NAME=${{ github.ref }}
+          VERSION=${BRANCH_NAME#refs/heads/rel/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+            echo "Tag $VERSION already exists."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
+    - name: Exit Workflow If Tag Already Exists
+      if: env.exists == 'true'
+      run: |
+        echo "Tag already exists. Exiting workflow."
+        exit 0
+
+    - name: Create tag
+      run: |
+          git tag $VERSION
+          git push origin $VERSION
         
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-        
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
 
     - name: Publish as Single Executable
       run: dotnet publish -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
@@ -48,3 +71,16 @@ jobs:
       with:
        name: ${{ env.Solution_Name }}
        path: LocalAIAgent.zip
+
+    - name: Create GitHub Release with ZIP
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          New release created!
+          - Tag: ${{ github.ref_name }}
+          - Includes an auto-generated ZIP file.
+        files: LocalAIAgent.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
