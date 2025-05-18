@@ -1,6 +1,6 @@
 ﻿using System.ServiceModel.Syndication;
 
-namespace Local_AI_Agent.News
+namespace LocalAIAgent.App.News
 {
     public class NewsItem
     {

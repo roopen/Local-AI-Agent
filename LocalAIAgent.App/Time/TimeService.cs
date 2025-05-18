@@ -1,7 +1,7 @@
 ﻿using Microsoft.SemanticKernel;
 using System.ComponentModel;
 
-namespace Local_AI_Agent.Time
+namespace LocalAIAgent.App.Time
 {
     internal class TimeService
     {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Local_AI_Agent.News
+namespace LocalAIAgent.App.News
 {
     internal class YleNewsSettings : INewsClientSettings
     {

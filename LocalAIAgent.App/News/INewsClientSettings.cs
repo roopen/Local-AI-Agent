@@ -1,4 +1,4 @@
-﻿namespace Local_AI_Agent.News
+﻿namespace LocalAIAgent.App.News
 {
     internal interface INewsClientSettings
     {

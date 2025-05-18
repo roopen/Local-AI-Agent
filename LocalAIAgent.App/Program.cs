@@ -1,7 +1,7 @@
-﻿using Local_AI_Agent.Chat;
-using Local_AI_Agent.News;
-using Local_AI_Agent.Time;
-using LocalAIAgent.App;
+﻿using LocalAIAgent.App;
+using LocalAIAgent.App.Chat;
+using LocalAIAgent.App.News;
+using LocalAIAgent.App.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;

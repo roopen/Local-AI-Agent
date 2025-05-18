@@ -1,11 +1,10 @@
-﻿using LocalAIAgent.App;
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using System.Text;
 
-namespace Local_AI_Agent.Chat
+namespace LocalAIAgent.App.Chat
 {
     internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options)
     {

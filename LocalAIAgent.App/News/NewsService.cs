@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.ServiceModel.Syndication;
 using System.Xml;
 
-namespace Local_AI_Agent.News
+namespace LocalAIAgent.App.News
 {
     internal class NewsService(IHttpClientFactory httpClientFactory)
     {

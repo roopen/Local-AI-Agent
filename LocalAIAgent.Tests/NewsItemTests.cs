@@ -1,7 +1,7 @@
-﻿using Local_AI_Agent.News;
+﻿using LocalAIAgent.App.News;
 using System.ServiceModel.Syndication;
 
-namespace Local_AI_Agent.Chat.Tests
+namespace LocalAIAgent.Tests
 {
     public class NewsItemTests
     {
