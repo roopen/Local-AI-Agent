@@ -10,10 +10,9 @@ This project provides a .NET 9-based AI agent service for fetching and summarizi
 
 ## Requirements
 
-- .NET 9 SDK
-- Visual Studio 2022 or later
+- Windows or Linux OS
 - [LM Studio](https://lmstudio.ai/) running with an OpenAI-compliant local API (currently hardcoded to use gemma-3-27b-it-abliterated model)
-- Internet access for fetching RSS feeds
+- Internet access (application will not work if blocked by Firewall)
 
 ## License
 
