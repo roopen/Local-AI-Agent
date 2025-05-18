@@ -5,7 +5,7 @@ using System.Xml;
 
 namespace LocalAIAgent.App.News
 {
-    internal class NewsService(IHttpClientFactory httpClientFactory)
+    internal class NewsService(IHttpClientFactory httpClientFactory, IEnumerable<INewsClientSettings> newsClientSettingsList)
     {
         private List<string> cachedNews = [];
 
@@ -18,47 +18,38 @@ namespace LocalAIAgent.App.News
 
             if (cachedNews.Count is 0)
             {
-                IEnumerable<string> newsFromYle = await GetNewsFromYleAsync();
-                IEnumerable<string> newsFromFox = await GetNewsFromFoxNewsAsync();
+                IEnumerable<string> news = await GetAllNewsAsync();
 
-                cachedNews = newsFromYle.Concat(newsFromFox).ToList();
+                cachedNews = news.ToList();
             }
 
             return cachedNews;
         }
 
-        [KernelFunction, Description("Get current summaries of latest news from the Finnish YLE.")]
-        public async Task<IEnumerable<string>> GetNewsFromYleAsync()
+        private async Task<IEnumerable<string>> GetAllNewsAsync()
         {
-            Console.WriteLine("NewsService: GetNewsFromYleAsync called");
-
-            HttpClient httpClient = httpClientFactory.CreateClient(YleNewsSettings.ClientName);
+            Console.WriteLine("NewsService: GetAllNewsAsync called");
             List<string> newsList = [];
 
-            foreach (string url in YleNewsSettings.GetNewsUrls())
+            foreach (INewsClientSettings settings in newsClientSettingsList)
             {
-                SyndicationFeed feed = await GetNews(httpClient, url);
-                newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
+                HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
+
+                foreach (string url in settings.GetNewsUrls())
+                {
+                    SyndicationFeed feed = await GetNews(httpClient, url);
+                    newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
+                }
             }
 
             return newsList;
         }
 
-        [KernelFunction, Description("Get current summaries of latest news from the American Fox News.")]
-        public async Task<IEnumerable<string>> GetNewsFromFoxNewsAsync()
+        private NewsClientSettingsType GetNewsSettings<NewsClientSettingsType>()
+            where NewsClientSettingsType : class, INewsClientSettings
         {
-            Console.WriteLine("NewsService: GetNewsFromFoxNewsAsync called");
-
-            HttpClient httpClient = httpClientFactory.CreateClient(FoxNewsSettings.ClientName);
-            List<string> newsList = [];
-
-            foreach (string url in FoxNewsSettings.GetNewsUrls())
-            {
-                SyndicationFeed feed = await GetNews(httpClient, url);
-                newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
-            }
-
-            return newsList;
+            return newsClientSettingsList.FirstOrDefault(s => s is NewsClientSettingsType) as NewsClientSettingsType
+                ?? throw new Exception("NewsSettings not found in news client settings list.");
         }
 
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
