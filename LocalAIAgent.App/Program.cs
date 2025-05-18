@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using NodaTime;
 
 IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 
@@ -20,6 +21,8 @@ IConfiguration configuration = new ConfigurationBuilder()
 
 kernelBuilder.Services.Configure<AIOptions>(configuration.GetSection("AIOptions"));
 AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ?? throw new Exception("AIOptions not found in configuration.");
+
+kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();
