@@ -1,4 +1,5 @@
-﻿using Microsoft.SemanticKernel;
+﻿using LocalAIAgent.App.Chat;
+using Microsoft.SemanticKernel;
 using System.ComponentModel;
 using System.ServiceModel.Syndication;
 using System.Xml;
@@ -10,11 +11,10 @@ namespace LocalAIAgent.App.News
         private List<string> cachedNews = [];
 
         [KernelFunction, Description(
-            "Get summaries of latest news from all sources.")]
-        public async Task<IEnumerable<string>> GetNewsAsync()
+            "Get summaries of latest news from a specified source (Yle, Fox, Yahoo).")]
+        public async Task<IEnumerable<string>> GetNewsBySourceAsync(string source)
         {
-            Console.WriteLine("NewsService: GetNewsAsync called");
-
+            Console.WriteLine($"NewsService: GetNewsBySourceAsync called (source requested: {source})");
             if (cachedNews.Count is 0)
             {
                 IEnumerable<string> news = await GetAllNewsAsync();
@@ -22,7 +22,7 @@ namespace LocalAIAgent.App.News
                 cachedNews = news.ToList();
             }
 
-            return cachedNews;
+            return cachedNews.Where(item => item.Contains(source, StringComparison.OrdinalIgnoreCase));
         }
 
         private async Task<IEnumerable<string>> GetAllNewsAsync()

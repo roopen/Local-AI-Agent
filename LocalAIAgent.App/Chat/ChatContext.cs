@@ -1,12 +1,13 @@
 ﻿using System.ServiceModel.Syndication;
 
-namespace LocalAIAgent.App
+namespace LocalAIAgent.App.Chat
 {
     /// <summary>
     /// Contains the context, state, and preferences of the chat session.
     /// </summary>
     internal class ChatContext
     {
+        public string UserPrompt { get; set; } = string.Empty;
         public List<string> UserDislikes { get; set; } = [];
 
         internal bool IsArticleRelevant(SyndicationItem item)
