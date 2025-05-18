@@ -9,7 +9,7 @@ namespace LocalAIAgent.Tests
         public void NewsItem_IsCreated_Successfully()
         {
             // Arrange
-            SyndicationItem syndicationItem = new SyndicationItem
+            SyndicationItem syndicationItem = new()
             {
                 Title = new TextSyndicationContent("Test Title"),
                 Summary = new TextSyndicationContent("Test Summary"),
@@ -34,7 +34,7 @@ namespace LocalAIAgent.Tests
         public void NewsItem_IsCreated_WithNulls()
         {
             // Arrange
-            SyndicationItem syndicationItem = new SyndicationItem
+            SyndicationItem syndicationItem = new()
             {
                 Title = null,
                 Summary = null,
