@@ -1,4 +1,5 @@
-﻿using Microsoft.SemanticKernel;
+﻿using LocalAIAgent.App;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
@@ -6,7 +7,7 @@ using System.Text;
 
 namespace Local_AI_Agent.Chat
 {
-    internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel)
+    internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options)
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences " +
@@ -20,7 +21,7 @@ namespace Local_AI_Agent.Chat
 
             StringBuilder fullAssistantContent = new();
 
-            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings();
+            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(options);
 
             while (true)
             {
@@ -45,14 +46,17 @@ namespace Local_AI_Agent.Chat
             }
         }
 
-        private static OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings()
+        private static OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings(AIOptions options)
         {
             return new OpenAIPromptExecutionSettings
             {
                 ChatSystemPrompt = ChatSystemPrompt + GetUserPreferencesPrompt(),
                 ReasoningEffort = ChatReasoningEffortLevel.High,
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
-                Temperature = 0.3f,
+                Temperature = (double)options.Temperature,
+                TopP = (double)options.TopP,
+                FrequencyPenalty = (double)options.FrequencyPenalty,
+                PresencePenalty = (double)options.PresencePenalty,
             };
         }
 
