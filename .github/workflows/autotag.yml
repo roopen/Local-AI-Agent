@@ -3,18 +3,21 @@ name: Auto Tag Releases
 on:
    push:
      branches: [ "rel/*" ]
-
+     
 jobs:
-  tag_pr:
+  tag:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Apply Tag
-        uses: Songmu/tagpr@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract version from branch name
+        run: |
+          BRANCH_NAME=${{ github.ref }}
+          VERSION=${BRANCH_NAME#refs/heads/rel/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create tag
+        run: |
+          git tag $VERSION
+          git push origin $VERSION
