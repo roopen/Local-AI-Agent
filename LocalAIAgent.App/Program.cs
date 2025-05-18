@@ -43,7 +43,8 @@ static async Task StartAiChat(Kernel kernel, AIOptions options)
     ChatService chatService = new(
         kernel.Services.GetService<IChatCompletionService>()!,
         kernel,
-        options
+        options,
+        kernel.Services.GetService<ChatContext>()!
     );
 
     string userPreferencesPrompt = GetUserPreferencesPrompt();
@@ -51,8 +52,9 @@ static async Task StartAiChat(Kernel kernel, AIOptions options)
     List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
     ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
     chatContext.UserDislikes = bannedWords;
+    chatContext.UserPrompt = userPreferencesPrompt;
 
-    await chatService.StartChat(userPreferencesPrompt);
+    await chatService.StartChat();
 }
 
 /// <summary>

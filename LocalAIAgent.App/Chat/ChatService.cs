@@ -6,22 +6,25 @@ using System.Text;
 
 namespace LocalAIAgent.App.Chat
 {
-    internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options)
+    internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences " +
             "Try to find the most significant news. " +
             "Use the following template for news reporting and fill information from the json response: \n" +
             "**Category:** Title - Summary (Source) [Link] \n The news information will be in json format. " +
-            "Keep your answers short. Be willing to discuss any news with the user.\n";
+            "Keep your answers short. Be willing to discuss any news with the user.\n" +
+            "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
-        public async Task StartChat(string userPreferencesPrompt)
+        public async Task StartChat()
         {
             ChatHistory chatHistory = [];
 
             StringBuilder fullAssistantContent = new();
 
-            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(options, ChatSystemPrompt + userPreferencesPrompt);
+            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
+                options,
+                ChatSystemPrompt + "User's dislikes: \n" + chatContext.UserDislikes);
 
             while (true)
             {
@@ -48,8 +51,10 @@ namespace LocalAIAgent.App.Chat
 
         public async Task<List<string>> GetUnwantedTopics(string userPrompt)
         {
-            string unwantedTopicsPrompt = "Provide a list of unwanted topics in the following user prompt. The response must follow following format:" +
-                "-Topic\n-Topic\n-Topic\n The response should contain nothing other than a plain list of words.\n";
+            string unwantedTopicsPrompt = "Provide a list of unwanted topics in the following user prompt. Each topic should be two entries in the list. " +
+                "One in English and the other in Finnish. The response must follow following format: " +
+                "-TopicInEnglish\n-TopicInFinnish\n-NextTopicInEnglish\n-NextTopicInFinnish\n " +
+                "The response should contain nothing other than a plain list of words.\n";
 
             ChatHistory chatHistory = [];
             chatHistory.AddUserMessage(userPrompt);
