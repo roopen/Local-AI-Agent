@@ -4,7 +4,7 @@ namespace LocalAIAgent.App.News
 {
     internal class YleNewsSettings : INewsClientSettings
     {
-        public static string ClientName = "YleNewsClient";
+        public string ClientName { get => "YleNewsClient"; }
         public static string UserAgent = "Mozilla/5.0";
         public static string BaseUrl = "https://yle.fi/";
 
@@ -13,7 +13,7 @@ namespace LocalAIAgent.App.News
         public static string WorldNewsUrl = "/rss/t/18-34953/fi";
         public static string FinlandNewsUrl = "/rss/t/18-34837/fi";
 
-        public static List<string> GetNewsUrls()
+        public List<string> GetNewsUrls()
         {
             return
             [
@@ -23,19 +23,14 @@ namespace LocalAIAgent.App.News
                 FinlandNewsUrl
             ];
         }
-    }
 
-    internal static partial class ServiceCollectionExtensions
-    {
-        public static IServiceCollection AddYleNewsClient(this IServiceCollection services)
+        public void AddHttpClient(IServiceCollection services)
         {
-            services.AddHttpClient(YleNewsSettings.ClientName, client =>
+            services.AddHttpClient(ClientName, client =>
             {
-                client.BaseAddress = new Uri(YleNewsSettings.BaseUrl);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(YleNewsSettings.UserAgent);
+                client.BaseAddress = new Uri(BaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             });
-
-            return services;
         }
     }
 }

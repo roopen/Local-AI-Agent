@@ -2,22 +2,19 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class FoxNewsSettings : INewsClientSettings
+    internal class YahooFinanceNewsSettings : INewsClientSettings
     {
-        public string ClientName { get => "FoxNewsClient"; }
+        public string ClientName { get => "YahooFinanceClient"; }
         public static string UserAgent = "Mozilla/5.0";
-        public static string BaseUrl = "https://moxie.foxnews.com/google-publisher/";
-        public static string Host = "moxie.foxnews.com";
+        public static string BaseUrl = "https://finance.yahoo.com/news/";
+        public static string Host = "finance.yahoo.com";
 
-        public static string UsaNewsUrl = "us.xml";
-        public static string WorldNewsUrl = "world.xml";
+        public static string RssIndexUrl = "rssindex";
 
         public List<string> GetNewsUrls()
         {
-            return
-            [
-                UsaNewsUrl,
-                WorldNewsUrl
+            return [
+                RssIndexUrl
             ];
         }
 

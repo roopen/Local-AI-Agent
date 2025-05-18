@@ -1,5 +1,6 @@
 ﻿using LocalAIAgent.App;
 using LocalAIAgent.App.Chat;
+using LocalAIAgent.App.Extensions;
 using LocalAIAgent.App.News;
 using LocalAIAgent.App.Time;
 using Microsoft.Extensions.Configuration;
@@ -10,16 +11,10 @@ using NodaTime;
 
 IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 
-kernelBuilder.Services.AddYleNewsClient();
-kernelBuilder.Services.AddFoxNewsClient();
+kernelBuilder.Services.AddNewsClients();
 kernelBuilder.Services.AddSingleton<ChatService>();
 
-IConfiguration configuration = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-    .Build();
-
-kernelBuilder.Services.Configure<AIOptions>(configuration.GetSection("AIOptions"));
+IConfiguration configuration = GetConfigurations(kernelBuilder);
 AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ?? throw new Exception("AIOptions not found in configuration.");
 
 kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
@@ -46,4 +41,15 @@ static async Task StartAiChat(Kernel kernel, AIOptions options)
         options
     );
     await chatService.StartChat();
+}
+
+static IConfiguration GetConfigurations(IKernelBuilder kernelBuilder)
+{
+    IConfiguration configuration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+        .Build();
+
+    kernelBuilder.Services.Configure<AIOptions>(configuration.GetSection("AIOptions"));
+    return configuration;
 }

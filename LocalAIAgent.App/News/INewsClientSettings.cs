@@ -1,7 +1,13 @@
-﻿namespace LocalAIAgent.App.News
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace LocalAIAgent.App.News
 {
     internal interface INewsClientSettings
     {
-        static abstract List<string> GetNewsUrls();
+        string ClientName { get; }
+
+        List<string> GetNewsUrls();
+
+        void AddHttpClient(IServiceCollection services);
     }
 }
