@@ -21,6 +21,11 @@ AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ??
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();
 
+#pragma warning disable SKEXP0070 
+// Experimental Google Gemini support
+//kernelBuilder.AddGoogleAIGeminiChatCompletion(aiOptions.ModelId, aiOptions.ApiKey);
+#pragma warning restore SKEXP0070 
+
 kernelBuilder
     .AddOpenAIChatCompletion(
         modelId: aiOptions.ModelId,

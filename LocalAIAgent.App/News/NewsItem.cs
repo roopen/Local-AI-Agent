@@ -8,6 +8,7 @@ namespace LocalAIAgent.App.News
         public string? Title { get; }
         public string? Summary { get; }
         public string? Link { get; }
+        public string? Source { get; }
 
         public NewsItem(SyndicationItem syndicationItem)
         {
@@ -15,6 +16,7 @@ namespace LocalAIAgent.App.News
             Summary = syndicationItem.Summary?.Text;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
+            Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
         }
 
         public override string ToString()

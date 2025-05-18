@@ -10,7 +10,7 @@ namespace LocalAIAgent.App.News
         private List<string> cachedNews = [];
 
         [KernelFunction, Description(
-            "Get current summaries of latest news from all sources.")]
+            "Get summaries of latest news from all sources.")]
         public async Task<IEnumerable<string>> GetNewsAsync()
         {
             Console.WriteLine("NewsService: GetNewsAsync called");
