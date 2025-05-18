@@ -1,0 +1,20 @@
+name: Auto Tag Releases
+
+on:
+   push:
+     branches: [ "rel/*" ]
+
+jobs:
+  tag_pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Apply Tag
+        uses: Songmu/tagpr@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
