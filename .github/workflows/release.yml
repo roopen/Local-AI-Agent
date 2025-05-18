@@ -4,6 +4,10 @@ on:
   push:
     branches: [ "rel/*" ]
 
+  workflow_run:
+    workflows: ["Build and Test"]
+    types: [completed]
+
 permissions:
   contents: write
 
@@ -64,7 +68,7 @@ jobs:
       run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.App/bin/Release/net9.0/win-x64/publish/LocalAIAgent.App.pdb
 
     - name: Zip the publish folder
-      run: zip -j LocalAIAgent.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.App/bin/Release/net9.0/win-x64/publish/LocalAIAgent.exe
+      run: zip -j LocalAIAgent.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.App/bin/Release/net9.0/win-x64/publish/*
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
