@@ -1,4 +1,4 @@
-name: Auto Tag Releases
+name: Automatically Tag Release Branch
 
 on:
    push:
@@ -17,7 +17,18 @@ jobs:
           VERSION=${BRANCH_NAME#refs/heads/rel/}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+            echo "Tag $VERSION already exists."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
       - name: Create tag
+        if: env.exists == 'false'
         run: |
           git tag $VERSION
           git push origin $VERSION
