@@ -16,7 +16,6 @@ namespace LocalAIAgent.Tests
             Mock<IClock> mockClock = new();
             mockClock.Setup(clock => clock.GetCurrentInstant()).Returns(Instant.FromDateTimeUtc(testDate));
             TimeService timeService = new(mockClock.Object);
-
             // Act
             string currentTime = timeService.GetCurrentTimeInUtc();
 
