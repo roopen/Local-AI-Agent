@@ -1,5 +1,6 @@
-﻿using LocalAIAgent.App.News;
-using LocalAIAgent.App.Options;
+﻿using LocalAIAgent.App.Chat;
+using LocalAIAgent.App.News;
+using LocalAIAgent.App.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

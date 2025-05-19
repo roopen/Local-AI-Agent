@@ -1,12 +1,18 @@
 ﻿using LocalAIAgent.App.Chat;
+using LocalAIAgent.App.Storage;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 using System.ComponentModel;
 using System.ServiceModel.Syndication;
 using System.Xml;
 
 namespace LocalAIAgent.App.News
 {
-    internal class NewsService(IHttpClientFactory httpClientFactory, IEnumerable<INewsClientSettings> newsClientSettingsList, ChatContext chatContext)
+    internal class NewsService(
+        IHttpClientFactory httpClientFactory,
+        EmbeddingService embeddingService,
+        IEnumerable<INewsClientSettings> newsClientSettingsList,
+        ChatContext chatContext)
     {
         private List<string> cachedNews = [];
 
@@ -32,17 +38,34 @@ namespace LocalAIAgent.App.News
 
             foreach (INewsClientSettings settings in newsClientSettingsList)
             {
-                HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
+                using HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
 
                 foreach (string url in settings.GetNewsUrls())
                 {
                     SyndicationFeed feed = await GetNews(httpClient, url);
                     FilterNewsArticles(feed);
+
                     newsList.AddRange(feed.Items.Select(item => new NewsItem(item).ToString()));
+
+                    await SaveToVectorDatabaseAsync(feed);
                 }
             }
 
             return newsList;
+        }
+
+        private async Task SaveToVectorDatabaseAsync(SyndicationFeed feed)
+        {
+            foreach (SyndicationItem? item in feed.Items)
+            {
+                NewsItem newsItem = new(item);
+                newsItem.Embedding = await embeddingService.GenerateEmbeddingAsync(newsItem);
+
+                InMemoryVectorStoreRecordCollection<string, NewsItem> collection = new("news");
+                await collection.CreateCollectionIfNotExistsAsync();
+                await collection.UpsertAsync(newsItem);
+                NewsItem? record = await collection.GetAsync(newsItem.Id);
+            }
         }
 
         /// <summary>
