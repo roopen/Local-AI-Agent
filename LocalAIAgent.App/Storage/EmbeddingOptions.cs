@@ -1,4 +1,4 @@
-﻿namespace LocalAIAgent.App.Options
+﻿namespace LocalAIAgent.App.Storage
 {
     internal class EmbeddingOptions
     {
