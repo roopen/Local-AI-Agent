@@ -17,7 +17,7 @@
     internal class EmbeddingData
     {
         public string Object { get; set; }
-        public float[] Embedding { get; set; }
+        public ReadOnlyMemory<float> Embedding { get; set; }
         public int Index { get; set; }
     }
 }

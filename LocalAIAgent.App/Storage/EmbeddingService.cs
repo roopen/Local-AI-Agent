@@ -1,44 +1,50 @@
-﻿using LocalAIAgent.App.News;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
 namespace LocalAIAgent.App.Storage
 {
-    internal class EmbeddingService(IOptions<EmbeddingOptions> options, IHttpClientFactory httpClientFactory)
-        : Microsoft.Extensions.AI.IEmbeddingGenerator
+    internal class EmbeddingService(IOptions<EmbeddingOptions> embeddingOptions, IHttpClientFactory httpClientFactory)
+        : IEmbeddingGenerator<string, Embedding<float>>
     {
         private bool disposedValue;
 
-        public async Task<List<float[]>> GenerateEmbeddingsAsync(List<string> text)
+        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
+            IEnumerable<string> values,
+            EmbeddingGenerationOptions? options,
+            CancellationToken cancellationToken)
         {
-            using HttpClient httpClient = httpClientFactory.CreateClient();
-            EmbeddingRequest request = new()
+            EmbeddingResponse embeddingResponse = await GetEmbeddingAsync(values);
+
+            GeneratedEmbeddings<Embedding<float>> result = [];
+            foreach (EmbeddingData item in embeddingResponse.Data)
             {
-                Model = options.Value.ModelId,
-                Input = text
-            };
+                result.Add(new Embedding<float>(item.Embedding));
+            }
 
-            HttpResponseMessage response = await httpClient.PostAsJsonAsync(options.Value.EndpointUrl, request);
-            EmbeddingResponse? embeddingResponse = await response.Content.ReadFromJsonAsync<EmbeddingResponse>()
-                ?? throw new InvalidOperationException("Failed to deserialize the response to a float array.");
-
-            return embeddingResponse.Data.Select(x => x.Embedding).ToList();
+            return result;
         }
 
-        public async Task<float[]> GenerateEmbeddingAsync(NewsItem newsItem)
+        public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(string query)
+        {
+            EmbeddingResponse embeddingResponse = await GetEmbeddingAsync([query]);
+
+            return embeddingResponse.Data.First().Embedding;
+        }
+
+        private async Task<EmbeddingResponse> GetEmbeddingAsync(IEnumerable<string> values)
         {
             using HttpClient httpClient = httpClientFactory.CreateClient();
             EmbeddingRequest request = new()
             {
-                Model = options.Value.ModelId,
-                Input = [newsItem.ToString()]
+                Model = embeddingOptions.Value.ModelId,
+                Input = values.ToList()
             };
 
-            HttpResponseMessage response = await httpClient.PostAsJsonAsync(options.Value.EndpointUrl, request);
-            EmbeddingResponse? embeddingResponse = await response.Content.ReadFromJsonAsync<EmbeddingResponse>()
-                ?? throw new InvalidOperationException("Failed to deserialize the response to a float array.");
+            HttpResponseMessage response = await httpClient.PostAsJsonAsync(embeddingOptions.Value.EndpointUrl, request);
 
-            return embeddingResponse.Data.First().Embedding;
+            return await response.Content.ReadFromJsonAsync<EmbeddingResponse>()
+                ?? throw new InvalidOperationException("Failed to deserialize the response to a float array.");
         }
 
         public object? GetService(Type serviceType, object? serviceKey = null)

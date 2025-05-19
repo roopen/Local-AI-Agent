@@ -1,12 +1,15 @@
-﻿using Microsoft.Extensions.VectorData;
+﻿using LocalAIAgent.App.RAG;
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Data;
 using System.ServiceModel.Syndication;
+using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.App.News
 {
-    public class NewsItem
+    internal class NewsItem : BaseVectorData
     {
         [VectorStoreRecordKey]
+        [JsonIgnore]
         public string Id { get; }
         public DateTimeOffset PublishDate { get; }
 
@@ -17,16 +20,10 @@ namespace LocalAIAgent.App.News
         [TextSearchResultValue]
         [VectorStoreRecordData]
         public string? Source { get; }
-        /// <summary>
-        /// The text embedding for this snippet. This is used to search the vector store.
-        /// While this is a string property it has the vector attribute, which means whatever
-        /// text it contains will be converted to a vector and stored as a vector in the vector store.
-        /// </summary>
-        public float[] Embedding { get; set; }
 
         public NewsItem(SyndicationItem syndicationItem)
         {
-            Id = Guid.NewGuid().ToString();
+            Id = Guid.CreateVersion7().ToString();
             Content = syndicationItem.Title?.Text + syndicationItem.Summary?.Text;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();

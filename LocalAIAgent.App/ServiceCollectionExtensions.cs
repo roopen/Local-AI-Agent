@@ -3,6 +3,8 @@ using LocalAIAgent.App.News;
 using LocalAIAgent.App.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace LocalAIAgent.App.Extensions
 {
@@ -39,6 +41,51 @@ namespace LocalAIAgent.App.Extensions
             services.Configure<EmbeddingOptions>(configuration.GetSection("EmbeddingOptions"));
 
             return configuration;
+        }
+
+        internal static async Task InitializeVectorDatabase(this Kernel kernel)
+        {
+            NewsService? newsService = kernel.Services.GetService<NewsService>();
+
+            if (newsService is not null) await newsService.LoadAllNews();
+
+            else Console.WriteLine("Warning: NewsService is not registered in the kernel. Vector database initialization skipped.");
+        }
+
+        internal static async Task StartAIChat(this Kernel kernel, AIOptions options)
+        {
+            ChatService chatService = new(
+                kernel.Services.GetService<IChatCompletionService>()!,
+                kernel,
+                options,
+                kernel.Services.GetService<ChatContext>()!
+            );
+
+            string userPreferencesPrompt = GetUserPreferencesPrompt();
+
+            List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
+            ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
+            chatContext.UserDislikes = bannedWords;
+            chatContext.UserPrompt = userPreferencesPrompt;
+
+            await chatService.StartChat();
+        }
+
+        /// <summary>
+        /// Attempts to read a user preferences prompt from ./UserPrompt.txt.
+        /// </summary>
+        static string GetUserPreferencesPrompt()
+        {
+            if (!File.Exists("UserPrompt.txt"))
+            {
+                Console.WriteLine("UserPrompt.txt not found.");
+                return string.Empty;
+            }
+            else
+            {
+                Console.WriteLine("UserPrompt.txt found.");
+                return File.ReadAllText("UserPrompt.txt");
+            }
         }
     }
 }

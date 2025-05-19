@@ -9,18 +9,19 @@ namespace LocalAIAgent.App.News
         public static string BaseUrl = "https://yle.fi/";
 
         public static string MainHeadlinesUrl = "/rss/uutiset/paauutiset";
-        public static string FinanceNewsUrl = "rss/t/18-19274/fi";
-        public static string WorldNewsUrl = "/rss/t/18-34953/fi";
-        public static string FinlandNewsUrl = "/rss/t/18-34837/fi";
+        // These contain duplicate news. Needs to be handled separately.
+        //public static string FinanceNewsUrl = "rss/t/18-19274/fi";
+        //public static string WorldNewsUrl = "/rss/t/18-34953/fi";
+        //public static string FinlandNewsUrl = "/rss/t/18-34837/fi";
 
         public List<string> GetNewsUrls()
         {
             return
             [
                 MainHeadlinesUrl,
-                FinanceNewsUrl,
-                WorldNewsUrl,
-                FinlandNewsUrl
+                //FinanceNewsUrl,
+                //WorldNewsUrl,
+                //FinlandNewsUrl
             ];
         }
 
