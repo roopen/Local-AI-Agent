@@ -1,4 +1,4 @@
-﻿namespace LocalAIAgent.App
+﻿namespace LocalAIAgent.App.Options
 {
     internal class AIOptions
     {

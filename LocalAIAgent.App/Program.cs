@@ -2,6 +2,7 @@
 using LocalAIAgent.App.Chat;
 using LocalAIAgent.App.Extensions;
 using LocalAIAgent.App.News;
+using LocalAIAgent.App.Options;
 using LocalAIAgent.App.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,7 @@ IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 kernelBuilder.Services.AddNewsClients();
 kernelBuilder.Services.AddSingleton<ChatService>();
 kernelBuilder.Services.AddSingleton<ChatContext>();
+
 kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
 IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
 
@@ -21,6 +23,8 @@ AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ??
 
 kernelBuilder.Plugins.AddFromType<TimeService>();
 kernelBuilder.Plugins.AddFromType<NewsService>();
+
+kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
 
 #pragma warning disable SKEXP0070 
 // Experimental Google Gemini support
