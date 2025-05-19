@@ -1,4 +1,5 @@
 ﻿using LocalAIAgent.App.News;
+using LocalAIAgent.App.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,6 +35,7 @@ namespace LocalAIAgent.App.Extensions
                 .Build();
 
             services.Configure<AIOptions>(configuration.GetSection("AIOptions"));
+            services.Configure<EmbeddingOptions>(configuration.GetSection("EmbeddingOptions"));
 
             return configuration;
         }
