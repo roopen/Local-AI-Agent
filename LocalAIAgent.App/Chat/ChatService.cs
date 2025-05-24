@@ -24,7 +24,7 @@ namespace LocalAIAgent.App.Chat
 
             OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
                 options,
-                ChatSystemPrompt + "User's dislikes: \n" + chatContext.UserDislikes);
+                ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString());
 
             while (true)
             {
