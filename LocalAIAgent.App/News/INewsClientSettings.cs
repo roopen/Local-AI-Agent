@@ -5,6 +5,7 @@ namespace LocalAIAgent.App.News
     internal interface INewsClientSettings
     {
         string ClientName { get; }
+        string BaseUrl { get; }
 
         List<string> GetNewsUrls();
 
