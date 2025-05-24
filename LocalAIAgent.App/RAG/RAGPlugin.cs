@@ -1,4 +1,5 @@
-﻿using LocalAIAgent.App.News;
+﻿using LocalAIAgent.App.Chat;
+using LocalAIAgent.App.News;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
@@ -10,12 +11,15 @@ namespace LocalAIAgent.App.RAG
     internal partial class RAGService
     {
         private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingService;
+        private readonly ChatContext _chatContext;
         private readonly InMemoryVectorStoreRecordCollection<string, GenericVectorData> _generalVectorStore;
         private readonly InMemoryVectorStoreRecordCollection<string, NewsItem> _newsVectorStore;
+        private readonly List<ReadOnlyMemory<float>> userDislikeVectors = [];
 
-        public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService)
+        public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService, ChatContext chatContext)
         {
             _embeddingService = embeddingService;
+            _chatContext = chatContext;
 
             InMemoryVectorStoreRecordCollectionOptions<string, GenericVectorData> options = new()
             {
@@ -38,6 +42,18 @@ namespace LocalAIAgent.App.RAG
             await _newsVectorStore.CreateCollectionIfNotExistsAsync();
         }
 
+        private async Task LoadUserDislikeVectorsAsync()
+        {
+            if (userDislikeVectors.Count is 0)
+            {
+                foreach (string dislike in _chatContext.UserDislikes)
+                {
+                    ReadOnlyMemory<float> dislikeVector = await _embeddingService.GenerateVectorAsync(dislike);
+                    userDislikeVectors.Add(dislikeVector);
+                }
+            }
+        }
+
         /// <summary>
         /// Saves a news item to the vector store.
         /// </summary>
@@ -48,7 +64,49 @@ namespace LocalAIAgent.App.RAG
 
             newsItem.Vector = await _embeddingService.GenerateVectorAsync(newsItem.Content);
 
-            return await _newsVectorStore.UpsertAsync(newsItem);
+            if (userDislikeVectors.Count is 0)
+                await LoadUserDislikeVectorsAsync();
+
+            if (!NewsIsFilteredByUserPreferences(newsItem))
+            {
+                return await _newsVectorStore.UpsertAsync(newsItem);
+            }
+
+            return string.Empty;
+        }
+
+        private bool NewsIsFilteredByUserPreferences(NewsItem newsItem)
+        {
+            const float threshold = 0.85f;
+
+            foreach (ReadOnlyMemory<float> dislikeVector in userDislikeVectors)
+            {
+                float similarity = CosineSimilarity(newsItem.Vector, dislikeVector);
+                if (similarity > threshold)
+                {
+                    Console.WriteLine($"RAGPlugin: News item violates user preferences with similarity: {newsItem.Content}");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static float CosineSimilarity(ReadOnlyMemory<float> vectorA, ReadOnlyMemory<float> vectorB)
+        {
+            ReadOnlySpan<float> spanA = vectorA.Span;
+            ReadOnlySpan<float> spanB = vectorB.Span;
+
+            float dotProduct = 0, normA = 0, normB = 0;
+
+            for (int i = 0; i < spanA.Length; i++)
+            {
+                dotProduct += spanA[i] * spanB[i];
+                normA += spanA[i] * spanA[i];
+                normB += spanB[i] * spanB[i];
+            }
+
+            return dotProduct / ((float)Math.Sqrt(normA) * (float)Math.Sqrt(normB));
         }
 
         /// <summary>
