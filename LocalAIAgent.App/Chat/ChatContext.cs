@@ -10,6 +10,15 @@ namespace LocalAIAgent.App.Chat
         public string UserPrompt { get; set; } = string.Empty;
         public List<string> UserDislikes { get; set; } = [];
 
+        public string GetUserDislikesAsString()
+        {
+            if (UserDislikes.Count > 0)
+            {
+                return string.Join(", ", UserDislikes);
+            }
+            return string.Empty;
+        }
+
         internal bool IsArticleRelevant(SyndicationItem item)
         {
             if (item is not null)
