@@ -68,6 +68,8 @@ namespace LocalAIAgent.App.Extensions
             chatContext.UserDislikes = bannedWords;
             chatContext.UserPrompt = userPreferencesPrompt;
 
+            await kernel.InitializeVectorDatabase();
+
             await chatService.StartChat();
         }
 

@@ -44,5 +44,4 @@ kernelBuilder
 
 Kernel kernel = kernelBuilder.Build();
 
-await kernel.InitializeVectorDatabase();
 await kernel.StartAIChat(aiOptions);
