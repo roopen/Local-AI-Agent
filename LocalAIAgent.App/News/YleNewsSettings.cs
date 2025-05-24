@@ -4,11 +4,11 @@ namespace LocalAIAgent.App.News
 {
     internal class YleNewsSettings : INewsClientSettings
     {
-        public string ClientName { get => "YleNewsClient"; }
-        public static string UserAgent = "Mozilla/5.0";
-        public static string BaseUrl = "https://yle.fi/";
+        public string ClientName => "YleNewsClient";
+        public string BaseUrl => "https://yle.fi/";
+        public string UserAgent = "Mozilla/5.0";
 
-        public static string MainHeadlinesUrl = "/rss/uutiset/paauutiset";
+        public string MainHeadlinesUrl = "/rss/uutiset/paauutiset";
         // These contain duplicate news. Needs to be handled separately.
         //public static string FinanceNewsUrl = "rss/t/18-19274/fi";
         //public static string WorldNewsUrl = "/rss/t/18-34953/fi";

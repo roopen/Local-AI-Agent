@@ -2,22 +2,19 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class FoxNewsSettings : INewsClientSettings
+    internal class DeutscheWelleNewsSettings : INewsClientSettings
     {
-        public string ClientName => "FoxNewsClient";
-        public string BaseUrl => "https://moxie.foxnews.com/google-publisher/";
+        public string ClientName => "DeutscheWelleClient";
+        public string BaseUrl => "https://rss.dw.com/atom/";
         public string UserAgent = "Mozilla/5.0";
-        public string Host = "moxie.foxnews.com";
+        public string Host = "rss.dw.com";
 
-        public string UsaNewsUrl = "us.xml";
-        public string WorldNewsUrl = "world.xml";
+        public string TopNewsUrl = "rss-en-top";
 
         public List<string> GetNewsUrls()
         {
-            return
-            [
-                UsaNewsUrl,
-                WorldNewsUrl
+            return [
+                TopNewsUrl
             ];
         }
 
