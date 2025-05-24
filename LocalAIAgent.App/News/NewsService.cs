@@ -16,7 +16,7 @@ namespace LocalAIAgent.App.News
         [KernelFunction, Description("Get the latest news articles from various sources.")]
         public async Task<List<string>> GetNewsAsync()
         {
-            List<string> result = await ragService.FilterNewsAsync(chatContext.UserDislikes, 10);
+            List<string> result = await ragService.FilterNewsAsync(chatContext.UserDislikes, 20);
 
             return result;
         }

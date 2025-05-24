@@ -12,8 +12,8 @@ namespace LocalAIAgent.App.Chat
             "When asked about news, you curate the current news according to user's preferences " +
             "Try to find the most significant news. " +
             "Use the following template for news reporting and fill information from the json response: \n" +
-            "**Category:** Title - Summary (Source) [Link] \n The news information will be in json format. " +
-            "Keep your answers short. Be willing to discuss any news with the user.\n" +
+            "Category - Title - Summary (Source) [Link] \n The news information will be in json format. " +
+            "Keep your answers short, but display a large variety of news. Be willing to discuss any news with the user.\n" +
             "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
         public async Task StartChat()
