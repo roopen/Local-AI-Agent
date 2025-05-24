@@ -1,12 +1,13 @@
 # Local AI Agent - An Intelligent News Curator
 
-This project provides a .NET 9-based AI agent service for fetching and summarizing the latest news based on user preferences. It leverages modern C# features and integrates with Microsoft Semantic Kernel for AI-powered operations.
+This project provides a .NET 9-based AI agent service for fetching and summarizing the latest news based on user preferences.
 
 ## Features
 
-- Fetches current news summaries from YLE and Fox News RSS feeds
-- Designed for integration with AI agents and Semantic Kernel
+- Fetches current news summaries from various freely available RSS feeds from major news outlets
+- AI Agent is powered by Microsoft Semantic Kernel
 - Modern C# 13.0 syntax and .NET 9 support
+- Leverages RAG (Retrieval-Augmented Generation) for enhanced information retrieval. RAG is queried with vector embeddings to provide contextually relevant summaries.
 
 ## Requirements
 
