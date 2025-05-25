@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
-namespace LocalAIAgent.App.Storage
+namespace LocalAIAgent.App.RAG.Embedding
 {
     internal class EmbeddingService(IOptions<EmbeddingOptions> embeddingOptions, IHttpClientFactory httpClientFactory)
         : IEmbeddingGenerator<string, Embedding<float>>

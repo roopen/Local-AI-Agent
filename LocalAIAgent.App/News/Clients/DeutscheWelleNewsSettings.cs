@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.App.News.Clients
 {
     internal class DeutscheWelleNewsSettings : BaseNewsClientSettings
     {

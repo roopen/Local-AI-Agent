@@ -1,16 +1,18 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.App.News.Clients
 {
-    internal class YahooFinanceNewsSettings : BaseNewsClientSettings
+    internal class FoxNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "YahooFinanceClient";
-        public override string BaseUrl => "https://finance.yahoo.com/news";
+        public override string ClientName => "FoxNewsClient";
+        public override string BaseUrl => "https://moxie.foxnews.com/google-publisher";
 
         public override List<string> GetNewsUrls()
         {
-            return [
-                $"{BaseUrl}/rssindex",
+            return
+            [
+                $"{BaseUrl}/us.xml",
+                $"{BaseUrl}/world.xml",
             ];
         }
 

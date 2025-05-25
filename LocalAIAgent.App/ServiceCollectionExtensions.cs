@@ -1,6 +1,6 @@
 ﻿using LocalAIAgent.App.Chat;
 using LocalAIAgent.App.News;
-using LocalAIAgent.App.Storage;
+using LocalAIAgent.App.RAG.Embedding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;

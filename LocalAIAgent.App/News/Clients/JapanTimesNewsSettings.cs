@@ -1,17 +1,17 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.App.News.Clients
 {
-    internal class LeMondeNewsSettings : BaseNewsClientSettings
+    internal class JapanTimesNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "LeMondeClient";
-        public override string BaseUrl => "https://www.lemonde.fr/en/rss";
+        public override string ClientName => "JapanTimes";
+        public override string BaseUrl => "https://www.japantimes.co.jp";
 
         public override List<string> GetNewsUrls()
         {
             return
                 [
-                    $"{BaseUrl}/une.xml",
+                    $"{BaseUrl}/feed",
                 ];
         }
 
@@ -20,6 +20,10 @@ namespace LocalAIAgent.App.News
             services.AddHttpClient(ClientName, client =>
             {
                 client.BaseAddress = new Uri(BaseUrl);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = true
             });
         }
     }
