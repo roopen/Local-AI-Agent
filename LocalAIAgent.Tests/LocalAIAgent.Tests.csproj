@@ -17,7 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LocalAIAgent.App\LocalAIAgent.App.csproj" />
+    <ProjectReference Include="..\LocalAIAgent.ConsoleAppConsoleApp\LocalAIAgent.ConsoleApp.csproj" />
+    <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

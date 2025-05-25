@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.36105.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.App", "LocalAIAgent.App\LocalAIAgent.App.csproj", "{C7B47039-9708-4717-9A1F-BF8C4AAD1A3F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.ConsoleApp", "LocalAIAgent.ConsoleApp\LocalAIAgent.ConsoleApp.csproj", "{C7B47039-9708-4717-9A1F-BF8C4AAD1A3F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.Tests", "LocalAIAgent.Tests\LocalAIAgent.Tests.csproj", "{EAE6AD03-0E1D-8160-5795-EADED9D234BF}"
 EndProject

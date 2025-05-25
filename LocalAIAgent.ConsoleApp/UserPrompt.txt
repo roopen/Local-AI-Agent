@@ -1,0 +1,17 @@
+The user does not want to see any content that fits the following criteria:
+ -Eurovision
+ -celebrities
+ -royalty who hold no real power
+ -sports
+ -music
+ -movies
+ -entertainment
+ -local news
+ -news about Donald Trump in Finnish media (US media is allowed)
+ -any news in that mentions conspiracy theories, populism or right-wing extremism.
+ -advertisements
+ -sponsored content
+ -funny news
+ -peculiar news
+ -sensationalism
+ -clickbait

@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 
-namespace LocalAIAgent.App
+namespace LocalAIAgent.ConsoleApp
 {
     internal static class ChatSetup
     {
