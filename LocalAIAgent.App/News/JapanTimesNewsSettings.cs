@@ -2,14 +2,12 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class JapanTimesNewsSettings : INewsClientSettings
+    internal class JapanTimesNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "JapanTimes";
-        public string UserAgent = "Mozilla/5.0";
-        public string Host = "japantimes.co.jp";
-        public string BaseUrl => "https://www.japantimes.co.jp";
+        public override string ClientName => "JapanTimes";
+        public override string BaseUrl => "https://www.japantimes.co.jp";
 
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return
                 [
@@ -17,7 +15,7 @@ namespace LocalAIAgent.App.News
                 ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {

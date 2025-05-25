@@ -13,14 +13,14 @@ namespace LocalAIAgent.App.Extensions
     {
         internal static void AddNewsClients(this IServiceCollection services)
         {
-            List<INewsClientSettings> newsClientSettings = typeof(INewsClientSettings).Assembly
+            List<BaseNewsClientSettings> newsClientSettings = typeof(BaseNewsClientSettings).Assembly
                 .GetTypes()
-                .Where(t => typeof(INewsClientSettings).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+                .Where(t => typeof(BaseNewsClientSettings).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
                 .Select(Activator.CreateInstance)
-                .Cast<INewsClientSettings>()
+                .Cast<BaseNewsClientSettings>()
                 .ToList();
 
-            foreach (INewsClientSettings clientSettings in newsClientSettings)
+            foreach (BaseNewsClientSettings clientSettings in newsClientSettings)
             {
                 services.AddSingleton(clientSettings);
                 clientSettings.AddHttpClient(services);

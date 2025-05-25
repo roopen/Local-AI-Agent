@@ -2,21 +2,19 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class DeutscheWelleNewsSettings : INewsClientSettings
+    internal class DeutscheWelleNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "DeutscheWelleClient";
-        public string BaseUrl => "https://rss.dw.com/atom/";
-        public string UserAgent = "Mozilla/5.0";
-        public string Host = "rss.dw.com";
+        public override string ClientName => "DeutscheWelleClient";
+        public override string BaseUrl => "https://rss.dw.com/atom/";
 
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return [
                 $"{BaseUrl}/rss-en-top",
             ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {

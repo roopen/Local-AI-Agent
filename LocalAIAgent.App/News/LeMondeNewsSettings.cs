@@ -2,12 +2,12 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class LeMondeNewsSettings : INewsClientSettings
+    internal class LeMondeNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "LeMondeClient";
-        public string BaseUrl => "https://www.lemonde.fr/en/rss";
+        public override string ClientName => "LeMondeClient";
+        public override string BaseUrl => "https://www.lemonde.fr/en/rss";
 
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return
                 [
@@ -15,7 +15,7 @@ namespace LocalAIAgent.App.News
                 ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {
