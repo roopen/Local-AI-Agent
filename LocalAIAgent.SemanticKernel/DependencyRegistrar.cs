@@ -17,14 +17,14 @@ namespace LocalAIAgent.SemanticKernel
     {
         public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
         {
-            Kernel kernel = GetSemanticKernel();
+            IKernelBuilder kernelBuilder = GetSemanticKernelBuilder();
 
-            services.AddSingleton(sp => GetSemanticKernel());
+            services.AddSingleton(sp => kernelBuilder.Build());
 
             return services;
         }
 
-        private static Kernel GetSemanticKernel()
+        public static IKernelBuilder GetSemanticKernelBuilder()
         {
             IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 
@@ -59,9 +59,7 @@ namespace LocalAIAgent.SemanticKernel
                     endpoint: new Uri(aiOptions.EndpointUrl)
                 );
 
-            Kernel kernel = kernelBuilder.Build();
-
-            return kernel;
+            return kernelBuilder;
         }
 
         public static async Task LoadUserPromptIntoChatContext(this Kernel kernel, ChatService chatService, string userPreferencesPrompt)

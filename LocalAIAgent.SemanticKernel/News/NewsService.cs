@@ -22,9 +22,10 @@ namespace LocalAIAgent.SemanticKernel.News
             return result;
         }
 
-        internal async Task LoadAllNews()
+        internal async Task<int> LoadAllNews()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
+            int feedCount = 0;
 
             foreach (BaseNewsClientSettings settings in newsClientSettingsList)
             {
@@ -37,10 +38,14 @@ namespace LocalAIAgent.SemanticKernel.News
                     FilterNewsArticles(feed);
 
                     await SaveToVectorDatabaseAsync(feed);
+
+                    feedCount = feed.Items.Count();
                 }
             }
             stopwatch.Stop();
             Console.WriteLine($"NewsService: Loaded all news in {stopwatch.ElapsedMilliseconds} ms.");
+
+            return feedCount;
         }
 
         private async Task SaveToVectorDatabaseAsync(SyndicationFeed feed)
