@@ -50,5 +50,30 @@ namespace LocalAIAgent.Tests.UnitTests
             string expectedDateAsJson = System.Text.Json.JsonSerializer.Serialize(new DateTimeOffset());
             Assert.Contains(expectedDateAsJson, newsItemJson);
         }
+
+        // Create a test for json serialization
+        [Fact]
+        public void NewsItem_Serialization_Deserialization_Works()
+        {
+            // Arrange
+            SyndicationItem syndicationItem = new()
+            {
+                Title = new TextSyndicationContent("Test Title"),
+                Summary = new TextSyndicationContent("Test Summary"),
+                PublishDate = new DateTimeOffset(),
+            };
+            syndicationItem.Links.Add(new SyndicationLink(new Uri("http://example.com")));
+            NewsItem newsItem = new(syndicationItem);
+
+            // Act
+            string serializedNewsItem = System.Text.Json.JsonSerializer.Serialize(newsItem);
+
+            // Assert
+            Assert.False(string.IsNullOrWhiteSpace(serializedNewsItem));
+            Assert.True(serializedNewsItem.Contains("PublishDate", StringComparison.InvariantCultureIgnoreCase));
+            Assert.True(serializedNewsItem.Contains("Content", StringComparison.InvariantCultureIgnoreCase));
+            Assert.True(serializedNewsItem.Contains("Link", StringComparison.InvariantCultureIgnoreCase));
+            Assert.False(serializedNewsItem.Contains("Vector", StringComparison.InvariantCultureIgnoreCase));
+        }
     }
 }
