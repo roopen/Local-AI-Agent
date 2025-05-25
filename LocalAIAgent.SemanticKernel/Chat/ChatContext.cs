@@ -1,4 +1,5 @@
 ﻿using System.ServiceModel.Syndication;
+using System.Text.RegularExpressions;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
@@ -34,15 +35,27 @@ namespace LocalAIAgent.SemanticKernel.Chat
         /// </summary>
         private bool SimpleWordFilter(SyndicationItem item)
         {
-            if (UserDislikes.Any(dislike => item.Title is not null &&
-                    item.Title.Text.Contains(dislike, StringComparison.InvariantCultureIgnoreCase)))
+            foreach (string dislike in UserDislikes)
             {
-                return false;
-            }
-            if (UserDislikes.Any(dislike => item.Summary is not null &&
-                    item.Summary.Text.Contains(dislike, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                return false;
+                string pattern = $@"\b{Regex.Escape(dislike)}\b"; // Ensure whole word match
+
+                foreach (SyndicationCategory category in item.Categories)
+                {
+                    if (Regex.IsMatch(category.Name, pattern, RegexOptions.IgnoreCase))
+                    {
+                        return false;
+                    }
+                }
+
+                if (Regex.IsMatch(item.Title.Text, pattern, RegexOptions.IgnoreCase))
+                {
+                    return false;
+                }
+
+                if (item.Summary is not null && Regex.IsMatch(item.Summary.Text, pattern, RegexOptions.IgnoreCase))
+                {
+                    return false;
+                }
             }
 
             return true;

@@ -14,7 +14,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
         private readonly ChatContext _chatContext;
         private readonly InMemoryVectorStoreRecordCollection<string, GenericVectorData> _generalVectorStore;
         private readonly InMemoryVectorStoreRecordCollection<string, NewsItem> _newsVectorStore;
-        private readonly List<ReadOnlyMemory<float>> userDislikeVectors = [];
+        private readonly Dictionary<string, ReadOnlyMemory<float>> userDislikeVectors = [];
 
         public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService, ChatContext chatContext)
         {
@@ -49,7 +49,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                 foreach (string dislike in _chatContext.UserDislikes)
                 {
                     ReadOnlyMemory<float> dislikeVector = await _embeddingService.GenerateVectorAsync(dislike);
-                    userDislikeVectors.Add(dislikeVector);
+                    userDislikeVectors.TryAdd(dislike, dislikeVector);
                 }
             }
         }
@@ -79,12 +79,13 @@ namespace LocalAIAgent.SemanticKernel.RAG
         {
             const float threshold = 0.85f;
 
-            foreach (ReadOnlyMemory<float> dislikeVector in userDislikeVectors)
+            foreach ((string dislike, ReadOnlyMemory<float> dislikeVector) in userDislikeVectors)
             {
                 float similarity = CosineSimilarity(newsItem.Vector, dislikeVector);
                 if (similarity > threshold)
                 {
-                    Console.WriteLine($"RAGPlugin: News item violates user preferences with similarity: {newsItem.Content}");
+                    Console.WriteLine($"RAGPlugin: News item violates user dislike {dislike} " +
+                        $"with the following content: {newsItem.Content}");
                     return true;
                 }
             }
@@ -188,6 +189,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
         public async Task<List<string>> FilterNewsAsync(List<string> dislikes, int top = 1)
         {
             Dictionary<string, string> newsSummariesById = [];
+            int topPerDislike = GetTopPerDislike(dislikes, top);
 
             foreach (string dislike in dislikes)
             {
@@ -198,7 +200,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                     VectorProperty = x => x.DifferenceVector,
                 };
 
-                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, 1, options);
+                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, topPerDislike, options);
 
                 await foreach (VectorSearchResult<NewsItem> result in searchResults)
                 {
@@ -208,6 +210,12 @@ namespace LocalAIAgent.SemanticKernel.RAG
 
             Console.WriteLine($"RAGPlugin: found: {newsSummariesById.Values.Count} news articles.");
             return newsSummariesById.Values.Take(top).ToList();
+        }
+
+        private static int GetTopPerDislike(List<string> dislikes, int top)
+        {
+            if (dislikes.Count > top) return (int)Math.Ceiling(dislikes.Count / (double)top);
+            else return (int)Math.Ceiling((double)top / dislikes.Count);
         }
 
         private string ReadPdfContentAsText(string path)
