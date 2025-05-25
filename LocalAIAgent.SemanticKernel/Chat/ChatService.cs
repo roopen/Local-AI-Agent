@@ -10,7 +10,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences " +
-            "Try to find the most significant news. " +
+            "Try to find the most significant news using NewsService. " +
             "Use the following template for news reporting and fill information from the json response: \n" +
             "Category - Title - Summary (Date) [Link] \n The news information will be in json format. " +
             "Keep your answers short, but display a large variety of news. Be willing to discuss any news with the user.\n" +
