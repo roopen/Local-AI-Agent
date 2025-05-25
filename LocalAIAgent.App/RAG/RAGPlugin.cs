@@ -191,8 +191,6 @@ namespace LocalAIAgent.App.RAG
 
             foreach (string dislike in dislikes)
             {
-                Console.WriteLine($"RAGPlugin FilterNewsAsync - query: {dislike}");
-
                 ReadOnlyMemory<float> embedding = await _embeddingService.GenerateVectorAsync(dislike);
 
                 VectorSearchOptions<NewsItem> options = new()

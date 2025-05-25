@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using System.Diagnostics;
 
 namespace LocalAIAgent.App.Extensions
 {
@@ -61,6 +62,16 @@ namespace LocalAIAgent.App.Extensions
                 kernel.Services.GetService<ChatContext>()!
             );
 
+            await kernel.LoadUserPrompt(chatService);
+            await kernel.InitializeVectorDatabase();
+
+            await chatService.StartChat();
+        }
+
+        private static async Task LoadUserPrompt(this Kernel kernel, ChatService chatService)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
             string userPreferencesPrompt = GetUserPreferencesPrompt();
 
             List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
@@ -68,9 +79,8 @@ namespace LocalAIAgent.App.Extensions
             chatContext.UserDislikes = bannedWords;
             chatContext.UserPrompt = userPreferencesPrompt;
 
-            await kernel.InitializeVectorDatabase();
-
-            await chatService.StartChat();
+            stopwatch.Stop();
+            Console.WriteLine($"UserPrompt.txt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
         }
 
         /// <summary>
