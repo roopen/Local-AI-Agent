@@ -60,8 +60,8 @@ jobs:
     - name: Rename the executable
       run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/LocalAIAgent.ConsoleApp.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/LocalAIAgent.exe
 
-    - name: Remove the .pdp file
-      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/LocalAIAgent.ConsoleApp.pdb
+    - name: Remove .pdb files
+      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/*.pdb
 
     - name: Add empty UserPrompt.txt
       run: touch /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/UserPrompt.txt
