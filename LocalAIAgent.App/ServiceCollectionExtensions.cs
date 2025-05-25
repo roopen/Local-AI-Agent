@@ -53,12 +53,12 @@ namespace LocalAIAgent.App.Extensions
             else Console.WriteLine("Warning: NewsService is not registered in the kernel. Vector database initialization skipped.");
         }
 
-        internal static async Task StartAIChat(this Kernel kernel, AIOptions options)
+        internal static async Task StartAIChatInConsole(this Kernel kernel)
         {
             ChatService chatService = new(
                 kernel.Services.GetService<IChatCompletionService>()!,
                 kernel,
-                options,
+                kernel.Services.GetService<AIOptions>()!,
                 kernel.Services.GetService<ChatContext>()!
             );
 
