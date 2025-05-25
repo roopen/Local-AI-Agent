@@ -2,6 +2,7 @@
 using LocalAIAgent.App.RAG;
 using Microsoft.SemanticKernel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.ServiceModel.Syndication;
 using System.Xml;
 
@@ -23,7 +24,7 @@ namespace LocalAIAgent.App.News
 
         internal async Task LoadAllNews()
         {
-            Console.WriteLine("NewsService: LoadAllNews called");
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
             foreach (INewsClientSettings settings in newsClientSettingsList)
             {
@@ -38,6 +39,8 @@ namespace LocalAIAgent.App.News
                     await SaveToVectorDatabaseAsync(feed);
                 }
             }
+            stopwatch.Stop();
+            Console.WriteLine($"NewsService: Loaded all news in {stopwatch.ElapsedMilliseconds} ms.");
         }
 
         private async Task SaveToVectorDatabaseAsync(SyndicationFeed feed)
