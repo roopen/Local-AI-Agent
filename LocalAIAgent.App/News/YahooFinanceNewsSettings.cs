@@ -2,21 +2,19 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class YahooFinanceNewsSettings : INewsClientSettings
+    internal class YahooFinanceNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "YahooFinanceClient";
-        public string BaseUrl => "https://finance.yahoo.com/news/";
-        public string UserAgent = "Mozilla/5.0";
-        public string Host = "finance.yahoo.com";
+        public override string ClientName => "YahooFinanceClient";
+        public override string BaseUrl => "https://finance.yahoo.com/news";
 
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return [
                 $"{BaseUrl}/rssindex",
             ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {

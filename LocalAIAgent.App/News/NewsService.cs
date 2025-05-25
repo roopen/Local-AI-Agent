@@ -10,7 +10,7 @@ namespace LocalAIAgent.App.News
 {
     internal class NewsService(
         IHttpClientFactory httpClientFactory,
-        IEnumerable<INewsClientSettings> newsClientSettingsList,
+        IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
         RAGService ragService,
         ChatContext chatContext)
     {
@@ -26,7 +26,7 @@ namespace LocalAIAgent.App.News
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            foreach (INewsClientSettings settings in newsClientSettingsList)
+            foreach (BaseNewsClientSettings settings in newsClientSettingsList)
             {
                 using HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
 

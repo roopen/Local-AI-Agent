@@ -2,13 +2,12 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class YleNewsSettings : INewsClientSettings
+    internal class YleNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "YleNewsClient";
-        public string BaseUrl => "https://yle.fi/rss";
-        public string UserAgent = "Mozilla/5.0";
+        public override string ClientName => "YleNewsClient";
+        public override string BaseUrl => "https://yle.fi/rss";
 
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return
             [
@@ -16,7 +15,7 @@ namespace LocalAIAgent.App.News
             ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {

@@ -2,13 +2,21 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal interface INewsClientSettings
+    internal abstract class BaseNewsClientSettings
     {
-        string ClientName { get; }
-        string BaseUrl { get; }
+        public abstract string ClientName { get; }
+        public abstract string BaseUrl { get; }
+        public virtual string UserAgent => "Mozilla/5.0";
+        public string Host => GetHostFromBaseUrl();
 
-        List<string> GetNewsUrls();
+        private string GetHostFromBaseUrl()
+        {
+            Uri uri = new(BaseUrl);
+            return uri.Host;
+        }
 
-        void AddHttpClient(IServiceCollection services);
+        public abstract List<string> GetNewsUrls();
+
+        public abstract void AddHttpClient(IServiceCollection services);
     }
 }

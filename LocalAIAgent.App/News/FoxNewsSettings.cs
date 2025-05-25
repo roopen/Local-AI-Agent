@@ -2,26 +2,21 @@
 
 namespace LocalAIAgent.App.News
 {
-    internal class FoxNewsSettings : INewsClientSettings
+    internal class FoxNewsSettings : BaseNewsClientSettings
     {
-        public string ClientName => "FoxNewsClient";
-        public string BaseUrl => "https://moxie.foxnews.com/google-publisher/";
-        public string UserAgent = "Mozilla/5.0";
-        public string Host = "moxie.foxnews.com";
+        public override string ClientName => "FoxNewsClient";
+        public override string BaseUrl => "https://moxie.foxnews.com/google-publisher";
 
-        public string UsaNewsUrl = "us.xml";
-        public string WorldNewsUrl = "world.xml";
-
-        public List<string> GetNewsUrls()
+        public override List<string> GetNewsUrls()
         {
             return
             [
-                UsaNewsUrl,
-                WorldNewsUrl
+                $"{BaseUrl}/us.xml",
+                $"{BaseUrl}/world.xml",
             ];
         }
 
-        public void AddHttpClient(IServiceCollection services)
+        public override void AddHttpClient(IServiceCollection services)
         {
             services.AddHttpClient(ClientName, client =>
             {

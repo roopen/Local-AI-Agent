@@ -5,10 +5,10 @@ namespace LocalAIAgent.Tests.ArchitecturalTests
     public class ArchitectureTests
     {
         [Fact]
-        public void All_INewsClientSettings_Implementations_Should_End_With_NewsSettings()
+        public void All_BaseNewsClientSettings_Implementations_Should_End_With_NewsSettings()
         {
             // Arrange
-            Type interfaceType = typeof(INewsClientSettings);
+            Type interfaceType = typeof(BaseNewsClientSettings);
 
             // Act
             IEnumerable<Type> types = interfaceType.Assembly.GetTypes()
