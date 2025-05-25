@@ -1,6 +1,6 @@
 ﻿namespace LocalAIAgent.SemanticKernel.Chat
 {
-    internal class AIOptions
+    public class AIOptions
     {
         public required string ModelId { get; set; }
         public required string EndpointUrl { get; set; }

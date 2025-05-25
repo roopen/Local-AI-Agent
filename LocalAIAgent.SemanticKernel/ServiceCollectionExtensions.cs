@@ -7,8 +7,17 @@ using Microsoft.SemanticKernel;
 
 namespace LocalAIAgent.SemanticKernel.Extensions
 {
-    internal static class ServiceCollectionExtensions
+    public static class ServiceCollectionExtensions
     {
+        public static async Task InitializeVectorDatabase(this Kernel kernel)
+        {
+            NewsService? newsService = kernel.Services.GetService<NewsService>();
+
+            if (newsService is not null) await newsService.LoadAllNews();
+
+            else Console.WriteLine("Warning: NewsService is not registered in the kernel. Vector database initialization skipped.");
+        }
+
         internal static void AddNewsClients(this IServiceCollection services)
         {
             List<BaseNewsClientSettings> newsClientSettings = typeof(BaseNewsClientSettings).Assembly
@@ -40,15 +49,6 @@ namespace LocalAIAgent.SemanticKernel.Extensions
             services.Configure<EmbeddingOptions>(configuration.GetSection("EmbeddingOptions"));
 
             return configuration;
-        }
-
-        internal static async Task InitializeVectorDatabase(this Kernel kernel)
-        {
-            NewsService? newsService = kernel.Services.GetService<NewsService>();
-
-            if (newsService is not null) await newsService.LoadAllNews();
-
-            else Console.WriteLine("Warning: NewsService is not registered in the kernel. Vector database initialization skipped.");
         }
     }
 }

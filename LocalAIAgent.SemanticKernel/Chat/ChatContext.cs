@@ -5,7 +5,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
     /// <summary>
     /// Contains the context, state, and preferences of the chat session.
     /// </summary>
-    internal class ChatContext
+    public class ChatContext
     {
         public string UserPrompt { get; set; } = string.Empty;
         public List<string> UserDislikes { get; set; } = [];
