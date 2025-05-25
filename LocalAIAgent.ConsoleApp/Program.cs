@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.App;
+﻿using LocalAIAgent.ConsoleApp;
 using LocalAIAgent.SemanticKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
