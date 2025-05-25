@@ -1,18 +1,17 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.App.News.Clients
 {
-    internal class FoxNewsSettings : BaseNewsClientSettings
+    internal class YleNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "FoxNewsClient";
-        public override string BaseUrl => "https://moxie.foxnews.com/google-publisher";
+        public override string ClientName => "YleNewsClient";
+        public override string BaseUrl => "https://yle.fi/rss";
 
         public override List<string> GetNewsUrls()
         {
             return
             [
-                $"{BaseUrl}/us.xml",
-                $"{BaseUrl}/world.xml",
+                $"{BaseUrl}/uutiset/paauutiset",
             ];
         }
 
@@ -22,7 +21,6 @@ namespace LocalAIAgent.App.News
             {
                 client.BaseAddress = new Uri(BaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
-                client.DefaultRequestHeaders.Host = Host;
             });
         }
     }

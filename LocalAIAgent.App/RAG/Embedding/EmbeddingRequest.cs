@@ -1,4 +1,4 @@
-﻿namespace LocalAIAgent.App.Storage
+﻿namespace LocalAIAgent.App.RAG.Embedding
 {
     internal class EmbeddingRequest
     {

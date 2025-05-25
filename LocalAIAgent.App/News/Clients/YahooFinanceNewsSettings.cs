@@ -1,17 +1,16 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.App.News.Clients
 {
-    internal class YleNewsSettings : BaseNewsClientSettings
+    internal class YahooFinanceNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "YleNewsClient";
-        public override string BaseUrl => "https://yle.fi/rss";
+        public override string ClientName => "YahooFinanceClient";
+        public override string BaseUrl => "https://finance.yahoo.com/news";
 
         public override List<string> GetNewsUrls()
         {
-            return
-            [
-                $"{BaseUrl}/uutiset/paauutiset",
+            return [
+                $"{BaseUrl}/rssindex",
             ];
         }
 
@@ -21,6 +20,7 @@ namespace LocalAIAgent.App.News
             {
                 client.BaseAddress = new Uri(BaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+                client.DefaultRequestHeaders.Host = Host;
             });
         }
     }

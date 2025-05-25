@@ -2,7 +2,7 @@
 using LocalAIAgent.App.Extensions;
 using LocalAIAgent.App.News;
 using LocalAIAgent.App.RAG;
-using LocalAIAgent.App.Storage;
+using LocalAIAgent.App.RAG.Embedding;
 using LocalAIAgent.App.Time;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
