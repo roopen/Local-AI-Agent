@@ -63,6 +63,9 @@ jobs:
     - name: Remove the .pdp file
       run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/LocalAIAgent.ConsoleApp.pdb
 
+    - name: Add empty UserPrompt.txt
+      run: touch /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/UserPrompt.txt
+
     - name: Zip the publish folder
       run: zip -j LocalAIAgent.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/*
 
