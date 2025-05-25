@@ -53,9 +53,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-
+        
     - name: Publish as Single Executable
-      run: dotnet publish -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
+      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/LocalAIAgent.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
 
     - name: Rename the executable
       run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.ConsoleApp/bin/Release/net9.0/win-x64/publish/LocalAIAgent.ConsoleApp.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.App/bin/Release/net9.0/win-x64/publish/LocalAIAgent.exe
