@@ -2,6 +2,8 @@
 
 This project provides a .NET 9-based AI agent service for fetching and summarizing the latest news based on user preferences.
 
+NOTE: Currently very much a Proof of Concept.
+
 ## Features
 
 - Fetches current news summaries from various freely available RSS feeds from major news outlets
