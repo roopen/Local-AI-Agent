@@ -4,7 +4,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using System.Text;
 
-namespace LocalAIAgent.App.Chat
+namespace LocalAIAgent.SemanticKernel.Chat
 {
     internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
     {
@@ -72,7 +72,7 @@ namespace LocalAIAgent.App.Chat
             return unwantedTopics;
         }
 
-        private OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings(AIOptions options, string systemPrompt, bool allowFunctionUse = true)
+        private static OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings(AIOptions options, string systemPrompt, bool allowFunctionUse = true)
         {
             return new OpenAIPromptExecutionSettings
             {

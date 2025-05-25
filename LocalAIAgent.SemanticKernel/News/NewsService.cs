@@ -1,12 +1,12 @@
-﻿using LocalAIAgent.App.Chat;
-using LocalAIAgent.App.RAG;
+﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.RAG;
 using Microsoft.SemanticKernel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.ServiceModel.Syndication;
 using System.Xml;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.SemanticKernel.News
 {
     internal class NewsService(
         IHttpClientFactory httpClientFactory,

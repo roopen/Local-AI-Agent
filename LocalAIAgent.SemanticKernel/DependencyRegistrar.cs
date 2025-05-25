@@ -1,16 +1,18 @@
-﻿using LocalAIAgent.App.Chat;
-using LocalAIAgent.App.Extensions;
-using LocalAIAgent.App.News;
-using LocalAIAgent.App.RAG;
-using LocalAIAgent.App.RAG.Embedding;
-using LocalAIAgent.App.Time;
+﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.Extensions;
+using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.RAG;
+using LocalAIAgent.SemanticKernel.RAG.Embedding;
+using LocalAIAgent.SemanticKernel.Time;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using NodaTime;
+using System.Diagnostics;
 
-namespace LocalAIAgent.App
+namespace LocalAIAgent.SemanticKernel
 {
     public static class DependencyRegistrar
     {
@@ -18,7 +20,7 @@ namespace LocalAIAgent.App
         {
             Kernel kernel = GetSemanticKernel();
 
-            services.AddSingleton<Kernel>(sp => GetSemanticKernel());
+            services.AddSingleton(sp => GetSemanticKernel());
 
             return services;
         }
@@ -59,7 +61,55 @@ namespace LocalAIAgent.App
                 );
 
             Kernel kernel = kernelBuilder.Build();
+
             return kernel;
+        }
+
+        public static async Task StartAIChatInConsole(this Kernel kernel)
+        {
+            ChatService chatService = new(
+                kernel.Services.GetService<IChatCompletionService>()!,
+                kernel,
+                kernel.Services.GetService<AIOptions>()!,
+                kernel.Services.GetService<ChatContext>()!
+            );
+
+            await kernel.LoadUserPrompt(chatService);
+            await kernel.InitializeVectorDatabase();
+
+            await chatService.StartChat();
+        }
+
+        private static async Task LoadUserPrompt(this Kernel kernel, ChatService chatService)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            string userPreferencesPrompt = GetUserPreferencesPrompt();
+
+            List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
+            ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
+            chatContext.UserDislikes = bannedWords;
+            chatContext.UserPrompt = userPreferencesPrompt;
+
+            stopwatch.Stop();
+            Console.WriteLine($"UserPrompt.txt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
+        }
+
+        /// <summary>
+        /// Attempts to read a user preferences prompt from ./UserPrompt.txt.
+        /// </summary>
+        private static string GetUserPreferencesPrompt()
+        {
+            if (!File.Exists("UserPrompt.txt"))
+            {
+                Console.WriteLine("UserPrompt.txt not found.");
+                return string.Empty;
+            }
+            else
+            {
+                Console.WriteLine("UserPrompt.txt found.");
+                return File.ReadAllText("UserPrompt.txt");
+            }
         }
     }
 }

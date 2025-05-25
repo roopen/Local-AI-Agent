@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.App.Chat;
+﻿using LocalAIAgent.SemanticKernel.Chat;
 using System.ServiceModel.Syndication;
 
 namespace LocalAIAgent.Tests.UnitTests

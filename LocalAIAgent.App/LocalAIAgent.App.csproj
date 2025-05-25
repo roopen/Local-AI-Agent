@@ -39,4 +39,8 @@
   	<InternalsVisibleTo Include="LocalAIAgent.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
+  </ItemGroup>
+
 </Project>

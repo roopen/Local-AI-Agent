@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.SemanticKernel.News
 {
     internal abstract class BaseNewsClientSettings
     {

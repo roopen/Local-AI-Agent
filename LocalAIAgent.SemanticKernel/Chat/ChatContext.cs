@@ -1,6 +1,6 @@
 ﻿using System.ServiceModel.Syndication;
 
-namespace LocalAIAgent.App.Chat
+namespace LocalAIAgent.SemanticKernel.Chat
 {
     /// <summary>
     /// Contains the context, state, and preferences of the chat session.

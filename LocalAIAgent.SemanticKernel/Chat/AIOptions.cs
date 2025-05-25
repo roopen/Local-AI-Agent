@@ -1,4 +1,4 @@
-﻿namespace LocalAIAgent.App.Chat
+﻿namespace LocalAIAgent.SemanticKernel.Chat
 {
     internal class AIOptions
     {

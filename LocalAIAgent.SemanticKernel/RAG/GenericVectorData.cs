@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.VectorData;
 
-namespace LocalAIAgent.App.RAG
+namespace LocalAIAgent.SemanticKernel.RAG
 {
     internal partial class RAGService
     {

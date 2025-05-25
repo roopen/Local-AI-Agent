@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.App.News;
+﻿using LocalAIAgent.SemanticKernel.News;
 
 namespace LocalAIAgent.Tests.ArchitecturalTests
 {
