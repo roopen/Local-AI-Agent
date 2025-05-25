@@ -1,4 +1,4 @@
-﻿namespace LocalAIAgent.App.RAG.Embedding
+﻿namespace LocalAIAgent.SemanticKernel.RAG.Embedding
 {
     internal class EmbeddingRequest
     {

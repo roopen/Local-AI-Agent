@@ -1,12 +1,12 @@
-﻿using LocalAIAgent.App.Chat;
-using LocalAIAgent.App.News;
+﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
-namespace LocalAIAgent.App.RAG
+namespace LocalAIAgent.SemanticKernel.RAG
 {
     internal partial class RAGService
     {

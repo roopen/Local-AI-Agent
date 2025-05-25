@@ -1,13 +1,11 @@
-﻿using LocalAIAgent.App.Chat;
-using LocalAIAgent.App.News;
-using LocalAIAgent.App.RAG.Embedding;
+﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.RAG.Embedding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using System.Diagnostics;
 
-namespace LocalAIAgent.App.Extensions
+namespace LocalAIAgent.SemanticKernel.Extensions
 {
     internal static class ServiceCollectionExtensions
     {
@@ -51,53 +49,6 @@ namespace LocalAIAgent.App.Extensions
             if (newsService is not null) await newsService.LoadAllNews();
 
             else Console.WriteLine("Warning: NewsService is not registered in the kernel. Vector database initialization skipped.");
-        }
-
-        internal static async Task StartAIChatInConsole(this Kernel kernel)
-        {
-            ChatService chatService = new(
-                kernel.Services.GetService<IChatCompletionService>()!,
-                kernel,
-                kernel.Services.GetService<AIOptions>()!,
-                kernel.Services.GetService<ChatContext>()!
-            );
-
-            await kernel.LoadUserPrompt(chatService);
-            await kernel.InitializeVectorDatabase();
-
-            await chatService.StartChat();
-        }
-
-        private static async Task LoadUserPrompt(this Kernel kernel, ChatService chatService)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            string userPreferencesPrompt = GetUserPreferencesPrompt();
-
-            List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
-            ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
-            chatContext.UserDislikes = bannedWords;
-            chatContext.UserPrompt = userPreferencesPrompt;
-
-            stopwatch.Stop();
-            Console.WriteLine($"UserPrompt.txt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
-        }
-
-        /// <summary>
-        /// Attempts to read a user preferences prompt from ./UserPrompt.txt.
-        /// </summary>
-        static string GetUserPreferencesPrompt()
-        {
-            if (!File.Exists("UserPrompt.txt"))
-            {
-                Console.WriteLine("UserPrompt.txt not found.");
-                return string.Empty;
-            }
-            else
-            {
-                Console.WriteLine("UserPrompt.txt found.");
-                return File.ReadAllText("UserPrompt.txt");
-            }
         }
     }
 }

@@ -3,7 +3,7 @@ using NodaTime;
 using System.ComponentModel;
 using System.Globalization;
 
-namespace LocalAIAgent.App.Time
+namespace LocalAIAgent.SemanticKernel.Time
 {
     internal class TimeService(IClock clock)
     {

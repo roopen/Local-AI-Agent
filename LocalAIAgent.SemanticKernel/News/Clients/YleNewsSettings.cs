@@ -1,18 +1,18 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News.Clients
+namespace LocalAIAgent.SemanticKernel.News.Clients
 {
-    internal class LeMondeNewsSettings : BaseNewsClientSettings
+    internal class YleNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "LeMondeClient";
-        public override string BaseUrl => "https://www.lemonde.fr/en/rss";
+        public override string ClientName => "YleNewsClient";
+        public override string BaseUrl => "https://yle.fi/rss";
 
         public override List<string> GetNewsUrls()
         {
             return
-                [
-                    $"{BaseUrl}/une.xml",
-                ];
+            [
+                $"{BaseUrl}/uutiset/paauutiset",
+            ];
         }
 
         public override void AddHttpClient(IServiceCollection services)
@@ -20,6 +20,7 @@ namespace LocalAIAgent.App.News.Clients
             services.AddHttpClient(ClientName, client =>
             {
                 client.BaseAddress = new Uri(BaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             });
         }
     }

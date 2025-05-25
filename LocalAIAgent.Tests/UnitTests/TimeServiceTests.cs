@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.App.Time;
+﻿using LocalAIAgent.SemanticKernel.Time;
 using Moq;
 using NodaTime;
 using System.Globalization;

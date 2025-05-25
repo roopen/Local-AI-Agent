@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LocalAIAgent.App.News.Clients
+namespace LocalAIAgent.SemanticKernel.News.Clients
 {
     internal class JapanTimesNewsSettings : BaseNewsClientSettings
     {

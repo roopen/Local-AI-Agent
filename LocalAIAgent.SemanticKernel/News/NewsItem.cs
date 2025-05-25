@@ -1,10 +1,10 @@
-﻿using LocalAIAgent.App.RAG;
+﻿using LocalAIAgent.SemanticKernel.RAG;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Data;
 using System.ServiceModel.Syndication;
 using System.Text.Json.Serialization;
 
-namespace LocalAIAgent.App.News
+namespace LocalAIAgent.SemanticKernel.News
 {
     internal class NewsItem : BaseVectorData
     {
