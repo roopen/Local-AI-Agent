@@ -362,5 +362,5 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /UserPrompt.txt
-/LocalAIAgent.App/UserPrompt.txt
+/LocalAIAgent.ConsoleApp/UserPrompt.txt
 *.pdf
