@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
-    internal class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
+    public class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences " +

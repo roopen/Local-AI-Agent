@@ -1,5 +1,5 @@
-﻿using LocalAIAgent.SemanticKernel;
-using LocalAIAgent.SemanticKernel.Extensions;
+﻿using LocalAIAgent.App;
+using LocalAIAgent.SemanticKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

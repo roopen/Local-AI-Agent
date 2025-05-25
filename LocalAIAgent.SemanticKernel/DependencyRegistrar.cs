@@ -8,7 +8,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
 using NodaTime;
 using System.Diagnostics;
 
@@ -65,26 +64,9 @@ namespace LocalAIAgent.SemanticKernel
             return kernel;
         }
 
-        public static async Task StartAIChatInConsole(this Kernel kernel)
-        {
-            ChatService chatService = new(
-                kernel.Services.GetService<IChatCompletionService>()!,
-                kernel,
-                kernel.Services.GetService<AIOptions>()!,
-                kernel.Services.GetService<ChatContext>()!
-            );
-
-            await kernel.LoadUserPrompt(chatService);
-            await kernel.InitializeVectorDatabase();
-
-            await chatService.StartChat();
-        }
-
-        private static async Task LoadUserPrompt(this Kernel kernel, ChatService chatService)
+        public static async Task LoadUserPromptIntoChatContext(this Kernel kernel, ChatService chatService, string userPreferencesPrompt)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-
-            string userPreferencesPrompt = GetUserPreferencesPrompt();
 
             List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
             ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
@@ -92,24 +74,7 @@ namespace LocalAIAgent.SemanticKernel
             chatContext.UserPrompt = userPreferencesPrompt;
 
             stopwatch.Stop();
-            Console.WriteLine($"UserPrompt.txt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
-        }
-
-        /// <summary>
-        /// Attempts to read a user preferences prompt from ./UserPrompt.txt.
-        /// </summary>
-        private static string GetUserPreferencesPrompt()
-        {
-            if (!File.Exists("UserPrompt.txt"))
-            {
-                Console.WriteLine("UserPrompt.txt not found.");
-                return string.Empty;
-            }
-            else
-            {
-                Console.WriteLine("UserPrompt.txt found.");
-                return File.ReadAllText("UserPrompt.txt");
-            }
+            Console.WriteLine($"User preferences prompt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
         }
     }
 }
