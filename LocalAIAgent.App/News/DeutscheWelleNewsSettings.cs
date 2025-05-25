@@ -9,12 +9,10 @@ namespace LocalAIAgent.App.News
         public string UserAgent = "Mozilla/5.0";
         public string Host = "rss.dw.com";
 
-        public string TopNewsUrl = "rss-en-top";
-
         public List<string> GetNewsUrls()
         {
             return [
-                TopNewsUrl
+                $"{BaseUrl}/rss-en-top",
             ];
         }
 

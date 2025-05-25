@@ -9,12 +9,10 @@ namespace LocalAIAgent.App.News
         public string UserAgent = "Mozilla/5.0";
         public string Host = "finance.yahoo.com";
 
-        public string RssIndexUrl = "rssindex";
-
         public List<string> GetNewsUrls()
         {
             return [
-                RssIndexUrl
+                $"{BaseUrl}/rssindex",
             ];
         }
 

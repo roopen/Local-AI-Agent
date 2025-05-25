@@ -5,15 +5,13 @@ namespace LocalAIAgent.App.News
     internal class LeMondeNewsSettings : INewsClientSettings
     {
         public string ClientName => "LeMondeClient";
-
-        public string BaseUrl => "https://www.lemonde.fr/en/rss/";
-
-        public string TopNews = "une.xml";
+        public string BaseUrl => "https://www.lemonde.fr/en/rss";
 
         public List<string> GetNewsUrls()
         {
-            return [
-                TopNews,
+            return
+                [
+                    $"{BaseUrl}/une.xml",
                 ];
         }
 
