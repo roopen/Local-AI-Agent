@@ -1,15 +1,50 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
+import ChatMessage from '../clients/ChatMessage';
 
 function ChatComponent() {
-    const [messages, setMessages] = useState<string[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
 
     useEffect(() => {
         setConnection(getConnection());
+    }, []);
+
+    useEffect(() => {
+        const cleanup = onMessageReceived((msg) => {
+            console.log(msg.user + ': ' + msg.message);
+            if (!msg || msg.message === null || msg.message === undefined) return;
+
+            setMessages(prevMessages => {
+                console.log('messages length: ' + prevMessages.length);
+
+                if (prevMessages.length > 0) {
+                    const lastMessage = prevMessages[prevMessages.length - 1];
+
+                    console.log("Previous message:", lastMessage.message);
+                    console.log("Is instance of ChatMessage:", lastMessage instanceof ChatMessage);
+
+                    // Check if the new message can be appended to the last message
+                    if (lastMessage.tryAppend(msg)) {
+                        // If appended, return a new array with the last message updated
+                        return [...prevMessages.slice(0, -1), lastMessage];
+                    } else {
+                        // If not appended, add the new message to the end
+                        return [...prevMessages, msg];
+                    }
+                }
+                // If no previous messages, just add the new message
+                return [...prevMessages, msg];
+            });
+        });
+
+        // Clean up the listener when the component unmounts or the effect re-runs
+        return () => {
+            cleanup();
+        };
     }, []);
 
     useEffect(() => {
@@ -27,11 +62,6 @@ function ChatComponent() {
             // If already connected or connecting, just update the state
             setIsConnected(connection.state === HubConnectionState.Connected);
         }
-
-
-        onMessageReceived((user, message) => {
-            setMessages(prevMessages => [...prevMessages, `${user}: ${message}`]);
-        });
 
         // Clean up connection on component unmount
         return () => {
@@ -53,14 +83,14 @@ function ChatComponent() {
     };
 
     return (
-        <div style={{ maxWidth: 400, margin: '0 auto' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
             <div style={{ border: '1px solid #ccc', padding: 10, minHeight: 200, marginBottom: 10 }}>
                 {messages.length === 0 ? (
                     <p>No messages yet.</p>
                 ) : (
                     messages.map((msg, idx) => (
                         <div key={idx} style={{ margin: '5px 0' }}>
-                            {msg}
+                            {msg.user}: {msg.message}
                         </div>
                     ))
                 )}
@@ -82,7 +112,3 @@ function ChatComponent() {
 }
 
 export default ChatComponent;
-
-function useRef(arg0: HubConnection) {
-    throw new Error('Function not implemented.');
-}

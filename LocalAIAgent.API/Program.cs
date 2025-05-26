@@ -1,4 +1,5 @@
 using LocalAIAgent.API.Hubs;
+using LocalAIAgent.SemanticKernel;
 
 namespace LocalAIAgent.API
 {
@@ -12,6 +13,7 @@ namespace LocalAIAgent.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
+            builder.Services.AddSemanticKernel();
 
             builder.Services.AddCors(options =>
             {
