@@ -13,6 +13,16 @@ namespace LocalAIAgent.API
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowSpecificOrigin",
+                    policy => policy.WithOrigins("http://localhost:53146") // Set the allowed frontend URL
+                                    .AllowAnyMethod()
+                                    .AllowAnyHeader()
+                                    .AllowCredentials()); // This enables cookies/auth tokens
+            });
+
+
             WebApplication app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -26,6 +36,8 @@ namespace LocalAIAgent.API
                     context.Response.Redirect("/swagger");
                     return Task.CompletedTask;
                 });
+
+                app.UseCors("AllowSpecificOrigin");
             }
 
             app.UseHttpsRedirection();
@@ -33,7 +45,7 @@ namespace LocalAIAgent.API
             app.UseAuthorization();
 
             app.MapControllers();
-            app.MapHub<ChatHub>("/chatHub");
+            app.MapHub<ChatHub>("/chatHub").RequireCors("AllowSpecificOrigin");
 
             app.Run();
         }
