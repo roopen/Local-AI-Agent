@@ -20,5 +20,23 @@ namespace LocalAIAgent.Tests.ArchitecturalTests
                 Assert.EndsWith("NewsSettings", type.Name);
             }
         }
+
+        [Fact]
+        public void SemanticKernel_Project_Should_Not_Reference_Other_Projects()
+        {
+            // Arrange
+            System.Reflection.Assembly semanticKernelAssembly = typeof(SemanticKernel.DependencyRegistrar).Assembly;
+            System.Reflection.AssemblyName[] referencedAssemblies = semanticKernelAssembly.GetReferencedAssemblies();
+
+            // Act
+            // Assuming all project assemblies in the solution start with "LocalAIAgent" except "SemanticKernel"
+            List<System.Reflection.AssemblyName> forbiddenReferences = referencedAssemblies
+                .Where(a => a.Name != semanticKernelAssembly.GetName().Name && a.Name!.StartsWith("LocalAIAgent"))
+                .ToList();
+
+            // Assert
+            Assert.Empty(forbiddenReferences);
+        }
+
     }
 }
