@@ -2,7 +2,6 @@
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
-using System.Text;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
@@ -17,16 +16,13 @@ namespace LocalAIAgent.SemanticKernel.Chat
             "Keep your answers short, but display a large variety of news. Be willing to discuss any news with the user.\n" +
             "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
-        public async Task StartChat()
-        {
-            ChatHistory chatHistory = [];
-
-            StringBuilder fullAssistantContent = new();
-
-            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
+        public readonly ChatHistory chatHistory = [];
+        private readonly OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
                 options,
                 ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString());
 
+        public async Task StartChat()
+        {
             while (true)
             {
                 Console.Write("User: ");
@@ -35,18 +31,25 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 chatHistory.AddUserMessage(input);
                 Console.WriteLine("Assistant: ");
 
-                await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                    chatHistory,
-                    openAiSettings,
-                    kernel)
-                    .ConfigureAwait(false))
+                await foreach (StreamingChatMessageContent? content in GetChatStreamAsync().ConfigureAwait(false))
                 {
                     Console.Write(content.Content);
-                    fullAssistantContent.Append(content.Content);
                 }
 
-                chatHistory.AddAssistantMessage(fullAssistantContent.ToString());
                 Console.WriteLine();
+            }
+        }
+
+        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync()
+        {
+            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
+                                chatHistory,
+                                openAiSettings,
+                                kernel)
+                                .ConfigureAwait(false))
+            {
+                chatHistory.AddAssistantMessage(content.Content ?? string.Empty);
+                yield return content;
             }
         }
 

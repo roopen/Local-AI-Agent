@@ -14,4 +14,13 @@
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  	<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  	<AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
 </Project>
