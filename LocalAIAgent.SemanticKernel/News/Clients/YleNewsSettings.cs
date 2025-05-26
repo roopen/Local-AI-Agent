@@ -11,7 +11,7 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
         {
             return
             [
-                $"{BaseUrl}/uutiset/paauutiset",
+                $"{BaseUrl}/news",
             ];
         }
 

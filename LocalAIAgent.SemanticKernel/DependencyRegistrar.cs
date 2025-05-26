@@ -66,9 +66,11 @@ namespace LocalAIAgent.SemanticKernel
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            List<string> bannedWords = await chatService.GetUnwantedTopics(userPreferencesPrompt);
-            ChatContext chatContext = kernel.Services.GetService<ChatContext>()!;
-            chatContext.UserDislikes = bannedWords;
+            List<string> dislikedTopics = await chatService.GetDislikedTopicsList(userPreferencesPrompt);
+            List<string> wantedTopics = await chatService.GetInterestingTopicsList(userPreferencesPrompt);
+            ChatContext chatContext = kernel.Services.GetRequiredService<ChatContext>();
+            chatContext.UserDislikes = dislikedTopics;
+            chatContext.UserInterests = wantedTopics;
             chatContext.UserPrompt = userPreferencesPrompt;
 
             stopwatch.Stop();

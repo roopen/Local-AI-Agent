@@ -17,7 +17,7 @@ namespace LocalAIAgent.SemanticKernel.News
         [KernelFunction, Description("Get the latest news articles from various sources.")]
         public async Task<List<string>> GetNewsAsync()
         {
-            List<string> result = await ragService.FilterNewsAsync(chatContext.UserDislikes, 20);
+            List<string> result = await ragService.SearchNewsAsync(chatContext.UserInterests, 30);
 
             return result;
         }

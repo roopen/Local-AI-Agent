@@ -48,7 +48,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
             {
                 foreach (string dislike in _chatContext.UserDislikes)
                 {
-                    ReadOnlyMemory<float> dislikeVector = await _embeddingService.GenerateVectorAsync(dislike);
+                    ReadOnlyMemory<float> dislikeVector = await _embeddingService.GenerateVectorAsync("I don't want content related to " + dislike);
                     userDislikeVectors.TryAdd(dislike, dislikeVector);
                 }
             }
@@ -77,7 +77,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
 
         private bool NewsIsFilteredByUserPreferences(NewsItem newsItem)
         {
-            const float threshold = 0.85f;
+            const float threshold = 0.90f;
 
             foreach ((string dislike, ReadOnlyMemory<float> dislikeVector) in userDislikeVectors)
             {
@@ -189,7 +189,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
         public async Task<List<string>> FilterNewsAsync(List<string> dislikes, int top = 1)
         {
             Dictionary<string, string> newsSummariesById = [];
-            int topPerDislike = GetTopPerDislike(dislikes, top);
+            int topPerDislike = GetTopPerTopic(dislikes, top);
 
             foreach (string dislike in dislikes)
             {
@@ -212,7 +212,33 @@ namespace LocalAIAgent.SemanticKernel.RAG
             return newsSummariesById.Values.Take(top).ToList();
         }
 
-        private static int GetTopPerDislike(List<string> dislikes, int top)
+        public async Task<List<string>> SearchNewsAsync(List<string> interests, int top = 1)
+        {
+            Dictionary<string, string> newsSummariesById = [];
+            int topPerInterest = GetTopPerTopic(interests, top);
+
+            foreach (string interest in interests)
+            {
+                ReadOnlyMemory<float> embedding = await _embeddingService.GenerateVectorAsync(interest);
+
+                VectorSearchOptions<NewsItem> options = new()
+                {
+                    VectorProperty = x => x.SimilarityVector,
+                };
+
+                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, topPerInterest, options);
+
+                await foreach (VectorSearchResult<NewsItem> result in searchResults)
+                {
+                    newsSummariesById.TryAdd(result.Record.Id, result.Record.ToString());
+                }
+            }
+
+            Console.WriteLine($"RAGPlugin: found: {newsSummariesById.Values.Count} news articles.");
+            return newsSummariesById.Values.Take(top).ToList();
+        }
+
+        private static int GetTopPerTopic(List<string> dislikes, int top)
         {
             if (dislikes.Count > top) return (int)Math.Ceiling(dislikes.Count / (double)top);
             else return (int)Math.Ceiling((double)top / dislikes.Count);
