@@ -10,6 +10,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
     {
         public string UserPrompt { get; set; } = string.Empty;
         public List<string> UserDislikes { get; set; } = [];
+        public List<string> UserInterests { get; set; } = [];
 
         public string GetUserDislikesAsString()
         {

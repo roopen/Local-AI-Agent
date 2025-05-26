@@ -15,7 +15,7 @@ namespace LocalAIAgent.Tests.IntegrationTests
             Kernel semanticKernel = scope.ServiceProvider.GetRequiredService<Kernel>();
             NewsService newsService = semanticKernel.Services.GetRequiredService<NewsService>();
             ChatContext chatContext = semanticKernel.Services.GetRequiredService<ChatContext>();
-            chatContext.UserDislikes = ["1", "2", "3", "4", "5"];
+            chatContext.UserInterests = ["1", "2", "3", "4", "5"];
 
             // Act
             int newsCount = await newsService.LoadAllNews();
