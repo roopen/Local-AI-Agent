@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.SemanticKernel
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "localaiagent.webui", "LocalAIAgent.WebUI\localaiagent.webui.esproj", "{1402B51A-4064-A91B-ED47-CA679CA682E5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.API", "LocalAIAgent.API\LocalAIAgent.API.csproj", "{C6A05056-C9EB-473C-BCB2-66D6759735C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,10 @@ Global
 		{1402B51A-4064-A91B-ED47-CA679CA682E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1402B51A-4064-A91B-ED47-CA679CA682E5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1402B51A-4064-A91B-ED47-CA679CA682E5}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{C6A05056-C9EB-473C-BCB2-66D6759735C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6A05056-C9EB-473C-BCB2-66D6759735C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6A05056-C9EB-473C-BCB2-66D6759735C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6A05056-C9EB-473C-BCB2-66D6759735C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
