@@ -14,7 +14,7 @@ NOTE: Currently very much a Proof of Concept.
 ## Requirements
 
 - Windows or Linux OS
-- [LM Studio](https://lmstudio.ai/) running with an OpenAI-compliant local API (currently hardcoded to use gemma-3-27b-it-abliterated model)
+- [LM Studio](https://lmstudio.ai/) running with an OpenAI-compliant local API
 - Internet access (application will not work if blocked by Firewall)
 
 ## Installation
@@ -22,7 +22,7 @@ NOTE: Currently very much a Proof of Concept.
 - Download newest version
 - Unzip the archive
 - Create UserPrompt.txt file in the root directory with your custom prompt
-- Ensure LMStudio is running (with gemma-3-27b-it-abliterated model and text-embedding-granite-embedding-278m-multilingual) [You can customize appsettings.json to use different models]
+- Ensure LMStudio is running (ideally with gemma-3-27b-it-abliterated model and text-embedding-granite-embedding-125m-english) [You can customize appsettings.json to use different models]
 - Run the application
 
 ## License
