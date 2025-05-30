@@ -11,11 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
-		.github\workflows\build.yml = .github\workflows\build.yml
-		.github\workflows\dotnet-format.yml = .github\workflows\dotnet-format.yml
 		README.md = README.md
-		.github\workflows\release.yml = .github\workflows\release.yml
-		.github\workflows\vulnerability-check.yml = .github\workflows\vulnerability-check.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalAIAgent.SemanticKernel", "LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj", "{E94D168A-EE09-46AE-A3B2-5A43C1E441D0}"
