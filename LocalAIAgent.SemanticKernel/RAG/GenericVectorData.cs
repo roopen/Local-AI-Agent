@@ -10,7 +10,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
             public string Key { get; set; } = Guid.CreateVersion7().ToString();
 
             [VectorStoreRecordData]
-            public string Chunk { get; set; }
+            public string? Chunk { get; set; }
         }
     }
 }
