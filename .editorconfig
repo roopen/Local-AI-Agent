@@ -1,0 +1,10 @@
+# Top-level root = true
+root = true
+
+# .NET coding conventions
+[*.cs]
+
+# CA1502: Avoid excessive complexity
+dotnet_diagnostic.CA1502.severity = error
+dotnet_code_quality.CA1502.api_surface = public,internal
+dotnet_code_quality.CA1502.threshold = 10

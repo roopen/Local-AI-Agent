@@ -16,6 +16,7 @@
   	<PackageReference Include="NodaTime" Version="3.2.2" />
   	<PackageReference Include="PdfPig" Version="0.1.10" />
   	<PackageReference Include="System.ServiceModel.Syndication" Version="9.0.5" />
+  	<PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
   </ItemGroup>
 	
   <PropertyGroup>
