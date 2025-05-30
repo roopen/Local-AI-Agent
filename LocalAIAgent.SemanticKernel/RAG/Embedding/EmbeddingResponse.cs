@@ -2,10 +2,10 @@
 {
     internal class EmbeddingResponse
     {
-        public string Object { get; set; }
-        public EmbeddingData[] Data { get; set; }
-        public string Model { get; set; }
-        public Usage Usage { get; set; }
+        public string? Object { get; set; }
+        public EmbeddingData[]? Data { get; set; }
+        public string? Model { get; set; }
+        public Usage? Usage { get; set; }
     }
 
     internal class Usage
@@ -16,7 +16,7 @@
 
     internal class EmbeddingData
     {
-        public string Object { get; set; }
+        public string? Object { get; set; }
         public ReadOnlyMemory<float> Embedding { get; set; }
         public int Index { get; set; }
     }
