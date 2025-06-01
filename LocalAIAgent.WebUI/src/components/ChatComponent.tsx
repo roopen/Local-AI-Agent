@@ -16,7 +16,7 @@ function ChatComponent() {
     useEffect(() => {
         const cleanup = onMessageReceived((msg) => {
             console.log(msg.user + ': ' + msg.message);
-            if (!msg || msg.message === null || msg.message === undefined) return;
+            if (!msg || msg.message === null || msg.message === undefined || msg.message.trim() === '') return;
 
             setMessages(prevMessages => {
                 console.log('messages length: ' + prevMessages.length);
@@ -75,16 +75,19 @@ function ChatComponent() {
         e.preventDefault();
         if (input.trim() === '' || !isConnected) return;
 
-        // Assuming a default user for now, replace with actual user logic if available
-        const user = "User";
-        await sendMessage(user, input);
-
+        const user = "You";
+        const message = input;
         setInput('');
+        try {
+            await sendMessage(user, message);
+        } catch (err) {
+            console.error("Failed to send message:", err);
+        }
     };
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            <div style={{ border: '1px solid #ccc', padding: 10, minHeight: 200, marginBottom: 10 }}>
+            <div style={{ border: '1px solid #ccc', padding: 10, maxHeight: 600, marginBottom: 10 }}>
                 {messages.length === 0 ? (
                     <p>No messages yet.</p>
                 ) : (
