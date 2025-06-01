@@ -1,0 +1,29 @@
+name: NPM Lint
+
+on:
+  push:
+    branches: [ "**" ]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Navigate to WebUI directory
+      run: cd LocalAIAgent.WebUI
+
+    - name: Install dependencies
+      run: npm install
+      working-directory: LocalAIAgent.WebUI
+
+    - name: Run npm eslint
+      run: npm run lint
+      working-directory: LocalAIAgent.WebUI

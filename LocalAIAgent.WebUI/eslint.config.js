@@ -23,6 +23,7 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      'complexity': ['error', 7], // Add cyclomatic complexity check
     },
   },
 )
