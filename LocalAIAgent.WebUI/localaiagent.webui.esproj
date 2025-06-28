@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2191419">
   <PropertyGroup>
     <StartupCommand>npm run dev</StartupCommand>
+    <EnvironmentVariables>$(EnvironmentVariables);ASPNETCORE_HTTPS_PORT=53146</EnvironmentVariables>
     <JavaScriptTestRoot>src\</JavaScriptTestRoot>
     <JavaScriptTestFramework>Vitest</JavaScriptTestFramework>
     <!-- Allows the build (or compile) script located on package.json to run on Build -->

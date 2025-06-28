@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
+    <ProjectReference Include="..\LocalAIAgent.ServiceDefaults\LocalAIAgent.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
