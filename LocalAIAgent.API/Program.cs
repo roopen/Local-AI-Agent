@@ -21,7 +21,7 @@ namespace LocalAIAgent.API
             {
                 options.AddPolicy("AllowWebUI", policy =>
                 {
-                    policy.SetIsOriginAllowed(origin => true)
+                    policy.SetIsOriginAllowed(origin => new Uri(origin).IsLoopback)
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
