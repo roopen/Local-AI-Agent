@@ -24,7 +24,7 @@ namespace LocalAIAgent.SemanticKernel.News
         public NewsItem(SyndicationItem syndicationItem)
         {
             Id = Guid.CreateVersion7().ToString();
-            Content = syndicationItem.Title?.Text + syndicationItem.Summary?.Text;
+            Content = syndicationItem.Title?.Text + "\n" + syndicationItem.Summary?.Text;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;

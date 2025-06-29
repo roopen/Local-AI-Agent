@@ -31,4 +31,10 @@
   	<InternalsVisibleTo Include="LocalAIAgent.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="UserPrompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -21,6 +21,15 @@ namespace LocalAIAgent.SemanticKernel.Chat
             return string.Empty;
         }
 
+        public string GetUserInterestsAsString()
+        {
+            if (UserInterests.Count > 0)
+            {
+                return string.Join(", ", UserInterests);
+            }
+            return string.Empty;
+        }
+
         internal bool IsArticleRelevant(SyndicationItem item)
         {
             if (item is not null)

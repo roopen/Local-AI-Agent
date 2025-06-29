@@ -19,9 +19,10 @@ namespace LocalAIAgent.SemanticKernel.Chat
         public readonly ChatHistory chatHistory = [];
         private readonly OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
                 options,
-                ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString());
+                ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
+                "User's likes: \n" + chatContext.GetUserInterestsAsString());
 
-        public async Task StartChat()
+        public async Task StartConsoleChat()
         {
             while (true)
             {
@@ -49,6 +50,28 @@ namespace LocalAIAgent.SemanticKernel.Chat
                                 .ConfigureAwait(false))
             {
                 chatHistory.AddAssistantMessage(content.Content ?? string.Empty);
+                yield return content;
+            }
+        }
+
+        public async IAsyncEnumerable<StreamingChatMessageContent> EvaluateArticles(string article)
+        {
+            string prompt = "Evaluate the following news article and return true if you think user wants to see it and " +
+                "false if you think they don't want to see it. So the only allowed responses are the single word 'true' or 'false'." +
+                " User preferences are as follows: ";
+            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
+                options,
+                prompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
+                "User's likes: \n" + chatContext.GetUserInterestsAsString());
+
+            chatHistory.AddUserMessage(article);
+            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
+                                chatHistory,
+                                openAiSettings,
+                                kernel)
+                                .ConfigureAwait(false))
+            {
+                chatHistory.Clear();
                 yield return content;
             }
         }

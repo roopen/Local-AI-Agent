@@ -19,7 +19,7 @@ namespace LocalAIAgent.ConsoleApp
 
             await kernel.LoadUserPromptIntoChatContext(chatService, GetUserPreferencesPrompt());
 
-            await chatService.StartChat();
+            await chatService.StartConsoleChat();
         }
 
         /// <summary>
