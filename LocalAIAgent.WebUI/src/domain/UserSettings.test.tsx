@@ -65,7 +65,7 @@ describe('UserSettings', () => {
         const summary = userSettings.getSummary();
 
         // Assert
-        expect(summary).toBe('Likes: chocolate | Dislikes: spinach');
+        expect(summary).toBe('Likes: chocolate | Dislikes: spinach | System Prompt: ');
     });
 
     it('should check if settings are empty', () => {

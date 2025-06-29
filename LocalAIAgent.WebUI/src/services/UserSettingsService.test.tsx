@@ -21,7 +21,7 @@ describe('UserSettingsService', () => {
         const retrievedSettings = userSettingsService.getSettings();
 
         expect(retrievedSettings).toEqual(newSettings);
-        expect(retrievedSettings.getSummary()).toBe('Likes: coding, testing | Dislikes: bugs');
+        expect(retrievedSettings.getSummary()).toBe('Likes: coding, testing | Dislikes: bugs | System Prompt: ');
     });
 
     it('should overwrite existing settings', () => {
