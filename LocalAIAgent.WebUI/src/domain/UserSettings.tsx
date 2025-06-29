@@ -7,10 +7,6 @@ class UserSettings {
         this.dislikes = dislikes.filter(this.isValid);
     }
 
-    private isValid(value: string): value is string {
-        return typeof value === 'string' && value.trim().length > 0;
-    }
-
     addLike(item: string): void {
         if (this.isValid(item) && !this.likes.includes(item)) {
             this.likes.push(item);
@@ -33,6 +29,31 @@ class UserSettings {
 
     getSummary(): string {
         return `Likes: ${this.likes.join(', ')} | Dislikes: ${this.dislikes.join(', ')}`;
+    }
+
+    isEmpty(): boolean {
+        return this.likes.length === 0 && this.dislikes.length === 0;
+    }
+
+    static fromJSON(json: string): UserSettings {
+        try {
+            const data = JSON.parse(json);
+            return new UserSettings(data.likes || [], data.dislikes || []);
+        } catch (error) {
+            console.error('Invalid JSON format:', error);
+            return new UserSettings();
+        }
+    }
+
+    toJSON(): string {
+        return JSON.stringify({
+            likes: this.likes,
+            dislikes: this.dislikes
+        });
+    }
+
+    private isValid(value: string): value is string {
+        return typeof value === 'string' && value.trim().length > 0;
     }
 }
 
