@@ -39,7 +39,7 @@ namespace LocalAIAgent.SemanticKernel.News
 
                     FilterNewsArticles(feed);
 
-                    SaveToVectorDatabaseAsync(feed);
+                    CacheNewsArticles(feed);
 
                     feedCount = feed.Items.Count();
                 }
@@ -50,7 +50,7 @@ namespace LocalAIAgent.SemanticKernel.News
             return feedCount;
         }
 
-        private void SaveToVectorDatabaseAsync(SyndicationFeed feed)
+        private void CacheNewsArticles(SyndicationFeed feed)
         {
             foreach (SyndicationItem? item in feed.Items)
             {

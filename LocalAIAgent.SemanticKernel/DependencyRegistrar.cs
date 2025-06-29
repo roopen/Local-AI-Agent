@@ -17,6 +17,11 @@ namespace LocalAIAgent.SemanticKernel
     {
         public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
         {
+            services.AddSingleton<IGetNewsUseCase, GetNewsUseCase>();
+            services.AddSingleton<INewsService, NewsService>();
+            services.AddSingleton<ChatContext>();
+            services.AddNewsClients();
+
             IKernelBuilder kernelBuilder = GetSemanticKernelBuilder();
 
             services.AddSingleton(sp => kernelBuilder.Build());
@@ -32,9 +37,9 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
             kernelBuilder.Services.AddSingleton<RAGService>();
-            kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
             kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
+            kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
 
             IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
             AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ?? throw new Exception("AIOptions not found in configuration.");
