@@ -6,15 +6,45 @@ const Settings: React.FC = () => {
     const [settings, setSettings] = useState<UserSettings>(new UserSettings());
     const [newLike, setNewLike] = useState('');
     const [newDislike, setNewDislike] = useState('');
+    const [buttonText, setButtonText] = useState('Save Settings');
+    const [isSaving, setIsSaving] = useState(false);
+    const [textStyle, setTextStyle] = useState<React.CSSProperties>({ opacity: 1 });
 
     useEffect(() => {
         const loadedSettings = userSettingsService.getSettings();
         setSettings(loadedSettings);
     }, []);
 
+    useEffect(() => {
+        if (!isSaving) return;
+
+        setTextStyle({ opacity: 1 });
+        setButtonText('Settings Saved!');
+
+        const fadeOutTimer = setTimeout(() => {
+            setTextStyle({ opacity: 0, transition: 'opacity 0.5s ease-out' });
+        }, 1500);
+
+        const fadeInTimer = setTimeout(() => {
+            setButtonText('Save Settings');
+            setTextStyle({ opacity: 1, transition: 'opacity 0.5s ease-in' });
+        }, 2000);
+
+        const endSaveTimer = setTimeout(() => {
+            setIsSaving(false);
+        }, 2500);
+
+        return () => {
+            clearTimeout(fadeOutTimer);
+            clearTimeout(fadeInTimer);
+            clearTimeout(endSaveTimer);
+        };
+    }, [isSaving]);
+
     const handleSave = () => {
+        if (isSaving) return;
         userSettingsService.saveSettings(settings);
-        alert('Settings saved!');
+        setIsSaving(true);
     };
 
     const addLike = () => {
@@ -84,7 +114,9 @@ const Settings: React.FC = () => {
                 />
                 <button onClick={addDislike}>Add Dislike</button>
             </div>
-            <button onClick={handleSave}>Save Settings</button>
+            <button onClick={handleSave} disabled={isSaving} style={{ minWidth: '160px', textAlign: 'center' }}>
+                <span style={{...textStyle, display: 'inline-block'}}>{buttonText}</span>
+            </button>
         </div>
     );
 };
