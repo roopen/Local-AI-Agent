@@ -49,7 +49,7 @@ const Settings: React.FC = () => {
 
     const addLike = () => {
         if (newLike) {
-            const newSettings = new UserSettings(settings.likes, settings.dislikes);
+            const newSettings = new UserSettings(settings.likes, settings.dislikes, settings.prompt);
             newSettings.addLike(newLike);
             setSettings(newSettings);
             setNewLike('');
@@ -58,7 +58,7 @@ const Settings: React.FC = () => {
 
     const addDislike = () => {
         if (newDislike) {
-            const newSettings = new UserSettings(settings.likes, settings.dislikes);
+            const newSettings = new UserSettings(settings.likes, settings.dislikes, settings.prompt);
             newSettings.addDislike(newDislike);
             setSettings(newSettings);
             setNewDislike('');
@@ -66,13 +66,13 @@ const Settings: React.FC = () => {
     };
 
     const removeLike = (item: string) => {
-        const newSettings = new UserSettings(settings.likes, settings.dislikes);
+        const newSettings = new UserSettings(settings.likes, settings.dislikes, settings.prompt);
         newSettings.removeLike(item);
         setSettings(newSettings);
     };
 
     const removeDislike = (item: string) => {
-        const newSettings = new UserSettings(settings.likes, settings.dislikes);
+        const newSettings = new UserSettings(settings.likes, settings.dislikes, settings.prompt);
         newSettings.removeDislike(item);
         setSettings(newSettings);
     };
@@ -80,6 +80,19 @@ const Settings: React.FC = () => {
     return (
         <div>
             <h1>Settings</h1>
+            <div>
+                <h2>Prompt</h2>
+                <textarea
+                    value={settings.prompt || ''}
+                    onChange={(e) => {
+                        const newSettings = new UserSettings(settings.likes, settings.dislikes, e.target.value);
+                        setSettings(newSettings);
+                    }}
+                    placeholder="System prompt for the AI"
+                    rows={5}
+                    style={{ width: 'calc(100% - 16px)', padding: '8px', boxSizing: 'border-box' }}
+                />
+            </div>
             <div>
                 <h2>Likes</h2>
                 <ul>
