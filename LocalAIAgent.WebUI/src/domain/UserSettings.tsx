@@ -1,10 +1,12 @@
 class UserSettings {
     likes: string[];
     dislikes: string[];
+    prompt: string;
 
-    constructor(likes: string[] = [], dislikes: string[] = []) {
+    constructor(likes: string[] = [], dislikes: string[] = [], prompt: string = '') {
         this.likes = likes.filter(this.isValid);
         this.dislikes = dislikes.filter(this.isValid);
+        this.prompt = prompt;
     }
 
     addLike(item: string): void {
@@ -28,17 +30,17 @@ class UserSettings {
     }
 
     getSummary(): string {
-        return `Likes: ${this.likes.join(', ')} | Dislikes: ${this.dislikes.join(', ')}`;
+        return `Likes: ${this.likes.join(', ')} | Dislikes: ${this.dislikes.join(', ')} | System Prompt: ${this.prompt}`;
     }
 
     isEmpty(): boolean {
-        return this.likes.length === 0 && this.dislikes.length === 0;
+        return this.likes.length === 0 && this.dislikes.length === 0 && (!this.prompt || this.prompt.trim().length === 0);
     }
 
     static fromJSON(json: string): UserSettings {
         try {
             const data = JSON.parse(json);
-            return new UserSettings(data.likes || [], data.dislikes || []);
+            return new UserSettings(data.likes || [], data.dislikes || [], data.prompt || '');
         } catch (error) {
             console.error('Invalid JSON format:', error);
             return new UserSettings();
@@ -48,7 +50,8 @@ class UserSettings {
     toJSON(): string {
         return JSON.stringify({
             likes: this.likes,
-            dislikes: this.dislikes
+            dislikes: this.dislikes,
+            prompt: this.prompt
         });
     }
 
