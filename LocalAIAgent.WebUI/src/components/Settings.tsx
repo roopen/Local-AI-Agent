@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { userSettingsService } from '../services/UserSettingsService';
 import UserSettings from '../domain/UserSettings';
 
-export const SettingsPageUrl = () => { return '/settings' };
-
 const Settings: React.FC = () => {
     const [settings, setSettings] = useState<UserSettings>(new UserSettings());
     const [newLike, setNewLike] = useState('');
