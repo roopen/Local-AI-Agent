@@ -1,9 +1,12 @@
 import { useState, type FormEvent, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../clients/ChatMessage';
+import { SettingsPageUrl } from './Settings';
 
 function ChatComponent() {
+    const navigate = useNavigate();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -87,6 +90,7 @@ function ChatComponent() {
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <button onClick={() => navigate(SettingsPageUrl())}>Preferences</button>
             <div style={{ border: '1px solid #ccc', padding: 10, maxHeight: 600, marginBottom: 10 }}>
                 {messages.length === 0 ? (
                     <p>No messages yet.</p>

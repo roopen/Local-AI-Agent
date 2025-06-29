@@ -8,7 +8,7 @@ class UserSettingsService {
 
     /**
      * Gets the user settings from local storage.
-     * @returns The user settings.
+     * @returns The user settings. Can be empty if not set.
      */
     public getSettings(): UserSettings {
         const settings = localStorage.getItem(this.storageKey);
