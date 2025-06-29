@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.SemanticKernel.RAG
 {
-    internal abstract class BaseVectorData
+    public abstract class BaseVectorData
     {
         [NotMapped]
         [JsonIgnore]

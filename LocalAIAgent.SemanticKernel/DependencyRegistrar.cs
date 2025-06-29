@@ -32,7 +32,7 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
             kernelBuilder.Services.AddSingleton<RAGService>();
-            kernelBuilder.Services.AddSingleton<NewsService>();
+            kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
             kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
@@ -41,7 +41,7 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
-            kernelBuilder.Plugins.AddFromType<NewsService>();
+            kernelBuilder.Plugins.AddFromType<RAGService>();
 
             kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
             kernelBuilder.AddInMemoryVectorStore();

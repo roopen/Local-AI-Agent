@@ -1,6 +1,5 @@
 ﻿using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.Chat;
-using LocalAIAgent.SemanticKernel.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -19,7 +18,6 @@ namespace LocalAIAgent.ConsoleApp
             );
 
             await kernel.LoadUserPromptIntoChatContext(chatService, GetUserPreferencesPrompt());
-            await kernel.InitializeVectorDatabase();
 
             await chatService.StartChat();
         }
