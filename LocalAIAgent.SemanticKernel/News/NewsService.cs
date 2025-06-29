@@ -1,25 +1,27 @@
 ﻿using LocalAIAgent.SemanticKernel.Chat;
-using LocalAIAgent.SemanticKernel.RAG;
-using Microsoft.SemanticKernel;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.ServiceModel.Syndication;
 using System.Xml;
 
 namespace LocalAIAgent.SemanticKernel.News
 {
+    public interface INewsService
+    {
+        Task<List<NewsItem>> GetNewsAsync();
+    }
+
     internal class NewsService(
         IHttpClientFactory httpClientFactory,
         IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
-        RAGService ragService,
-        ChatContext chatContext)
+        ChatContext chatContext) : INewsService
     {
-        [KernelFunction, Description("Get the latest news articles from various sources.")]
-        public async Task<List<string>> GetNewsAsync()
-        {
-            List<string> result = await ragService.SearchNewsAsync(chatContext.UserInterests, 30);
+        private readonly List<NewsItem> newsCache = [];
 
-            return result;
+        public async Task<List<NewsItem>> GetNewsAsync()
+        {
+            if (newsCache.Count is 0) await LoadAllNews();
+
+            return newsCache;
         }
 
         internal async Task<int> LoadAllNews()
@@ -37,7 +39,7 @@ namespace LocalAIAgent.SemanticKernel.News
 
                     FilterNewsArticles(feed);
 
-                    await SaveToVectorDatabaseAsync(feed);
+                    SaveToVectorDatabaseAsync(feed);
 
                     feedCount = feed.Items.Count();
                 }
@@ -48,11 +50,11 @@ namespace LocalAIAgent.SemanticKernel.News
             return feedCount;
         }
 
-        private async Task SaveToVectorDatabaseAsync(SyndicationFeed feed)
+        private void SaveToVectorDatabaseAsync(SyndicationFeed feed)
         {
             foreach (SyndicationItem? item in feed.Items)
             {
-                if (item is not null) await ragService.SaveNewsAsync(new NewsItem(item));
+                if (item is not null) newsCache.Add(new NewsItem(item));
             }
         }
 

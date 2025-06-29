@@ -2,7 +2,9 @@
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.InMemory;
+using System.ComponentModel;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
@@ -12,14 +14,16 @@ namespace LocalAIAgent.SemanticKernel.RAG
     {
         private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingService;
         private readonly ChatContext _chatContext;
+        private readonly INewsService _newsService;
         private readonly InMemoryVectorStoreRecordCollection<string, GenericVectorData> _generalVectorStore;
         private readonly InMemoryVectorStoreRecordCollection<string, NewsItem> _newsVectorStore;
         private readonly Dictionary<string, ReadOnlyMemory<float>> userDislikeVectors = [];
 
-        public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService, ChatContext chatContext)
+        public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService, ChatContext chatContext, INewsService newsService)
         {
             _embeddingService = embeddingService;
             _chatContext = chatContext;
+            _newsService = newsService;
 
             InMemoryVectorStoreRecordCollectionOptions<string, GenericVectorData> options = new()
             {
@@ -40,6 +44,14 @@ namespace LocalAIAgent.SemanticKernel.RAG
         {
             await _generalVectorStore.CreateCollectionIfNotExistsAsync();
             await _newsVectorStore.CreateCollectionIfNotExistsAsync();
+            List<NewsItem> news = await _newsService.GetNewsAsync();
+            foreach (NewsItem newsItem in news)
+            {
+                if (newsItem.Content is not null)
+                {
+                    await SaveNewsAsync(newsItem);
+                }
+            }
         }
 
         private async Task LoadUserDislikeVectorsAsync()
@@ -125,46 +137,38 @@ namespace LocalAIAgent.SemanticKernel.RAG
             return await _generalVectorStore.UpsertAsync(document);
         }
 
-        public async Task<string> SearchAsync(string query, int top = 1)
+        [KernelFunction, Description("Search news articles from the RAG.")]
+        public async Task<string> SearchAsync(
+            [Description("Query (what you want to find)")] string query,
+            [Description("Number of articles to return.")] int top = 10)
         {
             Console.WriteLine($"RAGPlugin: SearchAsync called (query: {query})");
-            await FillVectorDb();
 
             ReadOnlyMemory<float> embedding = await _embeddingService.GenerateVectorAsync(query);
 
-            VectorSearchOptions<GenericVectorData> options = new()
+            VectorSearchOptions<NewsItem> options = new()
             {
                 VectorProperty = x => x.SimilarityVector,
             };
 
-            IAsyncEnumerable<VectorSearchResult<GenericVectorData>> searchResults = _generalVectorStore.SearchEmbeddingAsync(embedding, top, options);
+            IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, top, options);
 
             string response = string.Empty;
-            await foreach (VectorSearchResult<GenericVectorData> result in searchResults)
+            await foreach (VectorSearchResult<NewsItem> result in searchResults)
             {
-                Console.WriteLine($"RAGPlugin: found: {result.Record.Chunk}");
-                return response += " " + result.Record.Chunk;
+                Console.WriteLine($"RAGPlugin: found: {result.Record.Content}");
+                response += " " + result.Record.Content;
             }
 
-            Console.WriteLine($"RAGPlugin: found nothing.");
             return response;
         }
 
-        private async Task FillVectorDb()
-        {
-            string text = "LOVE & GOOD";
-
-            await _generalVectorStore.UpsertAsync(new GenericVectorData { Chunk = text, Vector = await _embeddingService.GenerateVectorAsync(text) });
-
-            string text2 = "HATE & EVIL";
-
-            await _generalVectorStore.UpsertAsync(new GenericVectorData { Chunk = text2, Vector = await _embeddingService.GenerateVectorAsync(text2) });
-        }
-
-        public async Task<string> FilterAsync(string query, int top = 1)
+        [KernelFunction, Description("Get news articles by filtering.")]
+        public async Task<string> FilterAsync(
+            [Description("Query (what you want to avoid)")] string query,
+            [Description("Number of articles to return.")] int top = 10)
         {
             Console.WriteLine($"RAGPlugin: FilterAsync called (query: {query})");
-            await FillVectorDb();
 
             ReadOnlyMemory<float> embedding = await _embeddingService.GenerateVectorAsync(query);
 
@@ -179,10 +183,9 @@ namespace LocalAIAgent.SemanticKernel.RAG
             await foreach (VectorSearchResult<GenericVectorData> result in searchResults)
             {
                 Console.WriteLine($"RAGPlugin: found: {result.Record.Chunk}");
-                return response += " " + result.Record.Chunk;
+                response += " " + result.Record.Chunk;
             }
 
-            Console.WriteLine($"RAGPlugin: found nothing.");
             return response;
         }
 

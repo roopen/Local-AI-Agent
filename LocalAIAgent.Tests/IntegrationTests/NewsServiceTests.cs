@@ -13,16 +13,14 @@ namespace LocalAIAgent.Tests.IntegrationTests
             // Arrange
             using IServiceScope scope = factory.Services.CreateScope();
             Kernel semanticKernel = scope.ServiceProvider.GetRequiredService<Kernel>();
-            NewsService newsService = semanticKernel.Services.GetRequiredService<NewsService>();
+            INewsService newsService = semanticKernel.Services.GetRequiredService<INewsService>();
             ChatContext chatContext = semanticKernel.Services.GetRequiredService<ChatContext>();
             chatContext.UserInterests = ["1", "2", "3", "4", "5"];
 
             // Act
-            int newsCount = await newsService.LoadAllNews();
-            List<string> newsItems = await newsService.GetNewsAsync();
+            List<NewsItem> newsItems = await newsService.GetNewsAsync();
 
             // Assert
-            Assert.True(newsCount > 0);
             Assert.NotEmpty(newsItems);
         }
     }

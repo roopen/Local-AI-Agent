@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.SemanticKernel.News
 {
-    internal class NewsItem : BaseVectorData
+    public class NewsItem : BaseVectorData
     {
         [VectorStoreRecordKey]
         [JsonIgnore]
