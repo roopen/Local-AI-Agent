@@ -1,16 +1,15 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../clients/ChatMessage';
-import { SettingsPageUrl } from './Settings';
+import Settings from './Settings';
 
 function ChatComponent() {
-    const navigate = useNavigate();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
     useEffect(() => {
         setConnection(getConnection());
@@ -88,32 +87,43 @@ function ChatComponent() {
         }
     };
 
+    const toggleSettings = () => {
+        setIsSettingsOpen(!isSettingsOpen);
+    };
+
     return (
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            <button onClick={() => navigate(SettingsPageUrl())}>Preferences</button>
-            <div style={{ border: '1px solid #ccc', padding: 10, maxHeight: 600, marginBottom: 10 }}>
-                {messages.length === 0 ? (
-                    <p>No messages yet.</p>
-                ) : (
-                    messages.map((msg, idx) => (
-                        <div key={idx} style={{ margin: '5px 0' }}>
-                            {msg.user}: {msg.message}
-                        </div>
-                    ))
-                )}
+        <div style={{ display: 'flex', height: '100vh' }}>
+            {isSettingsOpen && (
+                <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto' }}>
+                    <Settings />
+                </div>
+            )}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
+                <button onClick={toggleSettings} style={{ marginBottom: '10px' }}>Preferences</button>
+                <div style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10, flex: 1, overflowY: 'auto' }}>
+                    {messages.length === 0 ? (
+                        <p>No messages yet.</p>
+                    ) : (
+                        messages.map((msg, idx) => (
+                            <div key={idx} style={{ margin: '5px 0' }}>
+                                {msg.user}: {msg.message}
+                            </div>
+                        ))
+                    )}
+                </div>
+                <form onSubmit={handleSubmit} style={{ display: 'flex' }}>
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        style={{ flex: 1, marginRight: 5 }}
+                        placeholder={isConnected ? "Type a message..." : "Connecting..."}
+                        disabled={!isConnected}
+                    />
+                    <button type="submit" disabled={!isConnected}>Send</button>
+                </form>
+                {!isConnected && <p style={{ color: 'red' }}>Connecting to chat server...</p>}
             </div>
-            <form onSubmit={handleSubmit} style={{ display: 'flex' }}>
-                <input
-                    type="text"
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    style={{ flex: 1, marginRight: 5 }}
-                    placeholder={isConnected ? "Type a message..." : "Connecting..."}
-                    disabled={!isConnected}
-                />
-                <button type="submit" disabled={!isConnected}>Send</button>
-            </form>
-            {!isConnected && <p style={{ color: 'red' }}>Connecting to chat server...</p>}
         </div>
     );
 }
