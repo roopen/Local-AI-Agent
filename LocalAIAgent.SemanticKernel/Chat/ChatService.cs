@@ -92,7 +92,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 kernel
             );
 
-            List<string> unwantedTopics = response.First().Content!.Split(',').ToList();
+            List<string> unwantedTopics = response[0].Content!.Split(',').ToList();
             unwantedTopics.RemoveAll(string.IsNullOrWhiteSpace);
             unwantedTopics = unwantedTopics.Select(topic => topic.Trim()).ToList();
 
@@ -115,7 +115,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 kernel
             );
 
-            List<string> wantedTopics = response.First().Content!.Split(',').ToList();
+            List<string> wantedTopics = response[0].Content!.Split(',').ToList();
             wantedTopics.RemoveAll(string.IsNullOrWhiteSpace);
             wantedTopics = wantedTopics.Select(topic => topic.Trim()).ToList();
 

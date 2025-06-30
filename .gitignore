@@ -365,3 +365,4 @@ FodyWeavers.xsd
 /LocalAIAgent.ConsoleApp/UserPrompt.txt
 *.pdf
 /LocalAIAgent.SemanticKernel/UserPrompt.txt
+/LocalAIAgent.API/user.db

@@ -247,7 +247,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
             else return (int)Math.Ceiling((double)top / dislikes.Count);
         }
 
-        private string ReadPdfContentAsText(string path)
+        private static string ReadPdfContentAsText(string path)
         {
             string text = string.Empty;
             using (PdfDocument document = PdfDocument.Open(path))

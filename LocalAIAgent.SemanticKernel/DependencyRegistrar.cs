@@ -42,7 +42,8 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
 
             IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
-            AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>() ?? throw new Exception("AIOptions not found in configuration.");
+            AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()
+                ?? throw new ArgumentNullException("AIOptions not found in configuration.");
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();

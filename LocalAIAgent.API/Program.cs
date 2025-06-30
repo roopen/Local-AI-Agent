@@ -1,5 +1,7 @@
 using LocalAIAgent.API.Hubs;
+using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.SemanticKernel;
+using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API
 {
@@ -10,6 +12,8 @@ namespace LocalAIAgent.API
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
             builder.AddServiceDefaults();
+            builder.Services.AddDbContext<UserContext>(options =>
+                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -29,6 +33,13 @@ namespace LocalAIAgent.API
             });
 
             WebApplication app = builder.Build();
+
+            // Ensure database is created and migrations are applied
+            using (IServiceScope scope = app.Services.CreateScope())
+            {
+                UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
+                dbContext.Database.Migrate();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
