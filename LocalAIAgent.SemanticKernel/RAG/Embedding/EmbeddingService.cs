@@ -17,7 +17,7 @@ namespace LocalAIAgent.SemanticKernel.RAG.Embedding
             EmbeddingResponse embeddingResponse = await GetEmbeddingAsync(values);
 
             GeneratedEmbeddings<Embedding<float>> result = [];
-            foreach (EmbeddingData item in embeddingResponse.Data)
+            foreach (EmbeddingData item in embeddingResponse.Data!)
             {
                 result.Add(new Embedding<float>(item.Embedding));
             }
@@ -29,7 +29,7 @@ namespace LocalAIAgent.SemanticKernel.RAG.Embedding
         {
             EmbeddingResponse embeddingResponse = await GetEmbeddingAsync([query]);
 
-            return embeddingResponse.Data.First().Embedding;
+            return embeddingResponse.Data!.First().Embedding;
         }
 
         private async Task<EmbeddingResponse> GetEmbeddingAsync(IEnumerable<string> values)
