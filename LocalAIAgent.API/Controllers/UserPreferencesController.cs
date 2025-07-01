@@ -16,7 +16,13 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         {
             return NotFound();
         }
-        return Ok(new UserPreferenceDto { Id = preferences.Id, Prompt = preferences.Prompt, Interests = preferences.Interests, Dislikes = preferences.Dislikes });
+        return Ok(new UserPreferenceDto
+        {
+            Id = preferences.Id,
+            Prompt = preferences.Prompt,
+            Interests = preferences.Interests,
+            Dislikes = preferences.Dislikes
+        });
     }
 
     [HttpPost("/api/SavePreferences")]
@@ -30,7 +36,12 @@ public class UserPreferencesController(UserContext context) : ControllerBase
 
         if (user.Preferences == null)
         {
-            user.Preferences = new UserPreference { Prompt = preferences.Prompt, Interests = preferences.Interests, Dislikes = preferences.Dislikes };
+            user.Preferences = new UserPreference
+            {
+                Prompt = preferences.Prompt,
+                Interests = preferences.Interests,
+                Dislikes = preferences.Dislikes
+            };
             context.UserPreferences.Add(user.Preferences);
         }
         else

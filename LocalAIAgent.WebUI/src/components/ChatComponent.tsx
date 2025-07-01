@@ -2,9 +2,11 @@ import { useState, type FormEvent, useEffect } from 'react';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../clients/ChatMessage';
+import UserService from '../users/UserService';
 import Settings from './Settings';
 
 function ChatComponent() {
+    const userService = new UserService();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -95,7 +97,7 @@ function ChatComponent() {
         <div style={{ display: 'flex', height: '100vh' }}>
             {isSettingsOpen && (
                 <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto' }}>
-                    <Settings />
+                    <Settings userService={userService} />
                 </div>
             )}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
