@@ -7,7 +7,7 @@ jest.mock('../clients/UserApiClient', () => ({
     UserPreferencesService: {
         postApiUser: jest.fn(),
         getApiUserPreferences: jest.fn(),
-        postApiUserPreferencesApiSavePreferences: jest.fn(),
+        postApiSavePreferences: jest.fn(),
     },
     OpenAPI: {
         BASE: ''
@@ -78,7 +78,7 @@ describe('UserService', () => {
 
             await userService.saveUserPreferences(preferences);
 
-            expect(mockedUserPreferencesService.postApiUserPreferencesApiSavePreferences).toHaveBeenCalledWith({
+            expect(mockedUserPreferencesService.postApiSavePreferences).toHaveBeenCalledWith({
                 userId: 1, // This is hardcoded in the service
                 prompt: preferences.prompt,
                 interests: preferences.likes,
