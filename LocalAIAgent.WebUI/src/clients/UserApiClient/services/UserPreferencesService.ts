@@ -29,12 +29,12 @@ export class UserPreferencesService {
      * @returns any OK
      * @throws ApiError
      */
-    public static postApiUserPreferencesApiSavePreferences(
+    public static postApiSavePreferences(
         requestBody?: UserPreferenceDto,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/UserPreferences/api/SavePreferences',
+            url: '/api/SavePreferences',
             body: requestBody,
             mediaType: 'application/json',
         });

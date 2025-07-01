@@ -3,7 +3,7 @@ import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
 
-OpenAPI.BASE = "http://localhost:5201";
+OpenAPI.BASE = "https://localhost:7276";
 const userId = 1;
 
 export default class UserService implements IUserService {
@@ -29,7 +29,7 @@ export default class UserService implements IUserService {
     }
 
     async saveUserPreferences(preferences: Omit<UserSettings, "id">): Promise<void> {
-        await UserPreferencesService.postApiUserPreferencesApiSavePreferences({
+        await UserPreferencesService.postApiSavePreferences({
             userId: userId,
             prompt: preferences.prompt,
             interests: preferences.likes,
