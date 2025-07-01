@@ -366,3 +366,4 @@ FodyWeavers.xsd
 *.pdf
 /LocalAIAgent.SemanticKernel/UserPrompt.txt
 /LocalAIAgent.API/user.db
+/LocalAIAgent.API/openapi/

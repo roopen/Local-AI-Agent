@@ -19,10 +19,10 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         return Ok(new UserPreferenceDto { Id = preferences.Id, Prompt = preferences.Prompt, Interests = preferences.Interests, Dislikes = preferences.Dislikes });
     }
 
-    [HttpPost("{userId}")]
-    public async Task<IActionResult> SavePreferences(int userId, [FromBody] UserPreferenceDto preferences)
+    [HttpPost("/api/SavePreferences")]
+    public async Task<IActionResult> SavePreferences([FromBody] UserPreferenceDto preferences)
     {
-        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == userId);
+        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == preferences.UserId);
         if (user == null)
         {
             return NotFound();
@@ -44,7 +44,7 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         return Ok();
     }
 
-    [HttpPost("user")]
+    [HttpPost("/api/user")]
     public async Task<ActionResult<UserDto>> CreateUser([FromBody] UserDto userDto)
     {
         if (string.IsNullOrEmpty(userDto.Username))
