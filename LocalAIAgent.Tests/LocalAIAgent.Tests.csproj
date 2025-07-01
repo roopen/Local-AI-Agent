@@ -14,6 +14,10 @@
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0-preview.5.24306.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="NSwag.ApiDescription.Client" Version="14.4.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
@@ -27,5 +31,13 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+
+  <Target Name="GenerateUserApiClient" BeforeTargets="CoreBuild">
+    <PropertyGroup>
+      <OpenApiInputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../LocalAIAgent.API/openapi/LocalAIAgent.API.json'))</OpenApiInputPath>
+      <OpenApiOutputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/Generated/UserApi.cs'))</OpenApiOutputPath>
+    </PropertyGroup>
+    <Exec Command="dotnet nswag openapi2csclient /input:$(OpenApiInputPath) /output:$(OpenApiOutputPath) /namespace:LocalAIAgent.Tests.Generated /className:UserClient" />
+  </Target>
 
 </Project>

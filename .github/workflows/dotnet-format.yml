@@ -18,6 +18,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Restore tools
+        run: dotnet tool restore
+
       - name: Run Tests
         run: dotnet test
 

@@ -1,5 +1,4 @@
-using LocalAIAgent.API.Controllers;
-using System.Net.Http.Json;
+using LocalAIAgent.Tests.Generated;
 
 namespace LocalAIAgent.Tests.IntegrationTests;
 
@@ -9,25 +8,20 @@ public class UserPreferencesControllerTests(CustomWebApplicationFactory factory)
     public async Task CreateAndGetUserPreferences_ShouldSucceed()
     {
         // Arrange
-        HttpClient client = factory.CreateClient();
-        UserDto newUser = new UserDto { Username = "testuser" };
+        var client = new UserClient("http://localhost", factory.CreateClient());
+        var newUser = new UserDto { Username = "testuser" };
 
         // Act
         // Create User
-        HttpResponseMessage createUserResponse = await client.PostAsJsonAsync("/api/userpreferences/user", newUser);
-        createUserResponse.EnsureSuccessStatusCode();
-        UserDto? createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserDto>();
+        var createdUser = await client.UserAsync(newUser);
         Assert.NotNull(createdUser);
 
         // Save Preferences
-        UserPreferenceDto newPreferences = new UserPreferenceDto { Prompt = "test prompt", Interests = ["coding", "testing"], Dislikes = ["bugs"] };
-        HttpResponseMessage savePreferencesResponse = await client.PostAsJsonAsync($"/api/userpreferences/{createdUser.Id}", newPreferences);
-        savePreferencesResponse.EnsureSuccessStatusCode();
+        var newPreferences = new UserPreferenceDto { UserId = createdUser.Id, Prompt = "test prompt", Interests = ["coding", "testing"], Dislikes = ["bugs"] };
+        await client.SavePreferencesAsync(newPreferences);
 
         // Get Preferences
-        HttpResponseMessage getPreferencesResponse = await client.GetAsync($"/api/userpreferences/{createdUser.Id}");
-        getPreferencesResponse.EnsureSuccessStatusCode();
-        UserPreferenceDto? retrievedPreferences = await getPreferencesResponse.Content.ReadFromJsonAsync<UserPreferenceDto>();
+        var retrievedPreferences = await client.UserPreferencesAsync(createdUser.Id);
 
         // Assert
         Assert.NotNull(retrievedPreferences);

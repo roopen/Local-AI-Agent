@@ -8,9 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "generate:api": "npx openapi-typescript-codegen --input ../LocalAIAgent.API/openapi/LocalAIAgent.API.json --output src/clients/UserApiClient --client axios"
   },
   "dependencies": {
+    "@microsoft/kiota-bundle": "^1.0.0-preview.96",
     "@microsoft/signalr": "^8.0.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
