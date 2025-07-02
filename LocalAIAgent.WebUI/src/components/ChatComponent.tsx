@@ -1,12 +1,12 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
-import ChatMessage from '../clients/ChatMessage';
+import ChatMessage from '../domain/ChatMessage';
 import UserService from '../users/UserService';
 import Settings from './Settings';
 
 function ChatComponent() {
-    const userService = new UserService();
+    const userService = UserService.getInstance();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
