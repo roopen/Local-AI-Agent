@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import ChatComponent from './ChatComponent';
 import * as ChatClient from '../clients/ChatClient';
-import ChatMessage from '../clients/ChatMessage';
+import ChatMessage from '../domain/ChatMessage';
 import { HubConnectionState } from '@microsoft/signalr';
 
 // Mock the ChatClient module

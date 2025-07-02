@@ -1,7 +1,6 @@
 ﻿using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.Extensions;
 using LocalAIAgent.SemanticKernel.News;
-using LocalAIAgent.SemanticKernel.RAG;
 using LocalAIAgent.SemanticKernel.RAG.Embedding;
 using LocalAIAgent.SemanticKernel.Time;
 using Microsoft.Extensions.AI;
@@ -16,9 +15,10 @@ namespace LocalAIAgent.SemanticKernel
     {
         public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
         {
-            services.AddSingleton<IGetNewsUseCase, GetNewsUseCase>();
+            services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<ChatContext>();
+            services.AddSingleton<IClock>(SystemClock.Instance);
             services.AddKernel().GetSemanticKernelBuilder();
             IConfiguration configuration = services.AddConfigurations();
             AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
@@ -36,11 +36,8 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddNewsClients();
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
-            kernelBuilder.Services.AddSingleton<RAGService>();
+            //kernelBuilder.Services.AddSingleton<RAGService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
-            kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
-            kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
-            kernelBuilder.Services.AddSingleton<IGetNewsUseCase, GetNewsUseCase>();
 
             IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
             AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()
@@ -48,7 +45,7 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
-            kernelBuilder.Plugins.AddFromType<RAGService>();
+            //kernelBuilder.Plugins.AddFromType<RAGService>();
 
             kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
             kernelBuilder.AddInMemoryVectorStore();

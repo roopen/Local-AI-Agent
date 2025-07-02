@@ -24,8 +24,12 @@ describe('UserService', () => {
     let userService: UserService;
 
     beforeEach(() => {
-        userService = new UserService();
+        userService = UserService.getInstance();
         jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+        userService.logout();
     });
 
     describe('login', () => {

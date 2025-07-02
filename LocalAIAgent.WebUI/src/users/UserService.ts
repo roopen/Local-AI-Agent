@@ -7,7 +7,18 @@ import UserSettings from "../domain/UserSettings";
 OpenAPI.BASE = "https://localhost:7276";
 
 export default class UserService implements IUserService {
+    private static _instance: UserService;
     private _currentUser: User | null = null;
+
+    private constructor() {
+    }
+
+    public static getInstance(): UserService {
+        if (!UserService._instance) {
+            UserService._instance = new UserService();
+        }
+        return UserService._instance;
+    }
 
     async login(user: UserLoginDto): Promise<User | null> {
         const loggedInUser = await LoginService.postApiLoginLogin(user);

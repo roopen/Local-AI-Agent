@@ -117,6 +117,12 @@ const Settings: React.FC<SettingsProps> = ({ userService }) => {
                     type="text"
                     value={newLike}
                     onChange={(e) => setNewLike(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addLike();
+                        }
+                    }}
                     placeholder="Add a new like"
                 />
                 <button onClick={addLike}>Add Like</button>
@@ -134,6 +140,12 @@ const Settings: React.FC<SettingsProps> = ({ userService }) => {
                     type="text"
                     value={newDislike}
                     onChange={(e) => setNewDislike(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addDislike();
+                        }
+                    }}
                     placeholder="Add a new dislike"
                 />
                 <button onClick={addDislike}>Add Dislike</button>

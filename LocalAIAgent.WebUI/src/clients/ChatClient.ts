@@ -1,5 +1,5 @@
 import * as signalR from "@microsoft/signalr";
-import ChatMessage from "./ChatMessage";
+import ChatMessage from "../domain/ChatMessage";
 
 const connection = new signalR.HubConnectionBuilder()
     .withUrl("https://localhost:7276/chatHub")
