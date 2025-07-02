@@ -11,7 +11,7 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
         {
             return
                 [
-                    $"{BaseUrl}/feed",
+                    $"{BaseUrl}/feed/",
                 ];
         }
 
@@ -20,6 +20,8 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
             services.AddHttpClient(ClientName, client =>
             {
                 client.BaseAddress = new Uri(BaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+                client.DefaultRequestHeaders.Host = Host;
             })
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {

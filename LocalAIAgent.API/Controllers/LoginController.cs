@@ -1,39 +1,23 @@
-using LocalAIAgent.API.Infrastructure;
-using LocalAIAgent.API.Services;
+using LocalAIAgent.API.Controllers.Serialization;
+using LocalAIAgent.API.Infrastructure.Models;
+using LocalAIAgent.API.UseCases;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class LoginController : ControllerBase
+    public class LoginController(
+        ICreateUserUseCase createUserUseCase,
+        IGetUserUseCase getUserUseCase) : ControllerBase
     {
-        private readonly UserContext _context;
-        private readonly IPasswordHasher _passwordHasher;
-
-        public LoginController(UserContext context, IPasswordHasher passwordHasher)
-        {
-            _context = context;
-            _passwordHasher = passwordHasher;
-        }
-
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register(UserRegistrationDto request)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-            {
+            if (await getUserUseCase.UsernameExists(request.Username))
                 return BadRequest("User already exists.");
-            }
 
-            var user = new User
-            {
-                Username = request.Username,
-                PasswordHash = _passwordHasher.Hash(request.Password)
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            User user = await createUserUseCase.CreateUser(request);
 
             return Ok(new UserDto { Id = user.Id, Username = user.Username });
         }
@@ -41,12 +25,10 @@ namespace LocalAIAgent.API.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(UserLoginDto request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+            Domain.User? user = await getUserUseCase.TryLogin(request);
 
-            if (user == null || !_passwordHasher.Verify(user.PasswordHash, request.Password))
-            {
+            if (user is null)
                 return BadRequest("Invalid credentials.");
-            }
 
             return Ok(new UserDto { Id = user.Id, Username = user.Username });
         }

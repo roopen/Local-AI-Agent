@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LocalAIAgent.Domain\LocalAIAgent.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="UserPrompt.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

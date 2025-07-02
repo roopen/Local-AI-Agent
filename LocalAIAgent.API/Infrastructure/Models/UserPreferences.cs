@@ -1,6 +1,6 @@
-namespace LocalAIAgent.API.Infrastructure;
+namespace LocalAIAgent.API.Infrastructure.Models;
 
-public class UserPreference
+public class UserPreferences
 {
     public int Id { get; set; }
     public string Prompt { get; set; } = string.Empty;

@@ -1,4 +1,4 @@
-namespace LocalAIAgent.API.Controllers;
+namespace LocalAIAgent.API.Controllers.Serialization;
 
 public class UserPreferenceDto
 {

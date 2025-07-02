@@ -1,4 +1,6 @@
+using LocalAIAgent.API.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
+using LocalAIAgent.API.Infrastructure.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +13,7 @@ public class UserPreferencesController(UserContext context) : ControllerBase
     [HttpGet("{userId}")]
     public async Task<ActionResult<UserPreferenceDto>> GetPreferences(int userId)
     {
-        UserPreference? preferences = await context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
+        UserPreferences? preferences = await context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences == null)
         {
             return NotFound();
@@ -36,7 +38,7 @@ public class UserPreferencesController(UserContext context) : ControllerBase
 
         if (user.Preferences == null)
         {
-            user.Preferences = new UserPreference
+            user.Preferences = new UserPreferences
             {
                 Prompt = preferences.Prompt,
                 Interests = preferences.Interests,

@@ -29,9 +29,11 @@ namespace LocalAIAgent.Tests.ArchitecturalTests
             System.Reflection.AssemblyName[] referencedAssemblies = semanticKernelAssembly.GetReferencedAssemblies();
 
             // Act
-            // Assuming all project assemblies in the solution start with "LocalAIAgent" except "SemanticKernel"
+            // Allow references to Domain project, but prevent other LocalAIAgent project references
             List<System.Reflection.AssemblyName> forbiddenReferences = referencedAssemblies
-                .Where(a => a.Name != semanticKernelAssembly.GetName().Name && a.Name!.StartsWith("LocalAIAgent"))
+                .Where(a => a.Name != semanticKernelAssembly.GetName().Name
+                    && a.Name!.StartsWith("LocalAIAgent")
+                    && a.Name != "LocalAIAgent.Domain")
                 .ToList();
 
             // Assert
