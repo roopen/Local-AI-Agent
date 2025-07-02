@@ -1,4 +1,5 @@
 ﻿using LocalAIAgent.SemanticKernel;
+using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,9 +20,10 @@ namespace LocalAIAgent.ConsoleApp
             .Build();
 
             Kernel kernel = host.Services.GetRequiredService<Kernel>();
-            IGetNewsUseCase getNewsUseCase = host.Services.GetRequiredService<IGetNewsUseCase>();
+            IGetNewsUseCase getNewsUseCase = kernel.Services.GetRequiredService<IGetNewsUseCase>();
+            ChatService chatService = kernel.Services.GetRequiredService<ChatService>();
 
-            List<NewsItem> newsArticles = await getNewsUseCase.GetAsync();
+            List<NewsItem> newsArticles = await getNewsUseCase.GetAsync(await ChatSetup.ReadUserPreferencesFromFile(chatService));
 
             DisplayNews(newsArticles);
 
@@ -31,7 +33,7 @@ namespace LocalAIAgent.ConsoleApp
 
         private static void DisplayNews(List<NewsItem> newsArticles)
         {
-            foreach (NewsItem newsArticle in newsArticles.Take(10))
+            foreach (NewsItem newsArticle in newsArticles.Take(20))
             {
                 Console.WriteLine($"{newsArticle.Content}");
                 Console.WriteLine($"Link: {newsArticle.Link}");
