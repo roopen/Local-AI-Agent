@@ -1,20 +1,48 @@
-import { OpenAPI, UserPreferencesService } from "../clients/UserApiClient";
+import { LoginService, OpenAPI, UserPreferencesService } from "../clients/UserApiClient";
+import type { UserLoginDto, UserRegistrationDto } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
 
 OpenAPI.BASE = "https://localhost:7276";
-const userId = 1;
 
 export default class UserService implements IUserService {
-    async createUser(user: Omit<User, "id">): Promise<User> {
-        const createdUser = await UserPreferencesService.postApiUser({
-            username: user.name
-        });
-        return {
-            id: createdUser.id!.toString(),
-            name: createdUser.username!
-        };
+    private _currentUser: User | null = null;
+
+    async login(user: UserLoginDto): Promise<User | null> {
+        const loggedInUser = await LoginService.postApiLoginLogin(user);
+        if (loggedInUser) {
+            this._currentUser = {
+                id: loggedInUser.id!.toString(),
+                name: loggedInUser.username!
+            };
+            return this._currentUser;
+        }
+        return null;
+    }
+
+    async register(user: UserRegistrationDto): Promise<User | null> {
+        const registeredUser = await LoginService.postApiLoginRegister(user);
+        if (registeredUser) {
+            this._currentUser = {
+                id: registeredUser.id!.toString(),
+                name: registeredUser.username!
+            };
+            return this._currentUser;
+        }
+        return null;
+    }
+
+    logout(): void {
+        this._currentUser = null;
+    }
+
+    getCurrentUser(): User | null {
+        return this._currentUser;
+    }
+
+    isLoggedIn(): boolean {
+        return this._currentUser !== null;
     }
 
     async getUserPreferences(userId: string): Promise<UserSettings | null> {
@@ -29,8 +57,11 @@ export default class UserService implements IUserService {
     }
 
     async saveUserPreferences(preferences: Omit<UserSettings, "id">): Promise<void> {
+        if (!this._currentUser) {
+            throw new Error("User not logged in");
+        }
         await UserPreferencesService.postApiSavePreferences({
-            userId: userId,
+            userId: parseInt(this._currentUser.id, 10),
             prompt: preferences.prompt,
             interests: preferences.likes,
             dislikes: preferences.dislikes

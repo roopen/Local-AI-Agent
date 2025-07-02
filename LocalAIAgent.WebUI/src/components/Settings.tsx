@@ -15,11 +15,14 @@ const Settings: React.FC<SettingsProps> = ({ userService }) => {
     const [textStyle, setTextStyle] = useState<React.CSSProperties>({ opacity: 1 });
 
     useEffect(() => {
-        userService.getUserPreferences("1").then(loadedSettings => {
-            if (loadedSettings) {
-                setSettings(loadedSettings);
-            }
-        });
+        const user = userService.getCurrentUser();
+        if (user) {
+            userService.getUserPreferences(user.id).then(loadedSettings => {
+                if (loadedSettings) {
+                    setSettings(loadedSettings);
+                }
+            });
+        }
     }, []);
 
     useEffect(() => {

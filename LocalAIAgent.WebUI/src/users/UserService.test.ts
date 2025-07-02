@@ -1,11 +1,14 @@
 import UserService from './UserService';
-import { UserPreferencesService } from '../clients/UserApiClient';
-import type { User } from '../domain/User';
+import { LoginService, UserPreferencesService } from '../clients/UserApiClient';
 import UserSettings from '../domain/UserSettings';
+import type { UserRegistrationDto, UserLoginDto, UserDto, UserPreferenceDto } from '../clients/UserApiClient';
 
 jest.mock('../clients/UserApiClient', () => ({
+    LoginService: {
+        postApiLoginLogin: jest.fn(),
+        postApiLoginRegister: jest.fn(),
+    },
     UserPreferencesService: {
-        postApiUser: jest.fn(),
         getApiUserPreferences: jest.fn(),
         postApiSavePreferences: jest.fn(),
     },
@@ -14,6 +17,7 @@ jest.mock('../clients/UserApiClient', () => ({
     }
 }));
 
+const mockedLoginService = LoginService as jest.Mocked<typeof LoginService>;
 const mockedUserPreferencesService = UserPreferencesService as jest.Mocked<typeof UserPreferencesService>;
 
 describe('UserService', () => {
@@ -24,22 +28,92 @@ describe('UserService', () => {
         jest.clearAllMocks();
     });
 
-    describe('createUser', () => {
-        it('should create a user and return the mapped user object', async () => {
-            const newUser: Omit<User, 'id'> = { name: 'testuser' };
-            const createdUserFromApi = { id: 1, username: 'testuser' };
+    describe('login', () => {
+        it('should log in a user and return the mapped user object', async () => {
+            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
+            const loggedInUserFromApi = { id: 1, username: 'testuser' };
 
-            mockedUserPreferencesService.postApiUser.mockResolvedValue(createdUserFromApi);
+            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
 
-            const result = await userService.createUser(newUser);
+            const result = await userService.login(userCredentials);
 
-            expect(mockedUserPreferencesService.postApiUser).toHaveBeenCalledWith({
-                username: newUser.name,
-            });
+            expect(mockedLoginService.postApiLoginLogin).toHaveBeenCalledWith(userCredentials);
             expect(result).toEqual({
                 id: '1',
                 name: 'testuser',
             });
+            expect(userService.isLoggedIn()).toBe(true);
+            expect(userService.getCurrentUser()).toEqual({
+                id: '1',
+                name: 'testuser',
+            });
+        });
+
+        it('should return null if login fails', async () => {
+            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
+            mockedLoginService.postApiLoginLogin.mockResolvedValue(null as unknown as UserDto);
+
+            const result = await userService.login(userCredentials);
+
+            expect(result).toBeNull();
+            expect(userService.isLoggedIn()).toBe(false);
+            expect(userService.getCurrentUser()).toBeNull();
+        });
+    });
+
+    describe('register', () => {
+        it('should register a user and return the mapped user object', async () => {
+            const newUser: UserRegistrationDto = { username: 'testuser', password: 'password' };
+            const registeredUserFromApi = { id: 1, username: 'testuser' };
+
+            mockedLoginService.postApiLoginRegister.mockResolvedValue(registeredUserFromApi);
+
+            const result = await userService.register(newUser);
+
+            expect(mockedLoginService.postApiLoginRegister).toHaveBeenCalledWith(newUser);
+            expect(result).toEqual({
+                id: '1',
+                name: 'testuser',
+            });
+            expect(userService.isLoggedIn()).toBe(true);
+            expect(userService.getCurrentUser()).toEqual({
+                id: '1',
+                name: 'testuser',
+            });
+        });
+
+        it('should return null if registration fails', async () => {
+            const newUser: UserRegistrationDto = { username: 'testuser', password: 'password' };
+            mockedLoginService.postApiLoginRegister.mockResolvedValue(null as unknown as UserDto);
+
+            const result = await userService.register(newUser);
+
+            expect(result).toBeNull();
+            expect(userService.isLoggedIn()).toBe(false);
+            expect(userService.getCurrentUser()).toBeNull();
+        });
+    });
+
+    describe('logout', () => {
+        it('should log out the user', async () => {
+            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
+            const loggedInUserFromApi = { id: 1, username: 'testuser' };
+            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
+            await userService.login(userCredentials);
+
+            expect(userService.isLoggedIn()).toBe(true);
+
+            userService.logout();
+
+            expect(userService.isLoggedIn()).toBe(false);
+            expect(userService.getCurrentUser()).toBeNull();
+        });
+    });
+
+    describe('isLoggedIn and getCurrentUser', () => {
+        it('should return false and null when no user is logged in', () => {
+            expect(userService.isLoggedIn()).toBe(false);
+            expect(userService.getCurrentUser()).toBeNull();
         });
     });
 
@@ -65,21 +139,30 @@ describe('UserService', () => {
 
         it('should return null if user preferences are not found', async () => {
             const userId = '1';
-            mockedUserPreferencesService.getApiUserPreferences.mockRejectedValue(new Error('API Error'));
+            mockedUserPreferencesService.getApiUserPreferences.mockResolvedValue(null as unknown as UserPreferenceDto);
 
-            await expect(userService.getUserPreferences(userId)).rejects.toThrow('API Error');
-            expect(mockedUserPreferencesService.getApiUserPreferences).toHaveBeenCalledWith(1);
+            const result = await userService.getUserPreferences(userId);
+            expect(result).toBeNull();
         });
     });
 
     describe('saveUserPreferences', () => {
-        it('should save user preferences', async () => {
-            const preferences: Omit<UserSettings, 'id'> = new UserSettings(['ai'], ['manual work'], 'be concise');
+        it('should throw an error if user is not logged in', async () => {
+            const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
+            await expect(userService.saveUserPreferences(preferences)).rejects.toThrow("User not logged in");
+        });
 
+        it('should save user preferences when user is logged in', async () => {
+            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
+            const loggedInUserFromApi = { id: 1, username: 'testuser' };
+            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
+            await userService.login(userCredentials);
+
+            const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
             await userService.saveUserPreferences(preferences);
 
             expect(mockedUserPreferencesService.postApiSavePreferences).toHaveBeenCalledWith({
-                userId: 1, // This is hardcoded in the service
+                userId: 1,
                 prompt: preferences.prompt,
                 interests: preferences.likes,
                 dislikes: preferences.dislikes,
