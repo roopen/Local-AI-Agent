@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 
-namespace LocalAIAgent.API.Services
+namespace LocalAIAgent.API.Infrastructure
 {
-    public class PasswordHasher : IPasswordHasher
+    public class PasswordHashService : IPasswordHashService
     {
         private const int SaltSize = 16;
         private const int HashSize = 20;

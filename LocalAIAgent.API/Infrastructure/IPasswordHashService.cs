@@ -1,6 +1,6 @@
-namespace LocalAIAgent.API.Services
+namespace LocalAIAgent.API.Infrastructure
 {
-    public interface IPasswordHasher
+    public interface IPasswordHashService
     {
         string Hash(string password);
         bool Verify(string passwordHash, string password);

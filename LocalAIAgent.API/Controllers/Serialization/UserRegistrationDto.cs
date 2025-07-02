@@ -1,6 +1,6 @@
-namespace LocalAIAgent.API.Controllers
+namespace LocalAIAgent.API.Controllers.Serialization
 {
-    public class UserLoginDto
+    public class UserRegistrationDto
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;

@@ -1,4 +1,5 @@
-﻿using LocalAIAgent.SemanticKernel.Chat;
+﻿using LocalAIAgent.Domain;
+using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -9,6 +10,7 @@ namespace LocalAIAgent.SemanticKernel
     public interface IGetNewsUseCase
     {
         Task<List<NewsItem>> GetAsync();
+        Task<List<NewsItem>> GetAsync(UserPreferences? preferences);
     }
 
     public class GetNewsUseCase : IGetNewsUseCase
@@ -50,6 +52,11 @@ namespace LocalAIAgent.SemanticKernel
             List<NewsItem> filteredNews = await FilteredNews(allNews);
 
             return filteredNews;
+        }
+
+        public Task<List<NewsItem>> GetAsync(UserPreferences? preferences)
+        {
+            throw new NotImplementedException();
         }
 
         private async Task<List<NewsItem>> FilteredNews(List<NewsItem> allNews)
