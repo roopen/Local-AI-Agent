@@ -43,8 +43,8 @@ namespace LocalAIAgent.Tests.IntegrationTests
                 // ctx.Database.EnsureCreated();
 
                 // OPTION B: If you want to actually test migrations, use:
-                // ctx.Database.EnsureDeleted();
-                // ctx.Database.Migrate();
+                ctx.Database.EnsureDeleted();
+                ctx.Database.Migrate();
             });
         }
 

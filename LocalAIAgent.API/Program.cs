@@ -1,5 +1,6 @@
 using LocalAIAgent.API.Hubs;
 using LocalAIAgent.API.Infrastructure;
+using LocalAIAgent.API.Services;
 using LocalAIAgent.SemanticKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,7 @@ namespace LocalAIAgent.API
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
             builder.Services.AddSemanticKernel();
+            builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 
             builder.Services.AddCors(options =>
