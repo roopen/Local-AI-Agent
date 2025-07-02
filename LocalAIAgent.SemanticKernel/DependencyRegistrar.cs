@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using NodaTime;
-using System.Diagnostics;
 
 namespace LocalAIAgent.SemanticKernel
 {
@@ -20,19 +19,20 @@ namespace LocalAIAgent.SemanticKernel
             services.AddSingleton<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<ChatContext>();
+            services.AddKernel().GetSemanticKernelBuilder();
+            IConfiguration configuration = services.AddConfigurations();
+            AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
+            services.AddSingleton(aiOptions);
+
+            services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
+
             services.AddNewsClients();
-
-            IKernelBuilder kernelBuilder = GetSemanticKernelBuilder();
-
-            services.AddSingleton(sp => kernelBuilder.Build());
 
             return services;
         }
 
-        public static IKernelBuilder GetSemanticKernelBuilder()
+        public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder)
         {
-            IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
-
             kernelBuilder.Services.AddNewsClients();
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
@@ -40,6 +40,7 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
             kernelBuilder.Services.AddSingleton<IClock>(SystemClock.Instance);
             kernelBuilder.Services.AddSingleton<INewsService, NewsService>();
+            kernelBuilder.Services.AddSingleton<IGetNewsUseCase, GetNewsUseCase>();
 
             IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
             AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()
@@ -66,21 +67,6 @@ namespace LocalAIAgent.SemanticKernel
                 );
 
             return kernelBuilder;
-        }
-
-        public static async Task LoadUserPromptIntoChatContext(this Kernel kernel, ChatService chatService, string userPreferencesPrompt)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            List<string> dislikedTopics = await chatService.GetDislikedTopicsList(userPreferencesPrompt);
-            List<string> wantedTopics = await chatService.GetInterestingTopicsList(userPreferencesPrompt);
-            ChatContext chatContext = kernel.Services.GetRequiredService<ChatContext>();
-            chatContext.UserDislikes = dislikedTopics;
-            chatContext.UserInterests = wantedTopics;
-            chatContext.UserPrompt = userPreferencesPrompt;
-
-            stopwatch.Stop();
-            Console.WriteLine($"User preferences prompt loaded into ChatContext in {stopwatch.ElapsedMilliseconds} ms.");
         }
     }
 }

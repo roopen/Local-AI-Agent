@@ -1,7 +1,6 @@
 ﻿using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using OpenAI.Chat;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
@@ -17,8 +16,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
             "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
         public readonly ChatHistory chatHistory = [];
-        private readonly OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
-                options,
+        private readonly OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
                 "User's likes: \n" + chatContext.GetUserInterestsAsString());
 
@@ -59,8 +57,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
             string prompt = "Evaluate the following news article and return true if you think user wants to see it and " +
                 "false if you think they don't want to see it. So the only allowed responses are the single word 'true' or 'false'." +
                 " User preferences are as follows: ";
-            OpenAIPromptExecutionSettings openAiSettings = GetOpenAIPromptExecutionSettings(
-                options,
+            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
                 "User's likes: \n" + chatContext.GetUserInterestsAsString());
 
@@ -86,9 +83,9 @@ namespace LocalAIAgent.SemanticKernel.Chat
             ChatHistory chatHistory = [];
             chatHistory.AddUserMessage(userPrompt);
 
-            IReadOnlyList<Microsoft.SemanticKernel.ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
+            IReadOnlyList<ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
                 chatHistory,
-                GetOpenAIPromptExecutionSettings(options, unwantedTopicsPrompt, allowFunctionUse: false),
+                options.GetOpenAIPromptExecutionSettings(unwantedTopicsPrompt, allowFunctionUse: false),
                 kernel
             );
 
@@ -109,9 +106,9 @@ namespace LocalAIAgent.SemanticKernel.Chat
             ChatHistory chatHistory = [];
             chatHistory.AddUserMessage(userPrompt);
 
-            IReadOnlyList<Microsoft.SemanticKernel.ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
+            IReadOnlyList<ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
                 chatHistory,
-                GetOpenAIPromptExecutionSettings(options, unwantedTopicsPrompt, allowFunctionUse: false),
+                options.GetOpenAIPromptExecutionSettings(unwantedTopicsPrompt, allowFunctionUse: false),
                 kernel
             );
 
@@ -120,20 +117,6 @@ namespace LocalAIAgent.SemanticKernel.Chat
             wantedTopics = wantedTopics.Select(topic => topic.Trim()).ToList();
 
             return wantedTopics;
-        }
-
-        private static OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings(AIOptions options, string systemPrompt, bool allowFunctionUse = true)
-        {
-            return new OpenAIPromptExecutionSettings
-            {
-                ChatSystemPrompt = systemPrompt,
-                ReasoningEffort = ChatReasoningEffortLevel.High,
-                FunctionChoiceBehavior = allowFunctionUse ? FunctionChoiceBehavior.Auto() : FunctionChoiceBehavior.None(),
-                Temperature = (double)options.Temperature,
-                TopP = (double)options.TopP,
-                FrequencyPenalty = (double)options.FrequencyPenalty,
-                PresencePenalty = (double)options.PresencePenalty,
-            };
         }
     }
 }
