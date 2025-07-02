@@ -32,7 +32,7 @@ public class LoginControllerTests(CustomWebApplicationFactory factory) : IClassF
     {
         // Arrange
         UserClient client = new("http://localhost", factory.CreateClient());
-        UserRegistrationDto registration = new() { Username = "testuser", Password = "password" };
+        UserRegistrationDto registration = new() { Username = "testuser2", Password = "password" };
 
         // Act
         // Register User
