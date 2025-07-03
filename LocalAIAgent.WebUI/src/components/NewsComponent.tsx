@@ -18,7 +18,9 @@ const NewsComponent: React.FC = () => {
     }, [isLoading]);
 
     useEffect(() => {
-        const newsService = new NewsService();
+        const newsService = NewsService.getInstance();
+        setIsLoading(true);
+        
         newsService.getNews()
             .then(setArticles)
             .catch(err => {
@@ -26,7 +28,7 @@ const NewsComponent: React.FC = () => {
                 console.error(err);
             })
             .finally(() => setIsLoading(false));
-    }, []);
+    }, []); 
 
     return (
         <div>
