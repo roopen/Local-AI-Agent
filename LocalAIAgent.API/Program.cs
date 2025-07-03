@@ -3,6 +3,7 @@ using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel;
+using LocalAIAgent.SemanticKernel.News;
 using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API
@@ -69,7 +70,21 @@ namespace LocalAIAgent.API
             app.MapControllers();
             app.MapHub<ChatHub>("/chatHub");
 
+            // Run initial news fetch on startup
+            InitializeNewsCache(app);
+
             app.Run();
+        }
+
+        private static void InitializeNewsCache(WebApplication app)
+        {
+            IServiceScopeFactory scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+            Task.Run(async () =>
+            {
+                using IServiceScope scope = scopeFactory.CreateScope();
+                INewsService newsService = scope.ServiceProvider.GetRequiredService<INewsService>();
+                await newsService.GetNewsAsync();
+            });
         }
     }
 }

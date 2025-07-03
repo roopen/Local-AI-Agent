@@ -26,6 +26,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
             List<NewsItem> news = await getNewsUseCase.GetAsync(user.Preferences);
 
+            newsMetrics.RecordNewsArticleCount(news.Count);
             newsMetrics.StopRecordingRequest();
             return Ok(news);
         }
