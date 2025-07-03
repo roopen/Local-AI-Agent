@@ -7,6 +7,8 @@ jest.mock('../clients/UserApiClient', () => ({
     LoginService: {
         postApiLoginLogin: jest.fn(),
         postApiLoginRegister: jest.fn(),
+        postApiLoginLogout: jest.fn(),
+        getApiLoginCurrent: jest.fn(),
     },
     UserPreferencesService: {
         getApiUserPreferences: jest.fn(),
@@ -46,7 +48,8 @@ describe('UserService', () => {
                 id: '1',
                 name: 'testuser',
             });
-            expect(userService.isLoggedIn()).toBe(true);
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            expect(await userService.isLoggedIn()).toBe(true);
             expect(userService.getCurrentUser()).toEqual({
                 id: '1',
                 name: 'testuser',
@@ -60,7 +63,8 @@ describe('UserService', () => {
             const result = await userService.login(userCredentials);
 
             expect(result).toBeNull();
-            expect(userService.isLoggedIn()).toBe(false);
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
+            expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
     });
@@ -79,7 +83,8 @@ describe('UserService', () => {
                 id: '1',
                 name: 'testuser',
             });
-            expect(userService.isLoggedIn()).toBe(true);
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(registeredUserFromApi);
+            expect(await userService.isLoggedIn()).toBe(true);
             expect(userService.getCurrentUser()).toEqual({
                 id: '1',
                 name: 'testuser',
@@ -93,7 +98,8 @@ describe('UserService', () => {
             const result = await userService.register(newUser);
 
             expect(result).toBeNull();
-            expect(userService.isLoggedIn()).toBe(false);
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
+            expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
     });
@@ -103,20 +109,41 @@ describe('UserService', () => {
             const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
             const loggedInUserFromApi = { id: 1, username: 'testuser' };
             mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            mockedLoginService.postApiLoginLogout.mockResolvedValue({}); // Mock successful logout
+            
             await userService.login(userCredentials);
+            expect(await userService.isLoggedIn()).toBe(true);
 
-            expect(userService.isLoggedIn()).toBe(true);
+            await userService.logout();
 
-            userService.logout();
-
-            expect(userService.isLoggedIn()).toBe(false);
+            expect(mockedLoginService.postApiLoginLogout).toHaveBeenCalled();
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
+            expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
     });
 
     describe('isLoggedIn and getCurrentUser', () => {
-        it('should return false and null when no user is logged in', () => {
-            expect(userService.isLoggedIn()).toBe(false);
+        it('should return false and null when no user is logged in', async () => {
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
+            expect(await userService.isLoggedIn()).toBe(false);
+            expect(userService.getCurrentUser()).toBeNull();
+        });
+
+        it('should return true and the user when a user is logged in', async () => {
+            const loggedInUserFromApi = { id: 1, username: 'testuser' };
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            expect(await userService.isLoggedIn()).toBe(true);
+            expect(userService.getCurrentUser()).toEqual({
+                id: '1',
+                name: 'testuser',
+            });
+        });
+
+        it('should return false when the api call fails', async () => {
+            mockedLoginService.getApiLoginCurrent.mockRejectedValue(new Error('Network error'));
+            expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
     });

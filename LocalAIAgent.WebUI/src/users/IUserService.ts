@@ -7,7 +7,7 @@ export interface IUserService {
     register(user: UserRegistrationDto): Promise<User | null>;
     logout(): void;
     getCurrentUser(): User | null;
-    isLoggedIn(): boolean;
+    isLoggedIn(): Promise<boolean>;
     getUserPreferences(userId: string): Promise<UserSettings | null>;
     saveUserPreferences(preferences: Omit<UserSettings, "id">): Promise<void>;
 }

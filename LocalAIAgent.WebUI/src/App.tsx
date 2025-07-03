@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
@@ -30,11 +30,28 @@ const MainApp = () => {
 };
 
 function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(userService.isLoggedIn());
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleLogin = () => {
+    useEffect(() => {
+        const checkLoginStatus = async () => {
+            try {
+                const loginStatus = await userService.isLoggedIn();
+                setIsLoggedIn(loginStatus);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        checkLoginStatus();
+    }, []);
+
+    const handleLogin = async () => {
         setIsLoggedIn(true);
     };
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
 
     return (
         <BrowserRouter>

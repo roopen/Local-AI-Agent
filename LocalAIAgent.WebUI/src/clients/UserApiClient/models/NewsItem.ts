@@ -6,6 +6,7 @@ export type NewsItem = {
     readonly publishDate?: string;
     readonly title?: string | null;
     readonly summary?: string | null;
+    readonly categories?: Array<string> | null;
     readonly link?: string | null;
     readonly source?: string | null;
 };

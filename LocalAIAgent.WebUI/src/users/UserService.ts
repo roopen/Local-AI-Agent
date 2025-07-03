@@ -5,6 +5,8 @@ import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
 
 OpenAPI.BASE = "https://localhost:7276";
+OpenAPI.CREDENTIALS = "include";
+OpenAPI.WITH_CREDENTIALS = true;
 
 export default class UserService implements IUserService {
     private static _instance: UserService;
@@ -44,7 +46,8 @@ export default class UserService implements IUserService {
         return null;
     }
 
-    logout(): void {
+    async logout(): Promise<void> {
+        await LoginService.postApiLoginLogout();
         this._currentUser = null;
     }
 
@@ -52,8 +55,20 @@ export default class UserService implements IUserService {
         return this._currentUser;
     }
 
-    isLoggedIn(): boolean {
-        return this._currentUser !== null;
+    async isLoggedIn(): Promise<boolean> {
+        try {
+            const currentUser = await LoginService.getApiLoginCurrent();
+            if (currentUser) {
+                this._currentUser = {
+                    id: currentUser.id!.toString(),
+                    name: currentUser.username!
+                };
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        }
     }
 
     async getUserPreferences(userId: string): Promise<UserSettings | null> {
