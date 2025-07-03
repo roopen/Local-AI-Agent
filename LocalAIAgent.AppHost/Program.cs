@@ -5,7 +5,7 @@ IResourceBuilder<ProjectResource> apiService = builder.AddProject<Projects.Local
 builder.AddNpmApp("webfrontend", "../LocalAIAgent.WebUI", "dev")
     .WithReference(apiService)
     .WithEnvironment("PORT", "53146")
-    .WithHttpEndpoint(env: "PORT")
+    .WithHttpsEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
 

@@ -39,4 +39,24 @@ export class LoginService {
             mediaType: 'application/json',
         });
     }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiLoginLogout(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/Login/logout',
+        });
+    }
+    /**
+     * @returns UserDto OK
+     * @throws ApiError
+     */
+    public static getApiLoginCurrent(): CancelablePromise<UserDto> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/Login/current',
+        });
+    }
 }
