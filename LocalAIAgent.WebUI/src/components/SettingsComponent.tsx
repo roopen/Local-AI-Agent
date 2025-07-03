@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import type { IUserService } from '../users/IUserService';
 import UserSettings from '../domain/UserSettings';
 
-interface SettingsProps {
+interface SettingsComponentProps {
     userService: IUserService;
 }
 
-const Settings: React.FC<SettingsProps> = ({ userService }) => {
+const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) => {
     const [settings, setSettings] = useState<UserSettings>(new UserSettings());
     const [newLike, setNewLike] = useState('');
     const [newDislike, setNewDislike] = useState('');
@@ -157,4 +157,4 @@ const Settings: React.FC<SettingsProps> = ({ userService }) => {
     );
 };
 
-export default Settings;
+export default SettingsComponent;

@@ -3,7 +3,7 @@ import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
 import UserService from '../users/UserService';
-import Settings from './Settings';
+import SettingsComponent from './SettingsComponent';
 
 function ChatComponent() {
     const userService = UserService.getInstance();
@@ -97,7 +97,7 @@ function ChatComponent() {
         <div style={{ display: 'flex', height: '100vh' }}>
             {isSettingsOpen && (
                 <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto' }}>
-                    <Settings userService={userService} />
+                    <SettingsComponent userService={userService} />
                 </div>
             )}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
