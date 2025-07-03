@@ -367,3 +367,5 @@ FodyWeavers.xsd
 /LocalAIAgent.SemanticKernel/UserPrompt.txt
 /LocalAIAgent.API/user.db
 /LocalAIAgent.API/openapi/
+/LocalAIAgent.API/user.db-shm
+/LocalAIAgent.API/user.db-wal
