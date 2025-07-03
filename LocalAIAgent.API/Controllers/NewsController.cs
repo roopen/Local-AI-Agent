@@ -16,9 +16,9 @@ namespace LocalAIAgent.API.Controllers
         {
             Domain.User? user = await getUserUseCase.GetUserById(userId);
             if (user == null)
-            {
-                return NotFound($"User with ID {userId} not found.");
-            }
+                return BadRequest($"User with ID {userId} not found.");
+            if (user.Preferences is null)
+                return BadRequest("User preferences are not set.");
 
             List<NewsItem> news = await getNewsUseCase.GetAsync(user.Preferences);
             return Ok(news);

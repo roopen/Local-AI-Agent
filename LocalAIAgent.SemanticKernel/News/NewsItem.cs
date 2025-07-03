@@ -12,9 +12,9 @@ namespace LocalAIAgent.SemanticKernel.News
         [JsonIgnore]
         public string Id { get; }
         public DateTimeOffset PublishDate { get; }
-
         public string Title { get; }
         public string Summary { get; }
+        public List<string> Categories { get; } = [];
 
         [TextSearchResultValue]
         [VectorStoreRecordData]
@@ -33,6 +33,10 @@ namespace LocalAIAgent.SemanticKernel.News
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
+            if (syndicationItem.Categories is not null)
+            {
+                Categories = syndicationItem.Categories.Select(c => c.Name ?? c.Label).ToList();
+            }
         }
 
 #pragma warning disable CS8618 // Vector Database requires a parameterless constructor
