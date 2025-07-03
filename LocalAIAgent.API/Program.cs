@@ -1,5 +1,6 @@
 using LocalAIAgent.API.Hubs;
 using LocalAIAgent.API.Infrastructure;
+using LocalAIAgent.API.Metrics;
 using LocalAIAgent.API.UseCases;
 using LocalAIAgent.SemanticKernel;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ namespace LocalAIAgent.API
             builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
+            builder.Services.AddSingleton<NewsMetrics>();
 
 
             builder.Services.AddCors(options =>
