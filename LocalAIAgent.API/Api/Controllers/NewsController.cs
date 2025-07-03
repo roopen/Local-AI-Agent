@@ -2,11 +2,13 @@ using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LocalAIAgent.API.Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class NewsController(
         IGetNewsUseCase getNewsUseCase,

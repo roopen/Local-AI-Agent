@@ -34,6 +34,15 @@ namespace LocalAIAgent.Tests.IntegrationTests
                     options.UseSqlite(_connection);
                 });
 
+                services.ConfigureHttpClientDefaults(http =>
+                {
+                    http.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                    {
+                        CookieContainer = new System.Net.CookieContainer(),
+                        UseCookies = true
+                    });
+                });
+
                 // 4) Build a temporary provider to initialize schema
                 using ServiceProvider sp = services.BuildServiceProvider();
                 using IServiceScope scope = sp.CreateScope();

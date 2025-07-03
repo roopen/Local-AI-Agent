@@ -4,6 +4,7 @@ using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API
@@ -38,6 +39,18 @@ namespace LocalAIAgent.API
                 });
             });
 
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.Strict;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(3600);
+                    options.LoginPath = "/api/Login/login";
+                    options.AccessDeniedPath = "/";
+                });
+
+
             WebApplication app = builder.Build();
 
             // Ensure database is created and migrations are applied
@@ -64,6 +77,7 @@ namespace LocalAIAgent.API
 
             app.UseCors("AllowWebUI");
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapDefaultEndpoints();

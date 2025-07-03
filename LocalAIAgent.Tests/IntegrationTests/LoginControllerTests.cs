@@ -9,7 +9,7 @@ public class LoginControllerTests(CustomWebApplicationFactory factory) : IClassF
     public async Task RegisterAndLogin_ShouldSucceed()
     {
         // Arrange
-        UserClient client = new("http://localhost", factory.CreateClient());
+        UserClient client = new("https://localhost", factory.CreateClient());
         UserRegistrationDto registration = new() { Username = "testuser", Password = "password" };
 
         // Act
@@ -31,7 +31,7 @@ public class LoginControllerTests(CustomWebApplicationFactory factory) : IClassF
     public async Task RegisterAndLoginWithWrongPassword_ShouldFail()
     {
         // Arrange
-        UserClient client = new("http://localhost", factory.CreateClient());
+        UserClient client = new("https://localhost", factory.CreateClient());
         UserRegistrationDto registration = new() { Username = "testuser2", Password = "password" };
 
         // Act
@@ -46,5 +46,43 @@ public class LoginControllerTests(CustomWebApplicationFactory factory) : IClassF
         // Assert
         Assert.NotNull(loginResult);
         Assert.Equal((int)HttpStatusCode.BadRequest, loginResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_ShouldSucceed()
+    {
+        // Arrange
+        UserClient client = new("https://localhost", factory.CreateClient());
+        UserRegistrationDto registration = new() { Username = "testuser3", Password = "password" };
+        UserDto registeredUser = await client.RegisterAsync(registration);
+        UserLoginDto login = new() { Username = "testuser3", Password = "password" };
+        UserDto loggedInUser = await client.LoginAsync(login);
+
+        // Act
+        await client.LogoutAsync();
+        ApiException logoutResult = await Assert.ThrowsAsync<ApiException>(client.CurrentAsync);
+
+        // Assert
+        Assert.NotNull(logoutResult);
+        Assert.Equal((int)HttpStatusCode.Unauthorized, logoutResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetCurrentUser_ShouldReturnAuthenticatedUser()
+    {
+        // Arrange
+        UserClient client = new("https://localhost", factory.CreateClient());
+        UserRegistrationDto registration = new() { Username = "testuser4", Password = "password" };
+        UserDto registeredUser = await client.RegisterAsync(registration);
+        UserLoginDto login = new() { Username = "testuser4", Password = "password" };
+        UserDto loggedInUser = await client.LoginAsync(login);
+
+        // Act
+        UserDto currentUser = await client.CurrentAsync();
+
+        // Assert
+        Assert.NotNull(currentUser);
+        Assert.Equal(loggedInUser.Id, currentUser.Id);
+        Assert.Equal(loggedInUser.Username, currentUser.Username);
     }
 }
