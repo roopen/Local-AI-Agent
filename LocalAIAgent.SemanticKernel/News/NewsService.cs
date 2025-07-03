@@ -21,7 +21,7 @@ namespace LocalAIAgent.SemanticKernel.News
         IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
         ILogger<NewsService> logger) : INewsService
     {
-        private readonly List<NewsItem> newsCache = [];
+        private List<NewsItem> newsCache = [];
 
         public async Task<List<NewsItem>> GetNewsAsync()
         {
@@ -72,6 +72,8 @@ namespace LocalAIAgent.SemanticKernel.News
             {
                 if (item is not null) newsCache.Add(new NewsItem(item));
             }
+
+            newsCache = newsCache.DistinctBy(item => item.Link).ToList();
         }
 
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
