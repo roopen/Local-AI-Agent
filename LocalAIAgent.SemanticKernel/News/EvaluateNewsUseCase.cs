@@ -1,5 +1,6 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -14,7 +15,8 @@ namespace LocalAIAgent.SemanticKernel.News
     internal class EvaluateNewsUseCase(
         IChatCompletionService chatCompletion,
         Kernel kernel,
-        AIOptions options) : IEvaluateNewsUseCase
+        AIOptions options,
+        ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
     {
         private readonly ChatHistory chatHistory = [];
 
@@ -58,6 +60,9 @@ namespace LocalAIAgent.SemanticKernel.News
                         result.Add(article);
                 }
             }
+
+            double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
+            NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
 
             return result;
         }

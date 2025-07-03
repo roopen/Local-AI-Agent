@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.ServiceModel.Syndication;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -17,7 +18,8 @@ namespace LocalAIAgent.SemanticKernel.News
 
     internal class NewsService(
         IHttpClientFactory httpClientFactory,
-        IEnumerable<BaseNewsClientSettings> newsClientSettingsList) : INewsService
+        IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
+        ILogger<NewsService> logger) : INewsService
     {
         private readonly List<NewsItem> newsCache = [];
 
@@ -32,7 +34,12 @@ namespace LocalAIAgent.SemanticKernel.News
         {
             if (newsCache.Count is 0) await LoadAllNews();
 
-            return newsCache.Where(item => PassesDislikeFilter(item, dislikes)).ToList(); ;
+            List<NewsItem> filteredNews = newsCache.Where(item => PassesDislikeFilter(item, dislikes)).ToList();
+
+            double filterPercentage = 100 - (filteredNews.Count / (double)newsCache.Count * 100);
+            NewsLogging.LogNewsFiltered(logger, newsCache.Count, filteredNews.Count, filterPercentage, null);
+
+            return filteredNews;
         }
 
         internal async Task<int> LoadAllNews()
