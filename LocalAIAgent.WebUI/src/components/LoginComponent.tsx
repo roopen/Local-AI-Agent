@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import type { IUserService } from '../users/IUserService';
 
 interface LoginComponentProps {
@@ -20,6 +20,12 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
         onLogin();
     };
 
+    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            handleAuth();
+        }
+    };
+
     return (
         <div>
             <h2>{isRegister ? 'Register' : 'Login'}</h2>
@@ -29,12 +35,14 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                     placeholder="Username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={handleKeyDown}
                 />
                 <input
                     type="password"
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={handleKeyDown}
                 />
             </div>
             <button onClick={handleAuth}>{isRegister ? 'Register' : 'Login'}</button>
