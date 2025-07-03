@@ -71,7 +71,8 @@ namespace LocalAIAgent.Tests.UnitTests
             // Assert
             Assert.False(string.IsNullOrWhiteSpace(serializedNewsItem));
             Assert.True(serializedNewsItem.Contains("PublishDate", StringComparison.InvariantCultureIgnoreCase));
-            Assert.True(serializedNewsItem.Contains("Content", StringComparison.InvariantCultureIgnoreCase));
+            Assert.True(serializedNewsItem.Contains("Title", StringComparison.InvariantCultureIgnoreCase));
+            Assert.True(serializedNewsItem.Contains("Summary", StringComparison.InvariantCultureIgnoreCase));
             Assert.True(serializedNewsItem.Contains("Link", StringComparison.InvariantCultureIgnoreCase));
             Assert.False(serializedNewsItem.Contains("Vector", StringComparison.InvariantCultureIgnoreCase));
         }

@@ -4,7 +4,8 @@
 /* eslint-disable */
 export type NewsItem = {
     readonly publishDate?: string;
-    readonly content?: string | null;
+    readonly title?: string | null;
+    readonly summary?: string | null;
     readonly link?: string | null;
     readonly source?: string | null;
 };

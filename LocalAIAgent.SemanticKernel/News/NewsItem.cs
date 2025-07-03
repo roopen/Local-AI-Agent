@@ -13,9 +13,13 @@ namespace LocalAIAgent.SemanticKernel.News
         public string Id { get; }
         public DateTimeOffset PublishDate { get; }
 
+        public string Title { get; }
+        public string Summary { get; }
+
         [TextSearchResultValue]
         [VectorStoreRecordData]
-        public string? Content { get; }
+        [JsonIgnore]
+        public string? Content => $"{Title}\n\n{Summary}";
         public string? Link { get; }
         [TextSearchResultValue]
         [VectorStoreRecordData]
@@ -24,7 +28,8 @@ namespace LocalAIAgent.SemanticKernel.News
         public NewsItem(SyndicationItem syndicationItem)
         {
             Id = Guid.CreateVersion7().ToString();
-            Content = syndicationItem.Title?.Text + "\n" + syndicationItem.Summary?.Text;
+            Title = syndicationItem.Title?.Text ?? string.Empty;
+            Summary = syndicationItem.Summary?.Text ?? string.Empty;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
