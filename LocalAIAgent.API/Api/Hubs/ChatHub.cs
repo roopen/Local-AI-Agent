@@ -4,7 +4,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using System.Text;
 
-namespace LocalAIAgent.API.Hubs
+namespace LocalAIAgent.API.Api.Hubs
 {
     public class ChatHub : Hub
     {

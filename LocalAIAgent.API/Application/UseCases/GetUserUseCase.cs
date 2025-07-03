@@ -1,10 +1,10 @@
-﻿using LocalAIAgent.API.Controllers.Serialization;
+﻿using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LocalAIAgent.API.UseCases
+namespace LocalAIAgent.API.Application.UseCases
 {
     public interface IGetUserUseCase
     {

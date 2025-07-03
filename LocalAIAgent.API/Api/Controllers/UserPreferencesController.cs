@@ -1,10 +1,10 @@
-using LocalAIAgent.API.Controllers.Serialization;
+using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LocalAIAgent.API.Controllers;
+namespace LocalAIAgent.API.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
