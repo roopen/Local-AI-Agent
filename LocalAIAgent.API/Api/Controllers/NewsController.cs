@@ -1,10 +1,10 @@
+using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Metrics;
-using LocalAIAgent.API.UseCases;
 using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LocalAIAgent.API.Controllers
+namespace LocalAIAgent.API.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

@@ -1,9 +1,9 @@
-using LocalAIAgent.API.Controllers.Serialization;
+using LocalAIAgent.API.Api.Controllers.Serialization;
+using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure.Models;
-using LocalAIAgent.API.UseCases;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LocalAIAgent.API.Controllers
+namespace LocalAIAgent.API.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

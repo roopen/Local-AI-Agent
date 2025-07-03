@@ -1,8 +1,8 @@
-﻿using LocalAIAgent.API.Controllers.Serialization;
+﻿using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 
-namespace LocalAIAgent.API.UseCases
+namespace LocalAIAgent.API.Application.UseCases
 {
     public interface ICreateUserUseCase
     {

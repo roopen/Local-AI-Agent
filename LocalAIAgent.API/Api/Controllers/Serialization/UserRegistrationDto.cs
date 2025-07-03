@@ -1,4 +1,4 @@
-namespace LocalAIAgent.API.Controllers.Serialization
+namespace LocalAIAgent.API.Api.Controllers.Serialization
 {
     public class UserRegistrationDto
     {
