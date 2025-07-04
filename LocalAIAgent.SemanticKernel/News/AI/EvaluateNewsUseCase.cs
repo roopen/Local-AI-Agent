@@ -5,7 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
-namespace LocalAIAgent.SemanticKernel.News
+namespace LocalAIAgent.SemanticKernel.News.AI
 {
     public interface IEvaluateNewsUseCase
     {
@@ -61,7 +61,7 @@ namespace LocalAIAgent.SemanticKernel.News
                 }
             }
 
-            double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
+            double filterPercentage = 100 - result.Count / (double)articles.Count * 100;
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
 
             return result;

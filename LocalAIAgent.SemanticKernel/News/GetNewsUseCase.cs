@@ -1,7 +1,7 @@
 ﻿using LocalAIAgent.Domain;
-using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.News.AI;
 
-namespace LocalAIAgent.SemanticKernel
+namespace LocalAIAgent.SemanticKernel.News
 {
     public interface IGetNewsUseCase
     {
