@@ -50,7 +50,6 @@ namespace LocalAIAgent.SemanticKernel.News
             foreach (BaseNewsClientSettings settings in newsClientSettingsList.Distinct())
             {
                 using HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
-                logger.LogInformation($"NewsService: Using HttpClient {settings.ClientName}.");
 
                 foreach (string url in settings.GetNewsUrls())
                 {
