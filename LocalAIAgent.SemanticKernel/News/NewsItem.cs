@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.SemanticKernel.News
 {
-    public class NewsItem : BaseVectorData
+    public partial class NewsItem : BaseVectorData
     {
         [VectorStoreRecordKey]
         [JsonIgnore]
@@ -29,8 +29,8 @@ namespace LocalAIAgent.SemanticKernel.News
         public NewsItem(SyndicationItem syndicationItem)
         {
             Id = Guid.CreateVersion7().ToString();
-            Title = WebUtility.HtmlDecode(syndicationItem.Title?.Text) ?? string.Empty;
-            Summary = WebUtility.HtmlDecode(syndicationItem.Summary?.Text) ?? string.Empty;
+            Title = GetDecodedHtmlString(syndicationItem.Title?.Text);
+            Summary = GetDecodedHtmlString(syndicationItem.Summary?.Text);
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
@@ -38,6 +38,19 @@ namespace LocalAIAgent.SemanticKernel.News
             {
                 Categories = syndicationItem.Categories.Select(c => c.Name ?? c.Label).ToList();
             }
+        }
+
+        private static string GetDecodedHtmlString(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            string decodedText = WebUtility.HtmlDecode(text) ?? string.Empty;
+
+            // Remove HTML tags if any
+            decodedText = HtmlTag().Replace(decodedText, string.Empty);
+
+            return decodedText;
         }
 
 #pragma warning disable CS8618 // Vector Database requires a parameterless constructor
@@ -49,5 +62,8 @@ namespace LocalAIAgent.SemanticKernel.News
             string jsonString = System.Text.Json.JsonSerializer.Serialize(this);
             return jsonString;
         }
+
+        [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
+        private static partial System.Text.RegularExpressions.Regex HtmlTag();
     }
 }

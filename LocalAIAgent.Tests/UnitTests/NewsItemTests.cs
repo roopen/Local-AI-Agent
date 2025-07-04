@@ -76,5 +76,27 @@ namespace LocalAIAgent.Tests.UnitTests
             Assert.True(serializedNewsItem.Contains("Link", StringComparison.InvariantCultureIgnoreCase));
             Assert.False(serializedNewsItem.Contains("Vector", StringComparison.InvariantCultureIgnoreCase));
         }
+
+        [Fact]
+        public void NewsItem_IsCreated_WithoutHtmlTags()
+        {
+            // Arrange
+            SyndicationItem syndicationItem = new()
+            {
+                Title = new TextSyndicationContent("Test <b>Title</b>"),
+                Summary = new TextSyndicationContent("Test <i>Summary</i>"),
+                PublishDate = new DateTimeOffset(),
+            };
+            syndicationItem.Links.Add(new SyndicationLink(new Uri("http://example.com")));
+
+            // Act
+            NewsItem newsItem = new(syndicationItem);
+            string newsItemJson = newsItem.ToString();
+
+            // Assert
+            Assert.NotNull(newsItem);
+            Assert.Contains("Test Title", newsItemJson);
+            Assert.Contains("Test Summary", newsItemJson);
+        }
     }
 }
