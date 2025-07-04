@@ -23,7 +23,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
                 }
             });
         }
-    }, []);
+    });
 
     useEffect(() => {
         if (!isSaving) return;
