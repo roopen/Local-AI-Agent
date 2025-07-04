@@ -6,22 +6,17 @@ import './App.css';
 import LoginComponent from './components/LoginComponent';
 import UserService from './users/UserService';
 import NewsComponent from './components/NewsComponent';
+import MainLayout from './layouts/MainLayout';
 
 const userService = UserService.getInstance();
 
 const MainApp = () => {
     return (
-        <>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img src={reactLogo} className="logo react" alt="React logo" />
-                </a>
-            </div>
-            <NewsComponent />
-        </>
+        <MainLayout>
+            <>
+                <NewsComponent />
+            </>
+        </MainLayout>
     );
 };
 
@@ -53,7 +48,7 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={isLoggedIn ? <MainApp /> : <LoginComponent userService={userService} onLogin={handleLogin} />} />
-                <Route path="/news" element={<NewsComponent />} />
+                <Route path="/news" element={<MainLayout><NewsComponent /></MainLayout>} />
             </Routes>
         </BrowserRouter>
     );
