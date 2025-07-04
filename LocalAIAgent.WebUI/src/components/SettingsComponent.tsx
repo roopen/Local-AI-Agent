@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { IUserService } from '../users/IUserService';
 import UserSettings from '../domain/UserSettings';
 
@@ -23,7 +23,8 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
                 }
             });
         }
-    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (!isSaving) return;
@@ -51,12 +52,27 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
         };
     }, [isSaving]);
 
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
         if (isSaving) return;
         userService.saveUserPreferences(settings).then(() => {
             setIsSaving(true);
         });
-    };
+    }, [isSaving, settings, userService]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+                handleSave();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleSave]);
 
     const addLike = () => {
         if (newLike) {
