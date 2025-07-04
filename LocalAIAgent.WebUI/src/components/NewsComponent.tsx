@@ -32,7 +32,6 @@ const NewsComponent: React.FC = () => {
 
     return (
         <div>
-            <h1>News</h1>
             {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
             {error && <p>{error}</p>}
             {!isLoading && !error && (
