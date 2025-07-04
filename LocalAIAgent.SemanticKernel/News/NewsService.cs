@@ -68,12 +68,18 @@ namespace LocalAIAgent.SemanticKernel.News
 
         private void CacheNewsArticles(SyndicationFeed feed)
         {
-            foreach (SyndicationItem? item in feed.Items)
-            {
-                if (item is not null) newsCache.Add(new NewsItem(item));
-            }
+            List<NewsItem> newItems = feed.Items
+                .Where(item => item != null)
+                .Select(item => new NewsItem(item))
+                .ToList();
 
-            newsCache = newsCache.DistinctBy(item => item.Link).ToList();
+            lock (newsCache)
+            {
+                newsCache = newsCache
+                    .Concat(newItems)
+                    .DistinctBy(item => item.Link)
+                    .ToList();
+            }
         }
 
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
