@@ -33,7 +33,6 @@ namespace LocalAIAgent.SemanticKernel
 
         public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder)
         {
-            kernelBuilder.Services.AddNewsClients();
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
             //kernelBuilder.Services.AddSingleton<RAGService>();

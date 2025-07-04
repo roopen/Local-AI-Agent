@@ -47,9 +47,10 @@ namespace LocalAIAgent.SemanticKernel.News
             Stopwatch stopwatch = Stopwatch.StartNew();
             int feedCount = 0;
 
-            foreach (BaseNewsClientSettings settings in newsClientSettingsList)
+            foreach (BaseNewsClientSettings settings in newsClientSettingsList.Distinct())
             {
                 using HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
+                logger.LogInformation($"NewsService: Using HttpClient {settings.ClientName}.");
 
                 foreach (string url in settings.GetNewsUrls())
                 {
@@ -79,10 +80,18 @@ namespace LocalAIAgent.SemanticKernel.News
         private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
         {
             Console.WriteLine($"NewsService: GetNews called with url: {newsClient.BaseAddress + url}");
-            using Stream stream = await newsClient.GetStreamAsync(url);
-            using XmlReader reader = XmlReader.Create(stream);
-            SyndicationFeed feed = SyndicationFeed.Load(reader);
-            return feed;
+            try
+            {
+                using Stream stream = await newsClient.GetStreamAsync(url);
+                using XmlReader reader = XmlReader.Create(stream);
+                SyndicationFeed feed = SyndicationFeed.Load(reader);
+                return feed;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"NewsService: Error fetching news from {url}: {ex.Message}");
+                return new SyndicationFeed();
+            }
         }
 
         internal static bool PassesDislikeFilter(NewsItem item, List<string> dislikes)
