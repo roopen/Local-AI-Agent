@@ -14,6 +14,11 @@ const Header = () => {
         setModalIsOpen(false);
     };
 
+    const handleLogout = async () => {
+        await UserService.getInstance().logout();
+        window.location.reload();
+    };
+
     return (
         <div style={{ marginBottom: 40 }}>
             <div style={{ marginLeft: 15 }}>
@@ -21,7 +26,7 @@ const Header = () => {
             </div>
             <div style={{ marginRight: 15, justifyContent: 'flex-end', padding: '10px' }}>
                 <button onClick={openModal} style={{ marginRight: '10px' }}>Settings</button>
-                <button>Logout</button>
+                <button onClick={handleLogout}>Logout</button>
             </div>
             <Modal
                 isOpen={modalIsOpen}
