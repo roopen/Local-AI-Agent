@@ -40,7 +40,7 @@ const NewsComponent: React.FC = () => {
                         <div key={index}>
                             <h2>{article.Title} <a href={article.Link} target="_blank" rel="noopener noreferrer">({article.Source})</a></h2>
                             <p>{article.Summary}</p>
-                            <hr />
+                            <hr style={{ width: '40%', margin: '0 auto' }} />
                         </div>
                     ))}
                 </div>
