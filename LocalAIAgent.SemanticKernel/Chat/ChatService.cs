@@ -52,27 +52,6 @@ namespace LocalAIAgent.SemanticKernel.Chat
             }
         }
 
-        public async IAsyncEnumerable<StreamingChatMessageContent> EvaluateArticles(string article)
-        {
-            string prompt = "Evaluate the following news article and return true if you think user wants to see it and " +
-                "false if you think they don't want to see it. So the only allowed responses are the single word 'true' or 'false'." +
-                " User preferences are as follows: ";
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                prompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
-                "User's likes: \n" + chatContext.GetUserInterestsAsString());
-
-            chatHistory.AddUserMessage(article);
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
-                                .ConfigureAwait(false))
-            {
-                chatHistory.Clear();
-                yield return content;
-            }
-        }
-
         public async Task<List<string>> GetDislikedTopicsList(string userPrompt)
         {
             string unwantedTopicsPrompt = "Provide a list of unwanted topics as keywords (to be used in filtering news) in the following user prompt. " +

@@ -1,6 +1,7 @@
 ﻿using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.Extensions;
 using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.News.AI;
 using LocalAIAgent.SemanticKernel.RAG.Embedding;
 using LocalAIAgent.SemanticKernel.Time;
 using Microsoft.Extensions.AI;

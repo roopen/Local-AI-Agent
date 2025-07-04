@@ -1,6 +1,5 @@
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Metrics;
-using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
