@@ -89,7 +89,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
     };
 
     return (
-        <div>
+        <div style={{ backgroundColor: '#282c34', color: 'white', padding: '20px' }}>
             <h1>Settings</h1>
             <div>
                 <h2>Prompt</h2>
@@ -101,15 +101,15 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
                     }}
                     placeholder="System prompt for the AI"
                     rows={5}
-                    style={{ width: 'calc(100% - 16px)', padding: '8px', boxSizing: 'border-box' }}
+                    style={{ width: 'calc(100% - 16px)', padding: '8px', boxSizing: 'border-box', backgroundColor: '#333', color: 'white', border: '1px solid #555' }}
                 />
             </div>
             <div>
                 <h2>Likes</h2>
-                <ul>
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
                     {settings.likes.map(like => (
-                        <li key={like}>
-                            {like} <button onClick={() => removeLike(like)}>Remove</button>
+                        <li key={like} style={{ marginBottom: '5px' }}>
+                            {like} <button onClick={() => removeLike(like)} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}>Remove</button>
                         </li>
                     ))}
                 </ul>
@@ -124,15 +124,16 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
                         }
                     }}
                     placeholder="Add a new like"
+                    style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '5px' }}
                 />
-                <button onClick={addLike}>Add Like</button>
+                <button onClick={addLike} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>Add Like</button>
             </div>
             <div>
                 <h2>Dislikes</h2>
-                <ul>
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
                     {settings.dislikes.map(dislike => (
-                        <li key={dislike}>
-                            {dislike} <button onClick={() => removeDislike(dislike)}>Remove</button>
+                        <li key={dislike} style={{ marginBottom: '5px' }}>
+                            {dislike} <button onClick={() => removeDislike(dislike)} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}>Remove</button>
                         </li>
                     ))}
                 </ul>
@@ -147,10 +148,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
                         }
                     }}
                     placeholder="Add a new dislike"
+                    style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '5px' }}
                 />
-                <button onClick={addDislike}>Add Dislike</button>
+                <button onClick={addDislike} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>Add Dislike</button>
             </div>
-            <button onClick={handleSave} disabled={isSaving} style={{ minWidth: '160px', textAlign: 'center' }}>
+            <button onClick={handleSave} disabled={isSaving} style={{ minWidth: '160px', textAlign: 'center', marginTop: '20px', backgroundColor: '#555', color: 'white', border: 'none', padding: '10px', cursor: 'pointer' }}>
                 <span style={{...textStyle, display: 'inline-block'}}>{buttonText}</span>
             </button>
         </div>
