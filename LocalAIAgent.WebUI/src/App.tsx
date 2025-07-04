@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
-import ChatComponent from './components/ChatComponent';
 import LoginComponent from './components/LoginComponent';
 import UserService from './users/UserService';
 import NewsComponent from './components/NewsComponent';
@@ -21,10 +20,7 @@ const MainApp = () => {
                     <img src={reactLogo} className="logo react" alt="React logo" />
                 </a>
             </div>
-            <nav>
-                <Link to="/news">News</Link>
-            </nav>
-            <ChatComponent />
+            <NewsComponent />
         </>
     );
 };
