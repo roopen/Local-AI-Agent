@@ -1,6 +1,7 @@
 ﻿using LocalAIAgent.SemanticKernel.RAG;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Data;
+using System.Net;
 using System.ServiceModel.Syndication;
 using System.Text.Json.Serialization;
 
@@ -28,8 +29,8 @@ namespace LocalAIAgent.SemanticKernel.News
         public NewsItem(SyndicationItem syndicationItem)
         {
             Id = Guid.CreateVersion7().ToString();
-            Title = syndicationItem.Title?.Text ?? string.Empty;
-            Summary = syndicationItem.Summary?.Text ?? string.Empty;
+            Title = WebUtility.HtmlDecode(syndicationItem.Title?.Text) ?? string.Empty;
+            Summary = WebUtility.HtmlDecode(syndicationItem.Summary?.Text) ?? string.Empty;
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
