@@ -1,0 +1,1 @@
+export type Relevancy = 'High' | 'Medium' | 'Low';

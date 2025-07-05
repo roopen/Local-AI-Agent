@@ -1,7 +1,20 @@
-import { NewsService as NewsApiClient } from "../clients/UserApiClient";
+import { NewsService as NewsApiClient } from "../clients/UserApiClient/services/NewsService";
+import { Relevancy as ClientRelevancy } from "../clients/UserApiClient/models/Relevancy";
 import NewsArticle from "../domain/NewsArticle";
+import type { Relevancy } from "../domain/Relevancy";
 import UserService from "../users/UserService";
 import type { INewsService } from "./INewsService";
+
+function mapRelevancy(relevancy: ClientRelevancy): Relevancy {
+    switch (relevancy) {
+        case ClientRelevancy._0:
+            return 'High';
+        case ClientRelevancy._1:
+            return 'Medium';
+        case ClientRelevancy._2:
+            return 'Low';
+    }
+}
 
 export default class NewsService implements INewsService {
     private static instance: NewsService | null = null;
@@ -30,13 +43,16 @@ export default class NewsService implements INewsService {
 
         this.isCallingGetNews = true;
         try {
-            const newsItems = await NewsApiClient.getApiNews(parseInt(currentUser.id, 10));
-            this.newsCache = newsItems.map((item) => new NewsArticle(
+            const evaluatedNews = await NewsApiClient.postApiNewsGetNewsV2(parseInt(currentUser.id, 10));
+            this.newsCache = evaluatedNews.newsArticles!.map((item) => new NewsArticle(
                 item.title!,
                 item.summary!,
-                new Date(item.publishDate!),
+                new Date(item.publishedDate!),
                 item.link!,
-                item.source!
+                item.source!,
+                item.categories! as string[],
+                mapRelevancy(item.relevancy),
+                item.reasoning!
             ));
             return this.newsCache;
         } catch (error) {

@@ -70,32 +70,34 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
-            string prompt = "Evaluate the following news article and respond by using the following json structure and nothing else:\n" +
-                "{" +
+            const int BatchSize = 5;
+            string prompt = "Evaluate the following news articles based on user preferences. " +
+                "Respond with an array of evaluations using the following json structure and nothing else." +
+                "Include a maximum of 2 categories.\n" +
+                "[{" +
+                "\"ArticleIndex\": 0," +
                 "\"Relevancy\": \"High|Medium|Low\"," +
-                "\"Categories\": [\"Politics\", \"EU\"]," +
-                "\"Reasoning\": \"The part of the user preferences that you used\"," +
-                "\"TranslatedTitle\": \"English translation. Null if original title is English.\"," +
-                "\"TranslatedSummary\": \"English translation. Null if original summary is English.\"," +
-                "}" +
-                "\nUser preferences are as follows: ";
+                "\"Categories\": [\"Politics\", \"EU\"," +
+                "}]\n" +
+                "User preferences are as follows: ";
+
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt + "User's dislikes: \n" + userPreferences.GetUserDislikesAsString() + "\n" +
                 "User's likes: \n" + userPreferences.GetUserInterestsAsString(), allowFunctionUse: false);
 
             List<NewsArticle> result = [];
-            List<EvaluationResult> evaluationResults = [];
+            IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
+                                        .Chunk(BatchSize);
 
-            foreach (NewsItem article in articles)
+            foreach (NewsItem[] batch in articleBatches)
             {
-                // clear chat history to keep context small and focused on only the current article
                 chatHistory.Clear();
+                string batchContent = string.Join("\n---ARTICLE SEPARATOR---\n",
+                    batch.Select((a, i) => $"Article {i}:\n{a.Content}"));
 
-                if (string.IsNullOrWhiteSpace(article.Content))
-                    continue;
-
-                chatHistory.AddUserMessage(article.Content);
+                chatHistory.AddUserMessage(batchContent);
                 string jsonContent = string.Empty;
+
                 await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
                                     chatHistory,
                                     openAiSettings,
@@ -111,12 +113,37 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         jsonContent.EndsWith("```", StringComparison.InvariantCultureIgnoreCase) &&
                         jsonContent.Length > 3)
                     {
-                        if (TryConstructNewsArticle(article, jsonContent, out NewsArticle? newsArticle))
+                        try
                         {
-                            jsonContent = string.Empty;
+                            List<EvaluationResult> evaluations = EvaluationResult.Deserialize(jsonContent);
 
-                            if (newsArticle is not null && newsArticle.Relevancy is not Relevancy.Low)
-                                result.Add(newsArticle);
+                            if (evaluations != null)
+                            {
+                                for (int i = 0; i < evaluations.Count; i++)
+                                {
+                                    if (evaluations[i].Relevancy is Relevancy.High)
+                                    {
+                                        NewsArticle newsArticle = new()
+                                        {
+                                            Title = evaluations[i].TranslatedTitle ?? batch[i].Title,
+                                            Summary = evaluations[i].TranslatedSummary ?? batch[i].Summary,
+                                            PublishedDate = batch[i].PublishDate.DateTime,
+                                            Link = batch[i].Link ?? string.Empty,
+                                            Source = batch[i].Source ?? string.Empty,
+                                            Categories = [.. batch[i].Categories.Concat(evaluations[i].Categories)],
+                                            Relevancy = evaluations[i].Relevancy,
+                                            Reasoning = evaluations[i].Reasoning
+                                        };
+                                        result.Add(newsArticle);
+                                    }
+                                }
+                                jsonContent = string.Empty;
+                            }
+                        }
+                        catch
+                        {
+                            // Continue processing if batch parsing fails
+                            continue;
                         }
                     }
                 }
@@ -126,31 +153,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
 
             return new EvaluatedNewsArticles { NewsArticles = result, LowRelevancyPercentage = (decimal)filterPercentage };
-        }
-
-        private static bool TryConstructNewsArticle(NewsItem article, string aiResponse, out NewsArticle? newsArticle)
-        {
-            try
-            {
-                EvaluationResult evaluationResult = EvaluationResult.Deserialize(aiResponse);
-                newsArticle = new NewsArticle
-                {
-                    Title = evaluationResult.TranslatedTitle ?? article.Title,
-                    Summary = evaluationResult.TranslatedSummary ?? article.Summary,
-                    PublishedDate = article.PublishDate.DateTime,
-                    Link = article.Link ?? string.Empty,
-                    Source = article.Source ?? string.Empty,
-                    Categories = [.. article.Categories.Concat(evaluationResult.Categories)],
-                    Relevancy = evaluationResult.Relevancy,
-                    Reasoning = evaluationResult.Reasoning
-                };
-                return true;
-            }
-            catch
-            {
-                newsArticle = null;
-                return false;
-            }
         }
     }
 }

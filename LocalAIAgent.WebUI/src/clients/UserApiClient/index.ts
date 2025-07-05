@@ -7,7 +7,10 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { EvaluatedNewsArticles } from './models/EvaluatedNewsArticles';
+export type { NewsArticle } from './models/NewsArticle';
 export type { NewsItem } from './models/NewsItem';
+export { Relevancy } from './models/Relevancy';
 export type { UserDto } from './models/UserDto';
 export type { UserLoginDto } from './models/UserLoginDto';
 export type { UserPreferenceDto } from './models/UserPreferenceDto';
