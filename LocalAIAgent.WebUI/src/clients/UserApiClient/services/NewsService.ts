@@ -23,4 +23,20 @@ export class NewsService {
             },
         });
     }
+    /**
+     * @param userId
+     * @returns NewsItem OK
+     * @throws ApiError
+     */
+    public static postApiNewsGetNewsV2(
+        userId?: number,
+    ): CancelablePromise<Array<NewsItem>> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/News/GetNewsV2',
+            query: {
+                'userId': userId,
+            },
+        });
+    }
 }
