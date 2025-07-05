@@ -10,14 +10,14 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public string? TranslatedTitle { get; set; }
         public string? TranslatedSummary { get; set; }
 
-        public static EvaluationResult Deserialize(string json)
+        public static List<EvaluationResult> Deserialize(string json)
         {
             string cleaned = json
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Trim();
 
-            return System.Text.Json.JsonSerializer.Deserialize<EvaluationResult>(cleaned, options) ??
+            return System.Text.Json.JsonSerializer.Deserialize<List<EvaluationResult>>(cleaned, options) ??
                    throw new InvalidOperationException("Failed to deserialize EvaluationResult from JSON.");
         }
 

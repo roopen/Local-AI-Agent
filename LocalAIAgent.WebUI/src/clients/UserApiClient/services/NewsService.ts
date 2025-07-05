@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { EvaluatedNewsArticles } from '../models/EvaluatedNewsArticles';
 import type { NewsItem } from '../models/NewsItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -25,12 +26,12 @@ export class NewsService {
     }
     /**
      * @param userId
-     * @returns NewsItem OK
+     * @returns EvaluatedNewsArticles OK
      * @throws ApiError
      */
     public static postApiNewsGetNewsV2(
         userId?: number,
-    ): CancelablePromise<Array<NewsItem>> {
+    ): CancelablePromise<EvaluatedNewsArticles> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/News/GetNewsV2',

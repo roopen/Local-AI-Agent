@@ -34,7 +34,7 @@ namespace LocalAIAgent.API.Api.Controllers
         }
 
         [HttpPost("GetNewsV2")]
-        public async Task<ActionResult<List<NewsItem>>> GetNewsV2(int userId)
+        public async Task<ActionResult<EvaluatedNewsArticles>> GetNewsV2(int userId)
         {
             newsMetrics.StartRecordingRequest();
 

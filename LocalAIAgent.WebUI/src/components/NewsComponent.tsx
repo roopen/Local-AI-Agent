@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import NewsService from '../news/NewsService';
 import NewsArticle from '../domain/NewsArticle';
+import type { Relevancy } from '../domain/Relevancy';
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
+    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const [sortBy, setSortBy] = useState<string>('Relevancy');
 
     useEffect(() => {
         if (isLoading) {
@@ -28,7 +31,33 @@ const NewsComponent: React.FC = () => {
                 console.error(err);
             })
             .finally(() => setIsLoading(false));
-    }, []); 
+    }, []);
+
+    const allCategories = useMemo(() => {
+        const categories = new Set<string>();
+        articles.forEach(article => {
+            article.Categories.forEach(category => {
+                categories.add(category);
+            });
+        });
+        return ['All', ...Array.from(categories)];
+    }, [articles]);
+
+    const sortedAndFilteredArticles = useMemo(() => {
+        let filtered = articles;
+        if (selectedCategory !== 'All') {
+            filtered = articles.filter(article => article.Categories.includes(selectedCategory));
+        }
+
+        if (sortBy === 'Relevancy') {
+            const relevancyOrder: Relevancy[] = ['High', 'Medium', 'Low'];
+            return [...filtered].sort((a, b) => {
+                return relevancyOrder.indexOf(a.Relevancy) - relevancyOrder.indexOf(b.Relevancy);
+            });
+        }
+
+        return filtered;
+    }, [articles, selectedCategory, sortBy]);
 
     return (
         <div>
@@ -36,9 +65,24 @@ const NewsComponent: React.FC = () => {
             {error && <p>{error}</p>}
             {!isLoading && !error && (
                 <div>
-                    {articles.map((article, index) => (
+                    <div>
+                        <label htmlFor="category-filter">Filter by category: </label>
+                        <select id="category-filter" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                            {allCategories.map(category => (
+                                <option key={category} value={category}>{category}</option>
+                            ))}
+                        </select>
+
+                        <label htmlFor="sort-by">Sort by: </label>
+                        <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                            <option value="Relevancy">Relevancy</option>
+                        </select>
+                    </div>
+                    <hr />
+                    {sortedAndFilteredArticles.map((article, index) => (
                         <div key={index}>
                             <h2>{article.Title} <a href={article.Link} target="_blank" rel="noopener noreferrer">({article.Source})</a></h2>
+                            <p><strong>Relevancy:</strong> {article.Relevancy}</p>
                             <p>{article.Summary}</p>
                             <hr style={{ width: '40%', margin: '0 auto' }} />
                         </div>
