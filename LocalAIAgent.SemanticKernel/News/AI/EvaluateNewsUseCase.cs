@@ -1,5 +1,6 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -14,7 +15,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     }
 
     internal class EvaluateNewsUseCase(
-        IChatCompletionService chatCompletion,
+        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options,
         ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
@@ -73,11 +74,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             const int BatchSize = 5;
             string prompt = "Evaluate the following news articles based on user preferences. " +
                 "Respond with an array of evaluations using the following json structure and nothing else." +
-                "Include a maximum of 2 categories.\n" +
                 "[{" +
                 "\"ArticleIndex\": 0," +
                 "\"Relevancy\": \"High|Medium|Low\"," +
-                "\"Categories\": [\"Politics\", \"EU\"," +
                 "}]\n" +
                 "User preferences are as follows: ";
 
@@ -119,24 +118,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                             if (evaluations != null)
                             {
-                                for (int i = 0; i < evaluations.Count; i++)
-                                {
-                                    if (evaluations[i].Relevancy is Relevancy.High)
-                                    {
-                                        NewsArticle newsArticle = new()
-                                        {
-                                            Title = evaluations[i].TranslatedTitle ?? batch[i].Title,
-                                            Summary = evaluations[i].TranslatedSummary ?? batch[i].Summary,
-                                            PublishedDate = batch[i].PublishDate.DateTime,
-                                            Link = batch[i].Link ?? string.Empty,
-                                            Source = batch[i].Source ?? string.Empty,
-                                            Categories = [.. batch[i].Categories.Concat(evaluations[i].Categories)],
-                                            Relevancy = evaluations[i].Relevancy,
-                                            Reasoning = evaluations[i].Reasoning
-                                        };
-                                        result.Add(newsArticle);
-                                    }
-                                }
+                                AddResults(result, batch, evaluations);
                                 jsonContent = string.Empty;
                             }
                         }
@@ -153,6 +135,28 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
 
             return new EvaluatedNewsArticles { NewsArticles = result, LowRelevancyPercentage = (decimal)filterPercentage };
+        }
+
+        private static void AddResults(List<NewsArticle> result, NewsItem[] batch, List<EvaluationResult> evaluations)
+        {
+            for (int i = 0; i < evaluations.Count; i++)
+            {
+                if (evaluations[i].Relevancy is Relevancy.High)
+                {
+                    NewsArticle newsArticle = new()
+                    {
+                        Title = batch[i].Title,
+                        Summary = batch[i].Summary,
+                        PublishedDate = batch[i].PublishDate.DateTime,
+                        Link = batch[i].Link ?? string.Empty,
+                        Source = batch[i].Source ?? string.Empty,
+                        Categories = [],
+                        Relevancy = evaluations[i].Relevancy,
+                        Reasoning = evaluations[i].Reasoning
+                    };
+                    result.Add(newsArticle);
+                }
+            }
         }
     }
 }

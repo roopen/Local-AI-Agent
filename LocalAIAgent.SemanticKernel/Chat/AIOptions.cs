@@ -7,6 +7,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
     public class AIOptions
     {
         public required string ModelId { get; set; }
+        public required string LanguageModelId { get; set; }
         public required string EndpointUrl { get; set; }
         public string ApiKey { get; set; } = string.Empty;
 

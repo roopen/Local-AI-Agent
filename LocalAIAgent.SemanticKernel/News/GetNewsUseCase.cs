@@ -11,7 +11,8 @@ namespace LocalAIAgent.SemanticKernel.News
 
     public class GetNewsUseCase(
         INewsService newsService,
-        IEvaluateNewsUseCase evaluateNewsUseCase) : IGetNewsUseCase
+        IEvaluateNewsUseCase evaluateNewsUseCase,
+        IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
     {
         public async Task<List<NewsItem>> GetAsync(UserPreferences preferences)
         {
@@ -24,7 +25,11 @@ namespace LocalAIAgent.SemanticKernel.News
         {
             List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
 
-            return await evaluateNewsUseCase.EvaluateArticlesV2(newsItems, preferences);
+            EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(newsItems, preferences);
+
+            evaluatedArticles.NewsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
+
+            return evaluatedArticles;
         }
     }
 }

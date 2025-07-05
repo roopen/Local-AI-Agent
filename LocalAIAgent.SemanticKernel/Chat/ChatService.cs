@@ -1,10 +1,11 @@
-﻿using Microsoft.SemanticKernel;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
-    public class ChatService(IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
+    public class ChatService([FromKeyedServices("General")] IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences (prioritize likes and filter away news based on" +

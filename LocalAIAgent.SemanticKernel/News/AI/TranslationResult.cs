@@ -1,21 +1,18 @@
-﻿using LocalAIAgent.Domain;
-
-namespace LocalAIAgent.SemanticKernel.News.AI
+﻿namespace LocalAIAgent.SemanticKernel.News.AI
 {
-    internal class EvaluationResult
+    internal class TranslationResult
     {
-        public required Relevancy Relevancy { get; set; }
-        public string? Category { get; set; }
-        public string? Reasoning { get; set; }
+        public required string TranslatedTitle { get; set; }
+        public required string TranslatedSummary { get; set; }
 
-        public static List<EvaluationResult> Deserialize(string json)
+        public static TranslationResult Deserialize(string json)
         {
             string cleaned = json
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Trim();
 
-            return System.Text.Json.JsonSerializer.Deserialize<List<EvaluationResult>>(cleaned, options) ??
+            return System.Text.Json.JsonSerializer.Deserialize<TranslationResult>(cleaned, options) ??
                    throw new InvalidOperationException("Failed to deserialize EvaluationResult from JSON.");
         }
 
