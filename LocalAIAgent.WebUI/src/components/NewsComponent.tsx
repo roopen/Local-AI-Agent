@@ -49,14 +49,18 @@ const NewsComponent: React.FC = () => {
             filtered = articles.filter(article => article.Categories.includes(selectedCategory));
         }
 
+        const sorted = [...filtered];
+
         if (sortBy === 'Relevancy') {
             const relevancyOrder: Relevancy[] = ['High', 'Medium', 'Low'];
-            return [...filtered].sort((a, b) => {
-                return relevancyOrder.indexOf(a.Relevancy) - relevancyOrder.indexOf(b.Relevancy);
-            });
+            sorted.sort((a, b) => relevancyOrder.indexOf(a.Relevancy) - relevancyOrder.indexOf(b.Relevancy));
+        } else if (sortBy === 'Category') {
+            sorted.sort((a, b) => (a.Categories[0] || '').localeCompare(b.Categories[0] || ''));
+        } else if (sortBy === 'Source') {
+            sorted.sort((a, b) => a.Source.localeCompare(b.Source));
         }
 
-        return filtered;
+        return sorted;
     }, [articles, selectedCategory, sortBy]);
 
     return (
@@ -76,13 +80,14 @@ const NewsComponent: React.FC = () => {
                         <label htmlFor="sort-by">Sort by: </label>
                         <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)}>
                             <option value="Relevancy">Relevancy</option>
+                            <option value="Category">Category</option>
+                            <option value="Source">Source</option>
                         </select>
                     </div>
                     <hr />
                     {sortedAndFilteredArticles.map((article, index) => (
                         <div key={index}>
                             <h2>{article.Title} <a href={article.Link} target="_blank" rel="noopener noreferrer">({article.Source})</a></h2>
-                            <p><strong>Relevancy:</strong> {article.Relevancy}</p>
                             <p>{article.Summary}</p>
                             <hr style={{ width: '40%', margin: '0 auto' }} />
                         </div>

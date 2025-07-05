@@ -26,6 +26,7 @@ namespace LocalAIAgent.SemanticKernel
             services.AddSingleton(aiOptions);
 
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
+            services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
 
             services.AddNewsClients();
 
@@ -60,7 +61,16 @@ namespace LocalAIAgent.SemanticKernel
                 .AddOpenAIChatCompletion(
                     modelId: aiOptions.ModelId,
                     apiKey: aiOptions.ApiKey,
-                    endpoint: new Uri(aiOptions.EndpointUrl)
+                    endpoint: new Uri(aiOptions.EndpointUrl),
+                    serviceId: "General"
+                );
+
+            kernelBuilder
+                .AddOpenAIChatCompletion(
+                    modelId: aiOptions.LanguageModelId,
+                    apiKey: aiOptions.ApiKey,
+                    endpoint: new Uri(aiOptions.EndpointUrl),
+                    serviceId: "Translation"
                 );
 
             return kernelBuilder;
