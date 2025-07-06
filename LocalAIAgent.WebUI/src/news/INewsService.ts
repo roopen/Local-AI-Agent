@@ -1,6 +1,11 @@
 
-import type { NewsArticle } from "../domain/NewsArticle";
+import type NewsArticle from "../domain/NewsArticle";
 
 export interface INewsService {
     getNews(userId: number): Promise<NewsArticle[]>;
+    getNewsStream(
+        onNewsReceived: (articles: NewsArticle[]) => void,
+        onStreamEnd: () => void,
+        signal: AbortSignal
+    ): void;
 }

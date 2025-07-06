@@ -21,16 +21,33 @@ const NewsComponent: React.FC = () => {
     }, [isLoading]);
 
     useEffect(() => {
+        const controller = new AbortController();
+        const signal = controller.signal;
         const newsService = NewsService.getInstance();
-        setIsLoading(true);
         
-        newsService.getNews()
-            .then(setArticles)
-            .catch(err => {
-                setError(`Error loading articles: ${err.message}`);
-                console.error(err);
-            })
-            .finally(() => setIsLoading(false));
+        const handleNewArticles = (newArticles: NewsArticle[]) => {
+            console.log('Received new articles:', newArticles);
+            setArticles(prevArticles => [...prevArticles, ...newArticles]);
+        };
+
+        const handleStreamEnd = () => {
+            setIsLoading(false);
+        };
+
+        try {
+            console.log('Starting news stream...');
+            setIsLoading(true);
+            newsService.getNewsStream(handleNewArticles, handleStreamEnd, signal);
+        } catch (err) {
+            setError(`Error loading articles: ${(err as Error).message}`);
+            console.error(err);
+            setIsLoading(false);
+        }
+
+        return () => {
+            console.log('Aborting news stream...');
+            controller.abort();
+        };
     }, []);
 
     const allCategories = useMemo(() => {
@@ -65,35 +82,34 @@ const NewsComponent: React.FC = () => {
 
     return (
         <div>
-            {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
             {error && <p>{error}</p>}
-            {!isLoading && !error && (
+            <div>
                 <div>
-                    <div>
-                        <label htmlFor="category-filter">Filter by category: </label>
-                        <select id="category-filter" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                            {allCategories.map(category => (
-                                <option key={category} value={category}>{category}</option>
-                            ))}
-                        </select>
+                    <label htmlFor="category-filter">Filter by category: </label>
+                    <select id="category-filter" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                        {allCategories.map(category => (
+                            <option key={category} value={category}>{category}</option>
+                        ))}
+                    </select>
 
-                        <label htmlFor="sort-by">Sort by: </label>
-                        <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                            <option value="Relevancy">Relevancy</option>
-                            <option value="Category">Category</option>
-                            <option value="Source">Source</option>
-                        </select>
-                    </div>
-                    <hr />
-                    {sortedAndFilteredArticles.map((article, index) => (
-                        <div key={index}>
-                            <h2>{article.Title} <a href={article.Link} target="_blank" rel="noopener noreferrer">({article.Source})</a></h2>
-                            <p>{article.Summary}</p>
-                            <hr style={{ width: '40%', margin: '0 auto' }} />
-                        </div>
-                    ))}
+                    <label htmlFor="sort-by">Sort by: </label>
+                    <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                        <option value="Relevancy">Relevancy</option>
+                        <option value="Category">Category</option>
+                        <option value="Source">Source</option>
+                    </select>
                 </div>
-            )}
+                <hr />
+                {sortedAndFilteredArticles.map((article, index) => (
+                    <div key={index}>
+                        <h2>{article.Title} <a href={article.Link} target="_blank" rel="noopener noreferrer">({article.Source})</a></h2>
+                        <p>{article.Summary}</p>
+                        <hr style={{ width: '40%', margin: '0 auto' }} />
+                    </div>
+                ))}
+                {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
+                {!isLoading && articles.length === 0 && !error && <p>No articles found.</p>}
+            </div>
         </div>
     );
 };

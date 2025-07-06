@@ -7,6 +7,7 @@ namespace LocalAIAgent.SemanticKernel.News
     {
         Task<List<NewsItem>> GetAsync(UserPreferences preferences);
         Task<EvaluatedNewsArticles> GetAsyncV2(UserPreferences preferences);
+        IAsyncEnumerable<List<NewsArticle>> GetNewsStreamAsync(UserPreferences preferences);
     }
 
     public class GetNewsUseCase(
@@ -30,6 +31,18 @@ namespace LocalAIAgent.SemanticKernel.News
             evaluatedArticles.NewsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
 
             return evaluatedArticles;
+        }
+
+        public async IAsyncEnumerable<List<NewsArticle>> GetNewsStreamAsync(UserPreferences preferences)
+        {
+            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
+
+            foreach (NewsItem[] newsBatch in newsItems.Chunk(5))
+            {
+                EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(newsBatch.ToList(), preferences);
+                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
+                yield return newsArticles;
+            }
         }
     }
 }

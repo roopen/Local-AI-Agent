@@ -40,4 +40,20 @@ export class NewsService {
             },
         });
     }
+    /**
+     * @param userId
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiNewsNewsStream(
+        userId?: number,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/News/newsStream',
+            query: {
+                'userId': userId,
+            },
+        });
+    }
 }
