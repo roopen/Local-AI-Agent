@@ -63,7 +63,11 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
-            string prompt = $"You are a professional translator. Translate the 'title' and 'summary' fields of each JSON object in the following array into {targetLanguage}. Respond with a valid JSON array of the translated objects, maintaining the same structure. Do not include any other text or formatting.";
+            string prompt = $"You are a professional translator. " +
+                $"You must translate the 'Title' and 'Summary' fields of each JSON object in the following array into {targetLanguage}. " +
+                "The incoming text may change language between fields, so you must translate each field independently. " +
+                $"Respond with a valid JSON array of the translations, maintaining the same structure. " +
+                $"Do not include any other text or formatting.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: false);

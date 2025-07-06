@@ -2,10 +2,10 @@
 
 namespace LocalAIAgent.SemanticKernel.News.Clients
 {
-    internal class NRKNewsSettings : BaseNewsClientSettings
+    internal class LibertyTimesTaiwanNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "NorwegianBroadcastingCorporationClient";
-        public override string BaseUrl => "https://www.nrk.no";
+        public override string ClientName => "LibertyTimesTaiwanClient";
+        public override string BaseUrl => "https://news.ltn.com.tw/rss";
 
         public override bool RequiresTranslation => true;
 
@@ -13,8 +13,10 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
         {
             return
             [
-                $"{BaseUrl}/toppsaker.rss",
-                $"{BaseUrl}/viten/toppsaker.rss",
+                $"{BaseUrl}/all.xml",
+                $"{BaseUrl}/politics.xml",
+                $"{BaseUrl}/society.xml",
+                $"{BaseUrl}/world.xml",
             ];
         }
 

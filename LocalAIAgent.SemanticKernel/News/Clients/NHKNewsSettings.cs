@@ -2,16 +2,21 @@
 
 namespace LocalAIAgent.SemanticKernel.News.Clients
 {
-    internal class JapanTimesNewsSettings : BaseNewsClientSettings
+    internal class NHKNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "JapanTimes";
-        public override string BaseUrl => "https://www.japantimes.co.jp";
+        public override string ClientName => "NipponHōsōKyōkaiClient";
+        public override string BaseUrl => "https://www3.nhk.or.jp/rss/news";
+
+        public override bool RequiresTranslation => true;
 
         public override List<string> GetNewsUrls()
         {
             return
                 [
-                    $"{BaseUrl}/feed/",
+                    $"{BaseUrl}/cat0.xml",
+                    $"{BaseUrl}/cat1.xml",
+                    $"{BaseUrl}/cat3.xml",
+                    $"{BaseUrl}/cat4.xml",
                 ];
         }
 

@@ -63,7 +63,7 @@ export default class NewsService implements INewsService {
     }
 
     private async AwaitForNewsCacheInitialization(): Promise<NewsArticle[]> {
-        const maxAttempts = 600; // Prevent infinite loops
+        const maxAttempts = 1500; // Prevent infinite loops
         let attempts = 0;
         
         while (this.isCallingGetNews && attempts < maxAttempts) {
