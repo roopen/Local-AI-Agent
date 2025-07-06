@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -19,6 +20,16 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         Kernel kernel,
         AIOptions options) : IGetTranslationUseCase
     {
+        private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        private static readonly JsonSerializerOptions s_jsonDeserializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         private readonly ChatHistory chatHistory = [];
 
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
@@ -45,16 +56,14 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             return articles;
         }
 
+        private record TranslationDto(string Title, string Summary);
+
         private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage)
         {
-            // Create combined text for batch translation
-            List<string> texts = batch.SelectMany(a => new[] { $"Title: {a.Title}", $"Summary: {a.Summary}" })
-                            .ToList();
-            string combinedText = string.Join("\n\n", texts);
+            var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
+            string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
-            string prompt = $"You are a professional translator. Translate the following news article titles and summaries into {targetLanguage}. " +
-                           $"Keep the 'Title:' and 'Summary:' labels in English. " +
-                           $"Do not change the format, only translate.";
+            string prompt = $"You are a professional translator. Translate the 'title' and 'summary' fields of each JSON object in the following array into {targetLanguage}. Respond with a valid JSON array of the translated objects, maintaining the same structure. Do not include any other text or formatting.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: false);
@@ -75,43 +84,30 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 result += content.Content;
             }
 
-            // Parse and update articles
-            string[] translatedParts = result.Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < batch.Count; i++)
+            // clean result from markdown
+            result = result.Replace("```json", "").Replace("```", "").Trim();
+
+            try
             {
-                string titlePart = translatedParts[i * 2];
-                string summaryPart = translatedParts[(i * 2) + 1];
+                List<TranslationDto>? translatedArticles = JsonSerializer.Deserialize<List<TranslationDto>>(result, s_jsonDeserializerOptions);
 
-                batch[i].Title = titlePart.Replace("Title: ", "").Trim();
-                batch[i].Summary = summaryPart.Replace("Summary: ", "").Trim();
+                if (translatedArticles != null)
+                {
+                    for (int i = 0; i < batch.Count; i++)
+                    {
+                        if (i < translatedArticles.Count)
+                        {
+                            batch[i].Title = translatedArticles[i].Title;
+                            batch[i].Summary = translatedArticles[i].Summary;
+                        }
+                    }
+                }
             }
-        }
-
-        public async Task<string> TranslateAsync(string text, string targetLanguage)
-        {
-            string prompt = $"Translate the following text to {targetLanguage}." +
-                "Respond with the translated text and nothing else.";
-
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                prompt, allowFunctionUse: false);
-
-            chatHistory.Clear();
-            chatHistory.AddUserMessage(text);
-            string result = string.Empty;
-
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
-                                .ConfigureAwait(false))
+            catch (JsonException ex)
             {
-                if (string.IsNullOrEmpty(content.Content))
-                    continue;
-
-                result += content.Content;
+                Console.WriteLine($"Error deserializing translation response: {ex.Message}");
+                Console.WriteLine($"LLM Response: {result}");
             }
-
-            return result;
         }
     }
 }
