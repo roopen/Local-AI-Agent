@@ -4,7 +4,7 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
 {
     internal class DagensNyheterNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "DagensNyheterNewsClient";
+        public override string ClientName => "DagensNyheterClient";
         public override string BaseUrl => "https://www.dn.se";
 
         public override bool RequiresTranslation => true;
