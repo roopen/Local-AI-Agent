@@ -21,7 +21,7 @@ const Header = () => {
 
     return (
         <div style={{ marginBottom: 40 }}>
-            <div style={{ marginLeft: 15 }}>
+            <div style={{  }}>
                 <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
             </div>
             <div style={{ marginRight: 15, justifyContent: 'flex-end', padding: '10px' }}>

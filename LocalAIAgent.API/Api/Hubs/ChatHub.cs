@@ -8,16 +8,11 @@ namespace LocalAIAgent.API.Api.Hubs
 {
     public class ChatHub : Hub
     {
-        private readonly ChatService _chatService;
+        private readonly IChatService _chatService;
 
-        public ChatHub(Kernel kernel)
+        public ChatHub(IChatService chatService)
         {
-            _chatService = new(
-                kernel.Services.GetService<IChatCompletionService>()!,
-                kernel,
-                kernel.Services.GetService<AIOptions>()!,
-                kernel.Services.GetService<ChatContext>()!
-            );
+            _chatService = chatService;
         }
 
         public async Task SendMessage(string user, string message)

@@ -5,7 +5,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
-    public class ChatService([FromKeyedServices("General")] IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext)
+    public class ChatService([FromKeyedServices("General")] IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext) : IChatService
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences (prioritize likes and filter away news based on" +
@@ -16,7 +16,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
             "Keep your answers short, but display a large variety of news. Be willing to discuss any news with the user.\n" +
             "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
-        public readonly ChatHistory chatHistory = [];
+        public ChatHistory chatHistory { get; } = [];
         private readonly OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
                 "User's likes: \n" + chatContext.GetUserInterestsAsString());

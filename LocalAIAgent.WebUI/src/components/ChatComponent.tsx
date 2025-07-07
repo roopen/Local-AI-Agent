@@ -1,17 +1,18 @@
-import { useState, type FormEvent, useEffect } from 'react';
+import { useState, type FormEvent, useEffect, useRef } from 'react';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
 import UserService from '../users/UserService';
 import SettingsComponent from './SettingsComponent';
 
-function ChatComponent() {
+function ChatComponent({ initialMessage }: { initialMessage?: string }) {
     const userService = UserService.getInstance();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         setConnection(getConnection());
@@ -19,17 +20,12 @@ function ChatComponent() {
 
     useEffect(() => {
         const cleanup = onMessageReceived((msg) => {
-            console.log(msg.user + ': ' + msg.message);
             if (!msg || msg.message === null || msg.message === undefined || msg.message.trim() === '') return;
 
             setMessages(prevMessages => {
-                console.log('messages length: ' + prevMessages.length);
 
                 if (prevMessages.length > 0) {
                     const lastMessage = prevMessages[prevMessages.length - 1];
-
-                    console.log("Previous message:", lastMessage.message);
-                    console.log("Is instance of ChatMessage:", lastMessage instanceof ChatMessage);
 
                     // Check if the new message can be appended to the last message
                     if (lastMessage.tryAppend(msg)) {
@@ -75,6 +71,18 @@ function ChatComponent() {
         };
     }, [connection]);
 
+    useEffect(() => {
+        if (initialMessage && isConnected) {
+            sendMessage("User", initialMessage);
+        }
+    }, [initialMessage, isConnected]);
+
+    useEffect(() => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (input.trim() === '' || !isConnected) return;
@@ -94,7 +102,7 @@ function ChatComponent() {
     };
 
     return (
-        <div style={{ display: 'flex', height: '100vh' }}>
+        <div style={{ display: 'flex', height: '100%' }}>
             {isSettingsOpen && (
                 <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto' }}>
                     <SettingsComponent userService={userService} />
@@ -102,7 +110,7 @@ function ChatComponent() {
             )}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
                 <button onClick={toggleSettings} style={{ marginBottom: '10px' }}>Preferences</button>
-                <div style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10, flex: 1, overflowY: 'auto' }}>
+                <div ref={messagesContainerRef} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10, flex: 1, overflowY: 'auto' }}>
                     {messages.length === 0 ? (
                         <p>No messages yet.</p>
                     ) : (
