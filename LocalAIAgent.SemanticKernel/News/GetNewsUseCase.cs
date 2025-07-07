@@ -1,5 +1,6 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.News.AI;
+using System.Runtime.CompilerServices;
 
 namespace LocalAIAgent.SemanticKernel.News
 {
@@ -7,7 +8,7 @@ namespace LocalAIAgent.SemanticKernel.News
     {
         Task<List<NewsItem>> GetAsync(UserPreferences preferences);
         Task<EvaluatedNewsArticles> GetAsyncV2(UserPreferences preferences);
-        IAsyncEnumerable<List<NewsArticle>> GetNewsStreamAsync(UserPreferences preferences);
+        IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(UserPreferences preferences, CancellationToken cancellationToken);
     }
 
     public class GetNewsUseCase(
@@ -33,7 +34,9 @@ namespace LocalAIAgent.SemanticKernel.News
             return evaluatedArticles;
         }
 
-        public async IAsyncEnumerable<List<NewsArticle>> GetNewsStreamAsync(UserPreferences preferences)
+        public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
+            UserPreferences preferences,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
 
@@ -41,7 +44,11 @@ namespace LocalAIAgent.SemanticKernel.News
             {
                 EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(newsBatch.ToList(), preferences);
                 List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
-                yield return newsArticles;
+
+                foreach (NewsArticle article in newsArticles)
+                {
+                    yield return article;
+                }
             }
         }
     }

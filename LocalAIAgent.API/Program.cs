@@ -83,6 +83,7 @@ namespace LocalAIAgent.API
             app.MapDefaultEndpoints();
             app.MapControllers();
             app.MapHub<ChatHub>("/chatHub");
+            app.MapHub<NewsHub>("/newsHub");
 
             // Run initial news fetch on startup
             InitializeNewsCache(app);
