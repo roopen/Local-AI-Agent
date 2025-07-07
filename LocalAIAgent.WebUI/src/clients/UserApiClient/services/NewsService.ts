@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { EvaluatedNewsArticles } from '../models/EvaluatedNewsArticles';
+import type { NewsArticle } from '../models/NewsArticle';
 import type { NewsItem } from '../models/NewsItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -42,12 +43,12 @@ export class NewsService {
     }
     /**
      * @param userId
-     * @returns any OK
+     * @returns NewsArticle OK
      * @throws ApiError
      */
     public static getApiNewsNewsStream(
         userId?: number,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<Array<Array<NewsArticle>>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/News/newsStream',
