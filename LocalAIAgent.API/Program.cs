@@ -23,6 +23,7 @@ namespace LocalAIAgent.API
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
             builder.Services.AddSemanticKernel();
+            builder.Services.AddScoped<LocalAIAgent.SemanticKernel.Chat.IChatService, LocalAIAgent.SemanticKernel.Chat.ChatService>();
             builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
