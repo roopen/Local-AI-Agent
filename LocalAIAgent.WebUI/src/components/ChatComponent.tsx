@@ -1,65 +1,60 @@
 import { useState, type FormEvent, useEffect, useRef } from 'react';
-import { HubConnection, HubConnectionState } from "@microsoft/signalr";
-import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
+import { HubConnectionState } from "@microsoft/signalr";
+import { ChatConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
 
 function ChatComponent({ initialMessage }: { initialMessage?: string }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
-    const [connection, setConnection] = useState<HubConnection | null>(null);
+    const [connection, setConnection] = useState<ChatConnection | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setConnection(getConnection());
-    }, []);
-
-    useEffect(() => {
-        const cleanup = onMessageReceived((msg) => {
-            if (!msg || msg.message === null || msg.message === undefined || msg.message.trim() === '') return;
-
-            setMessages(prevMessages => {
-
-                if (prevMessages.length > 0) {
-                    const lastMessage = prevMessages[prevMessages.length - 1];
-
-                    // Check if the new message can be appended to the last message
-                    if (lastMessage.tryAppend(msg)) {
-                        // If appended, return a new array with the last message updated
-                        return [...prevMessages.slice(0, -1), lastMessage];
-                    } else {
-                        // If not appended, add the new message to the end
-                        return [...prevMessages, msg];
-                    }
-                }
-                // If no previous messages, just add the new message
-                return [...prevMessages, msg];
-            });
-        });
-
-        // Clean up the listener when the component unmounts or the effect re-runs
-        return () => {
-            cleanup();
-        };
+        setConnection(new ChatConnection());
     }, []);
 
     useEffect(() => {
         if (!connection) return;
 
-        // Only start the connection if it's disconnected
-        if (connection.state === HubConnectionState.Disconnected) {
-            connection.start()
-                .then(() => {
+        const cleanup = connection.onMessageReceived((msg: ChatMessage) => {
+            if (!msg || msg.message === null || msg.message === undefined || msg.message.trim() === '') return;
+
+            setMessages(prevMessages => {
+                if (prevMessages.length > 0) {
+                    const lastMessage = prevMessages[prevMessages.length - 1];
+                    if (lastMessage.tryAppend(msg)) {
+                        return [...prevMessages.slice(0, -1), lastMessage];
+                    }
+                }
+                return [...prevMessages, msg];
+            });
+        });
+
+        return () => {
+            cleanup();
+        };
+    }, [connection]);
+
+    useEffect(() => {
+        if (!connection) return;
+
+        const connect = async () => {
+            if (connection.getState() === HubConnectionState.Disconnected) {
+                try {
+                    await connection.start();
                     console.log("Connected to SignalR Hub");
                     setIsConnected(true);
-                })
-                .catch(err => console.error("SignalR Error:", err));
-        } else {
-            // If already connected or connecting, just update the state
-            setIsConnected(connection.state === HubConnectionState.Connected);
-        }
+                } catch (err) {
+                    console.error("SignalR Error:", err);
+                }
+            } else {
+                setIsConnected(connection.getState() === HubConnectionState.Connected);
+            }
+        };
 
-        // Clean up connection on component unmount
+        connect();
+
         return () => {
             connection.stop()
                 .then(() => console.log("Disconnected from SignalR Hub"))
@@ -68,10 +63,10 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
     }, [connection]);
 
     useEffect(() => {
-        if (initialMessage && isConnected) {
-            sendMessage("User", initialMessage);
+        if (initialMessage && isConnected && connection) {
+            connection.sendMessage("User", initialMessage);
         }
-    }, [initialMessage, isConnected]);
+    }, [initialMessage, isConnected, connection]);
 
     useEffect(() => {
         if (messagesContainerRef.current) {
@@ -81,13 +76,13 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (input.trim() === '' || !isConnected) return;
+        if (input.trim() === '' || !isConnected || !connection) return;
 
         const user = "You";
         const message = input;
         setInput('');
         try {
-            await sendMessage(user, message);
+            await connection.sendMessage(user, message);
         } catch (err) {
             console.error("Failed to send message:", err);
         }

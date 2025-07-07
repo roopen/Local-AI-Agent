@@ -1,31 +1,39 @@
 import * as signalR from "@microsoft/signalr";
 import ChatMessage from "../domain/ChatMessage";
 
-const connection = new signalR.HubConnectionBuilder()
-    .withUrl("https://localhost:7276/chatHub")
-    .withAutomaticReconnect()
-    .build();
+export class ChatConnection {
+    private connection: signalR.HubConnection;
 
-export function getConnection() {
-    return connection;
-}
+    constructor() {
+        this.connection = new signalR.HubConnectionBuilder()
+            .withUrl("https://localhost:7276/chatHub")
+            .withAutomaticReconnect()
+            .build();
+    }
 
-export function onMessageReceived(callback: (message: ChatMessage) => void): () => void {
-    const handler = (message: string, user: string, id: string) => {
-        callback(new ChatMessage(user, message, id));
-    };
-    connection.on("ReceiveMessage", handler);
-    // Return a cleanup function to remove the listener
-    return () => {
-        connection.off("ReceiveMessage", handler);
-    };
-}
+    public start = async () => {
+        await this.connection.start();
+    }
 
-export async function sendMessage(user: string, message: string) {
-    try {
-        await connection.invoke("SendMessage", user, message);
-        console.log(`Message sent: ${message}`);
-    } catch (err) {
-        console.error("Error sending message:", err);
+    public stop = async () => {
+        await this.connection.stop();
+    }
+
+    public onMessageReceived = (callback: (message: ChatMessage) => void) => {
+        const handler = (message: string, user: string, id: string) => {
+            callback(new ChatMessage(user, message, id));
+        };
+        this.connection.on("ReceiveMessage", handler);
+        return () => {
+            this.connection.off("ReceiveMessage", handler);
+        };
+    }
+
+    public sendMessage = async (user: string, message: string) => {
+        await this.connection.invoke("SendMessage", user, message);
+    }
+
+    public getState = () => {
+        return this.connection.state;
     }
 }
