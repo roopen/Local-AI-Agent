@@ -76,7 +76,8 @@ const NewsComponent: React.FC = () => {
                         </div>
                         {selectedArticleIndex === index && (
                             <div style={{ height: '500px', maxWidth: '800px', margin: '10px auto', border: '1px solid #ccc' }}>
-                                <ChatComponent initialMessage={`Summarize this article for me: ${article.Title} - ${article.Summary}`} />
+                                <ChatComponent initialMessage={
+                                    `How old is this article: ${article.Title} - ${article.Summary} - ${article.PublishDate}`} />
                             </div>
                         )}
                         <hr style={{ width: '40%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />

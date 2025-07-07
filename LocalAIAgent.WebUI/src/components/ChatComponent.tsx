@@ -2,16 +2,12 @@ import { useState, type FormEvent, useEffect, useRef } from 'react';
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
 import { onMessageReceived, sendMessage, getConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
-import UserService from '../users/UserService';
-import SettingsComponent from './SettingsComponent';
 
 function ChatComponent({ initialMessage }: { initialMessage?: string }) {
-    const userService = UserService.getInstance();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -97,19 +93,9 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
         }
     };
 
-    const toggleSettings = () => {
-        setIsSettingsOpen(!isSettingsOpen);
-    };
-
     return (
         <div style={{ display: 'flex', height: '100%' }}>
-            {isSettingsOpen && (
-                <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto' }}>
-                    <SettingsComponent userService={userService} />
-                </div>
-            )}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
-                <button onClick={toggleSettings} style={{ marginBottom: '10px' }}>Preferences</button>
                 <div ref={messagesContainerRef} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10, flex: 1, overflowY: 'auto' }}>
                     {messages.length === 0 ? (
                         <p>No messages yet.</p>
