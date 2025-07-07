@@ -51,6 +51,7 @@ const NewsComponent: React.FC = () => {
         return () => {
             console.log('Stopping news stream...');
             newsStreamClient.stop();
+            setIsLoading(false);
         };
     }, []);
 
@@ -77,7 +78,8 @@ const NewsComponent: React.FC = () => {
                         {selectedArticleIndex === index && (
                             <div style={{ height: '500px', maxWidth: '800px', margin: '10px auto', border: '1px solid #ccc' }}>
                                 <ChatComponent initialMessage={
-                                    `How old is this article: ${article.Title} - ${article.Summary} - ${article.PublishDate}`} />
+                                    `Title: ${article.Title} \nSummary: ${article.Summary} \n 
+                                    Published: ${article.PublishDate} \nLink: ${article.Link}`} />
                             </div>
                         )}
                         <hr style={{ width: '40%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
