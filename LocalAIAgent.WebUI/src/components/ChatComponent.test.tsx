@@ -2,112 +2,113 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ChatComponent from './ChatComponent';
-import * as ChatClient from '../clients/ChatClient';
+import { ChatConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
 import { HubConnectionState } from '@microsoft/signalr';
 
-// Mock the ChatClient module
+// Mock the ChatConnection class
 jest.mock('../clients/ChatClient');
 
-// Cast mocks for type safety
-const mockedGetConnection = ChatClient.getConnection as jest.Mock;
-const mockedSendMessage = ChatClient.sendMessage as jest.Mock;
-const mockedOnMessageReceived = ChatClient.onMessageReceived as jest.Mock;
+// Mock react-markdown and remark-gfm
+jest.mock('react-markdown', () => (props: React.PropsWithChildren<object>) => {
+    return <div>{props.children}</div>;
+});
+jest.mock('remark-gfm', () => () => {});
+
+const mockedChatConnection = ChatConnection as jest.MockedClass<typeof ChatConnection>;
 
 describe('ChatComponent', () => {
-  let messageCallback: (message: ChatMessage) => void;
-  const mockConnection = {
-    start: jest.fn(),
-    stop: jest.fn().mockResolvedValue(undefined),
-    on: jest.fn(),
-    off: jest.fn(),
-    invoke: jest.fn(),
-    state: HubConnectionState.Connected, // Default state
-  };
+    let messageCallback: (message: ChatMessage) => void;
+    let mockConnectionInstance: {
+        start: jest.Mock;
+        stop: jest.Mock;
+        onMessageReceived: jest.Mock;
+        sendMessage: jest.Mock;
+        getState: jest.Mock;
+    };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+    beforeEach(() => {
+        jest.clearAllMocks();
 
-    // Default mock implementations
-    mockedGetConnection.mockReturnValue(mockConnection);
-    mockedSendMessage.mockResolvedValue(undefined);
-    mockedOnMessageReceived.mockImplementation((callback) => {
-      messageCallback = callback;
-      return jest.fn(); // Return a mock cleanup function
-    });
-    mockConnection.start.mockResolvedValue(undefined); // Default start behavior
-    mockConnection.state = HubConnectionState.Connected; // Reset state
-  });
+        mockConnectionInstance = {
+            start: jest.fn().mockResolvedValue(undefined),
+            stop: jest.fn().mockResolvedValue(undefined),
+            onMessageReceived: jest.fn().mockImplementation((callback) => {
+                messageCallback = callback;
+                return jest.fn(); // Return a mock cleanup function
+            }),
+            sendMessage: jest.fn().mockResolvedValue(undefined),
+            getState: jest.fn().mockReturnValue(HubConnectionState.Connected),
+        };
 
-  it('renders the chat component when connected', () => {
-    render(<ChatComponent />);
-    expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
-    expect(screen.getByText('No messages yet.')).toBeInTheDocument();
-  });
-
-  it('sends a message when the form is submitted', async () => {
-    render(<ChatComponent />);
-    const inputElement = screen.getByPlaceholderText('Type a message...');
-    const sendButton = screen.getByRole('button', { name: /send/i });
-
-    fireEvent.change(inputElement, { target: { value: 'Test message' } });
-    fireEvent.click(sendButton);
-
-    await waitFor(() => {
-      expect(mockedSendMessage).toHaveBeenCalledWith('You', 'Test message');
+        mockedChatConnection.mockImplementation(() => mockConnectionInstance as unknown as ChatConnection);
     });
 
-    expect((inputElement as HTMLInputElement).value).toBe('');
-  });
-
-  it('displays received messages', () => {
-    render(<ChatComponent />);
-    const receivedMessage = new ChatMessage('Bot', 'Hello from bot', 'msg2');
-
-    act(() => {
-      messageCallback(receivedMessage);
+    it('renders the chat component when connected', () => {
+        render(<ChatComponent />);
+        expect(screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+        expect(screen.getByText('No messages yet.')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Bot: Hello from bot')).toBeInTheDocument();
-  });
+    it('sends a message when the form is submitted', async () => {
+        render(<ChatComponent />);
+        const inputElement = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+        const sendButton = screen.getByRole('button', { name: /send/i });
 
-  describe('when connection is not established', () => {
-    it('displays connecting status and connects successfully', async () => {
-      // Mock a controllable promise for the start method
-      let resolveStart: () => void;
-      const startPromise = new Promise<void>(resolve => {
-        resolveStart = resolve;
-      });
+        fireEvent.change(inputElement, { target: { value: 'Test message' } });
+        fireEvent.click(sendButton);
 
-      // Setup mocks for the disconnected state
-      mockConnection.state = HubConnectionState.Disconnected;
-      mockConnection.start.mockReturnValue(startPromise);
-      
-      render(<ChatComponent />);
-      
-      // Verify initial connecting UI
-      expect(mockConnection.start).toHaveBeenCalledTimes(1);
-      expect(screen.getByPlaceholderText('Connecting...')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /send/i })).toBeDisabled();
-      expect(screen.getByText('Connecting to chat server...')).toBeInTheDocument();
+        await waitFor(() => {
+            expect(mockConnectionInstance.sendMessage).toHaveBeenCalledWith('You', 'Test message');
+        });
 
-      // Simulate the connection succeeding
-      await act(async () => {
-        resolveStart();
-        // Wait for the promise chain to resolve
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
-
-      // Verify UI updated to connected state
-      expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
-      expect(screen.queryByText('Connecting to chat server...')).not.toBeInTheDocument();
+        expect((inputElement as HTMLInputElement).value).toBe('');
     });
-  });
 
-  it('stops connection on unmount', () => {
-    const { unmount } = render(<ChatComponent />);
-    unmount();
-    expect(mockConnection.stop).toHaveBeenCalledTimes(1);
-  });
+    it('displays received messages', () => {
+        render(<ChatComponent />);
+        const receivedMessage = new ChatMessage('Bot', 'Hello from bot', 'msg2');
+
+        act(() => {
+            messageCallback(receivedMessage);
+        });
+
+        expect(screen.getByText('Hello from bot')).toBeInTheDocument();
+    });
+
+    describe('when connection is not established', () => {
+        it('displays connecting status and connects successfully', async () => {
+            let resolveStart: () => void;
+            const startPromise = new Promise<void>(resolve => {
+                resolveStart = resolve;
+            });
+
+            mockConnectionInstance.getState.mockReturnValue(HubConnectionState.Disconnected);
+            mockConnectionInstance.start.mockReturnValue(startPromise);
+
+            render(<ChatComponent />);
+
+            expect(mockConnectionInstance.start).toHaveBeenCalledTimes(1);
+            expect(screen.getByPlaceholderText('Connecting...')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /send/i })).toBeDisabled();
+            expect(screen.getByText('Connecting to chat server...')).toBeInTheDocument();
+
+            mockConnectionInstance.getState.mockReturnValue(HubConnectionState.Connected);
+
+            await act(async () => {
+                resolveStart();
+                await new Promise(resolve => setTimeout(resolve, 0));
+            });
+
+            expect(screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)')).toBeInTheDocument();
+            expect(screen.queryByText('Connecting to chat server...')).not.toBeInTheDocument();
+        });
+    });
+
+    it('stops connection on unmount', () => {
+        const { unmount } = render(<ChatComponent />);
+        unmount();
+        expect(mockConnectionInstance.stop).toHaveBeenCalledTimes(1);
+    });
 });
