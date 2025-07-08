@@ -55,16 +55,19 @@ jobs:
         dotnet-version: 9.0.x
         
     - name: Publish as Single Executable
-      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
+      run: dotnet publish LocalAIAgent.AppHost -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true -o ./publish
+
+    - name: List publish directory
+      run: ls -R ./publish
 
     - name: Rename the executable
-      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent-UI.exe
+      run: mv ./publish/*.exe ./publish/LocalAIAgent-UI.exe
 
     - name: Remove .pdb files
-      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.pdb
+      run: rm ./publish/*.pdb
 
     - name: Zip the publish folder
-      run: zip -j LocalAIAgent-UI.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*
+      run: zip -j LocalAIAgent-UI.zip ./publish/*
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
