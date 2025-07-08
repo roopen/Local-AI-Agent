@@ -29,6 +29,8 @@ namespace LocalAIAgent.API
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
             builder.Services.AddScoped<NewsMetrics>();
 
+
+#if DEBUG
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowWebUI", policy =>
@@ -39,6 +41,7 @@ namespace LocalAIAgent.API
                         .AllowCredentials();
                 });
             });
+#endif
 
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
@@ -76,7 +79,12 @@ namespace LocalAIAgent.API
 
             app.UseHttpsRedirection();
 
+#if DEBUG
             app.UseCors("AllowWebUI");
+#else
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+#endif
 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -85,6 +93,10 @@ namespace LocalAIAgent.API
             app.MapControllers();
             app.MapHub<ChatHub>("/chatHub");
             app.MapHub<NewsHub>("/newsHub");
+
+#if !DEBUG
+            app.MapFallbackToFile("/index.html");
+#endif
 
             // Run initial news fetch on startup
             InitializeNewsCache(app);

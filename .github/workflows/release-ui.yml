@@ -1,0 +1,85 @@
+name: Release API+UI App
+
+on:
+  push:
+    branches: [ "rel/ui-*" ]
+
+permissions:
+  contents: write
+
+jobs:
+
+  build:
+  
+    runs-on: ubuntu-latest
+
+    env:
+      Solution_Name: ${{ vars.SOLUTION_NAME_UI }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version from branch name
+      run: |
+          BRANCH_NAME=${{ github.ref }}
+          VERSION=${BRANCH_NAME#refs/heads/rel/ui-}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/ui-$VERSION"; then
+            echo "Tag ui-$VERSION already exists."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
+    - name: Exit Workflow If Tag Already Exists
+      if: env.exists == 'true'
+      run: |
+        echo "Tag already exists. Exiting workflow."
+        exit 0
+
+    - name: Create tag
+      run: |
+          git tag ui-$VERSION
+          git push origin ui-$VERSION
+        
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+        
+    - name: Publish as Single Executable
+      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
+
+    - name: Rename the executable
+      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent.AppHost.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent-UI.exe
+
+    - name: Remove .pdb files
+      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.pdb
+
+    - name: Zip the publish folder
+      run: zip -j LocalAIAgent-UI.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+       name: ${{ env.Solution_Name }}
+       path: LocalAIAgent-UI.zip
+
+    - name: Create GitHub Release with ZIP
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ui-${{ env.VERSION }}
+        name: Release UI ${{ env.VERSION }}
+        body: |
+          New UI release created!
+          - Tag: ui-${{ env.VERSION }}
+        files: LocalAIAgent-UI.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
