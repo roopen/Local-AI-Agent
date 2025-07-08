@@ -2,7 +2,7 @@ name: Release Console App
 
 on:
   push:
-    branches: [ "rel/*" ]
+    branches: [ "rel/cli-*" ]
 
 permissions:
   contents: write

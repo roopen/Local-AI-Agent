@@ -37,4 +37,13 @@
   	<AnalysisMode>Recommended</AnalysisMode>
   </PropertyGroup>
 
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition=" '$(Configuration)' == 'Release' ">
+    <Exec Command="npm install" WorkingDirectory="../LocalAIAgent.WebUI" />
+    <Exec Command="npm run build" WorkingDirectory="../LocalAIAgent.WebUI" />
+    <ItemGroup>
+      <DistFiles Include="../LocalAIAgent.WebUI/dist/**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
+  </Target>
+
 </Project>

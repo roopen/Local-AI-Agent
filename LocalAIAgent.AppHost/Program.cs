@@ -1,12 +1,14 @@
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-IResourceBuilder<ProjectResource> apiService = builder.AddProject<Projects.LocalAIAgent_API>("AINewsCurationAPI");
+var apiService = builder.AddProject<Projects.LocalAIAgent_API>("ainewscurationapi");
 
-builder.AddNpmApp("AINewsCurationUI", "../LocalAIAgent.WebUI", "dev")
+#if DEBUG
+builder.AddNpmApp("ainewscurationui", "../LocalAIAgent.WebUI", "dev")
     .WithReference(apiService)
     .WithEnvironment("PORT", "53146")
     .WithHttpsEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
+#endif
 
 builder.Build().Run();
