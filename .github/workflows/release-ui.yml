@@ -57,6 +57,9 @@ jobs:
     - name: Publish as Single Executable
       run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
 
+    - name: List publish directory
+      run: ls -R /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/
+
     - name: Rename the executable
       run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent-UI.exe
 
