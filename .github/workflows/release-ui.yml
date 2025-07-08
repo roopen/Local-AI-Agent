@@ -58,7 +58,7 @@ jobs:
       run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
 
     - name: Rename the executable
-      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent.AppHost.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent-UI.exe
+      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/LocalAIAgent-UI.exe
 
     - name: Remove .pdb files
       run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/*.pdb
