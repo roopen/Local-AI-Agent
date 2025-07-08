@@ -20,7 +20,7 @@ class ChatMessage {
     tryAppend(message: ChatMessage): boolean {
         if (message.isEmpty()) return false;
         if (this.user !== message.user) return false;
-        if (this.id === message.id) return true; //message already appended
+        if (this.id === message.id) return true;
 
         this.message += `${message.message}`;
         this.id = message.id;

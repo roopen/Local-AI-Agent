@@ -76,10 +76,8 @@ const NewsComponent: React.FC = () => {
                             </a>
                         </div>
                         {selectedArticleIndex === index && (
-                            <div style={{ height: '500px', maxWidth: '800px', margin: '10px auto', border: '1px solid #ccc' }}>
-                                <ChatComponent initialMessage={
-                                    `Title: ${article.Title} \nSummary: ${article.Summary} \n 
-                                    Published: ${article.PublishDate} \nLink: ${article.Link}`} />
+                            <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
+                                <ChatComponent initialMessage={`I have a news article I'd like to talk about.\nNewsTitle: ${article.Title}\nNewsSummary: ${article.Summary}\nPublished: ${article.PublishDate}\nLink: ${article.Link}`} />
                             </div>
                         )}
                         <hr style={{ width: '40%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
