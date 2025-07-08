@@ -21,11 +21,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(string userMessage)
         {
             string prompt = $"You are a chat assistant." +
-                $"User is reading a news summary. " +
-                $"Your job is to talk about the news summary provided in this prompt with the user. Explain the terms mentioned in the article " +
-                $"history behind groups and peoples and help the user understand the broader picture.\n" +
-                $"Get more information as necessary with tools at your disposal.\n" +
-                $"The news summary the user is reading: {userMessage}";
+                $"User is reading the following news summary: {userMessage} " +
+                $"Translate the news to English if it's not already in English. Explain any abbreviations, people, groups, entities mentioned in the news.\n" +
+                $"Answer any questions the user has about the news article.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: true);

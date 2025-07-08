@@ -18,8 +18,10 @@
     "axios": "^1.10.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
     "react-modal": "^3.16.3",
-    "react-router-dom": "^6.25.1"
+    "react-router-dom": "^6.25.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

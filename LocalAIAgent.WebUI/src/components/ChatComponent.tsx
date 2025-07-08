@@ -1,4 +1,6 @@
 import { useState, type FormEvent, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { HubConnectionState } from "@microsoft/signalr";
 import { ChatConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
@@ -9,6 +11,7 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<ChatConnection | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         setConnection(new ChatConnection());
@@ -74,8 +77,14 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
         }
     }, [messages]);
 
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [input]);
+
+    const sendMessage = async () => {
         if (input.trim() === '' || !isConnected || !connection) return;
 
         const user = "You";
@@ -88,27 +97,50 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
         }
     };
 
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        await sendMessage();
+    };
+
+    const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            await sendMessage();
+        }
+    };
+
     return (
         <div style={{ display: 'flex', height: '100%' }}>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 800, margin: '0 auto', padding: '10px' }}>
-                <div ref={messagesContainerRef} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10, flex: 1, overflowY: 'auto' }}>
-                    {messages.length === 0 ? (
-                        <p>No messages yet.</p>
-                    ) : (
-                        messages.map((msg, idx) => (
-                            <div key={idx} style={{ margin: '5px 0' }}>
-                                {msg.user}: {msg.message}
-                            </div>
-                        ))
-                    )}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '0 auto', padding: '10px' }}>
+                <div style={{ border: '1px solid #ccc', marginBottom: 10, flex: 1, overflow: 'hidden' }}>
+                    <div ref={messagesContainerRef} style={{ height: '100%', overflowY: 'auto', padding: 10 }}>
+                        {messages.length === 0 ? (
+                            <p>No messages yet.</p>
+                        ) : (
+                            messages.map((msg, idx) => (
+                                <div key={idx} style={{ margin: '5px 0' }}>
+                                    <div style={{ whiteSpace: 'pre-wrap' }}>
+                                        {msg.user}: <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                a: ({ ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
+                                            }}
+                                        >{msg.message}</ReactMarkdown>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
                 <form onSubmit={handleSubmit} style={{ display: 'flex' }}>
-                    <input
-                        type="text"
+                    <textarea
+                        ref={textareaRef}
+                        rows={1}
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        style={{ flex: 1, marginRight: 5 }}
-                        placeholder={isConnected ? "Type a message..." : "Connecting..."}
+                        onKeyDown={handleKeyDown}
+                        style={{ flex: 1, marginRight: 5, resize: 'none', overflowY: 'auto', maxHeight: '150px' }}
+                        placeholder={isConnected ? "Type a message... (Shift+Enter for new line)" : "Connecting..."}
                         disabled={!isConnected}
                     />
                     <button type="submit" disabled={!isConnected}>Send</button>
