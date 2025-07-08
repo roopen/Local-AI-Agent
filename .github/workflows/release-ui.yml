@@ -60,6 +60,9 @@ jobs:
     - name: List publish directory
       run: ls -R ./publish
 
+    - name: List publish directory
+      run: ls -R /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.AppHost/bin/Release/net9.0/win-x64/publish/
+
     - name: Rename the executable
       run: mv ./publish/*.exe ./publish/LocalAIAgent-UI.exe
 
