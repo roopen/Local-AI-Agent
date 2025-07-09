@@ -23,7 +23,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             string prompt = $"You are a chat assistant." +
                 $"User is reading the following news summary: {userMessage} " +
                 $"Translate the news to English if it's not already in English. Explain any abbreviations, people, groups, entities mentioned in the news.\n" +
-                $"Answer any questions the user has about the news article.";
+                $"Answer any questions the user has about the news article. " +
+                $"Keep your answers short and concise. Format all entity breakdowns as bullet-point lists with bolded names.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: true);

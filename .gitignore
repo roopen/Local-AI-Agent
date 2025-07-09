@@ -369,3 +369,4 @@ FodyWeavers.xsd
 /LocalAIAgent.API/openapi/
 /LocalAIAgent.API/user.db-shm
 /LocalAIAgent.API/user.db-wal
+*.db
