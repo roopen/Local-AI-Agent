@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { IUserService } from '../users/IUserService';
+import UserService from "../users/UserService";
 import UserSettings from '../domain/UserSettings';
 
-interface SettingsComponentProps {
-    userService: IUserService;
+interface ChildComponentProps {
+  onSave: () => Promise<void>;
 }
 
-const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) => {
+const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
     const [settings, setSettings] = useState<UserSettings>(new UserSettings());
     const [newLike, setNewLike] = useState('');
     const [newDislike, setNewDislike] = useState('');
     const [buttonText, setButtonText] = useState('Save Settings');
     const [isSaving, setIsSaving] = useState(false);
     const [textStyle, setTextStyle] = useState<React.CSSProperties>({ opacity: 1 });
+
+    const userService = UserService.getInstance();
 
     useEffect(() => {
         const user = userService.getCurrentUser();
@@ -55,6 +57,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ userService }) =>
     const handleSave = useCallback(() => {
         if (isSaving) return;
         userService.saveUserPreferences(settings).then(() => {
+            onSave();
             setIsSaving(true);
         });
     }, [isSaving, settings, userService]);

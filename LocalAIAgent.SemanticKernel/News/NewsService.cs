@@ -120,13 +120,13 @@ namespace LocalAIAgent.SemanticKernel.News
 
                 foreach (string category in item.Categories)
                 {
-                    if (Regex.IsMatch(category, pattern, RegexOptions.IgnoreCase))
+                    if (!string.IsNullOrEmpty(category) && Regex.IsMatch(category, pattern, RegexOptions.IgnoreCase))
                     {
                         return false;
                     }
                 }
 
-                if (Regex.IsMatch(item.Title, pattern, RegexOptions.IgnoreCase))
+                if (!string.IsNullOrEmpty(item.Title) && Regex.IsMatch(item.Title, pattern, RegexOptions.IgnoreCase))
                 {
                     return false;
                 }
