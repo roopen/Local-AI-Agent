@@ -52,7 +52,7 @@ const Header = () => {
                     }
                 }}
             >
-                <SettingsComponent userService={UserService.getInstance()} />
+                <SettingsComponent />
                 <button onClick={closeModal}>Close</button>
             </Modal>
         </div>

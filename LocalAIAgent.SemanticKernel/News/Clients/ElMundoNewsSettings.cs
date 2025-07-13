@@ -2,10 +2,10 @@
 
 namespace LocalAIAgent.SemanticKernel.News.Clients
 {
-    internal class YleNewsSettings : BaseNewsClientSettings
+    internal class ElMundoNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "YleClient";
-        public override string BaseUrl => "https://yle.fi/rss";
+        public override string ClientName => "ElMundoClient";
+        public override string BaseUrl => "https://e00-elmundo.uecdn.es/elmundo/rss";
 
         public override bool RequiresTranslation => true;
 
@@ -13,8 +13,10 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
         {
             return
             [
-                $"{BaseUrl}/uutiset/paauutiset",
-                $"{BaseUrl}/t/18-819/fi",
+                $"{BaseUrl}/portada.xml",
+                $"{BaseUrl}/espana.xml",
+                $"{BaseUrl}/internacional.xml",
+                $"{BaseUrl}/union_europea.xml",
             ];
         }
 
@@ -24,6 +26,11 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
             {
                 client.BaseAddress = new Uri(BaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+                client.DefaultRequestHeaders.Host = Host;
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = true
             });
         }
     }

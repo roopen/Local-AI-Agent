@@ -35,11 +35,20 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            List<string> sourcesToTranslate = newsClientSettings.Where(s => s.RequiresTranslation).Select(s => s.Host).ToList();
+            List<BaseNewsClientSettings> sourcesToTranslate = newsClientSettings.Where(s => s.RequiresTranslation).ToList();
 
             if (sourcesToTranslate.Count is 0) return articles;
 
-            List<NewsArticle> articlesToTranslate = articles.Where(a => sourcesToTranslate.Contains(a.Source)).ToList();
+            List<NewsArticle> articlesToTranslate = [];
+
+            foreach (BaseNewsClientSettings source in sourcesToTranslate)
+            {
+                string host = source.Host;
+                string sourceName = source.ClientName.Replace("Client", null).ToLowerInvariant();
+
+                // Filter articles that belong to the current source and require translation
+                articlesToTranslate.AddRange(articles.Where(a => a.Source.Contains(host) || a.Source.Contains(sourceName)));
+            }
 
             if (articlesToTranslate.Count is 0) return articles;
 
