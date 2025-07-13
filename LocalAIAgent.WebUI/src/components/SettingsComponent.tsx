@@ -3,7 +3,7 @@ import UserService from "../users/UserService";
 import UserSettings from '../domain/UserSettings';
 
 interface ChildComponentProps {
-  onSave: () => Promise<void>;
+  onSave?: () => Promise<void>;
 }
 
 const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
@@ -57,7 +57,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
     const handleSave = useCallback(() => {
         if (isSaving) return;
         userService.saveUserPreferences(settings).then(() => {
-            onSave();
+            onSave?.();
             setIsSaving(true);
         });
     }, [isSaving, settings, userService]);
