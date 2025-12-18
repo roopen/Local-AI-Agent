@@ -14,7 +14,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
+    - name: Generate OpenAPI JSON
+      run: dotnet build LocalAIAgent.API -c Release
+           dotnet nswag run LocalAIAgent.API/nswag.json
     - name: Restore dependencies
       run: dotnet restore
     - name: Restore tools
