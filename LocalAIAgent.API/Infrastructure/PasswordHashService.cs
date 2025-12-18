@@ -13,8 +13,12 @@ namespace LocalAIAgent.API.Infrastructure
             byte[] salt = new byte[SaltSize];
             RandomNumberGenerator.Fill(salt);
 
-            using Rfc2898DeriveBytes pbkdf2 = new(password, salt, Iterations, HashAlgorithmName.SHA256);
-            byte[] hash = pbkdf2.GetBytes(HashSize);
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                Iterations,
+                HashAlgorithmName.SHA256,
+                HashSize);
 
             byte[] hashBytes = new byte[SaltSize + HashSize];
             Array.Copy(salt, 0, hashBytes, 0, SaltSize);
@@ -29,8 +33,12 @@ namespace LocalAIAgent.API.Infrastructure
             byte[] salt = new byte[SaltSize];
             Array.Copy(hashBytes, 0, salt, 0, SaltSize);
 
-            using Rfc2898DeriveBytes pbkdf2 = new(password, salt, Iterations, HashAlgorithmName.SHA256);
-            byte[] hash = pbkdf2.GetBytes(HashSize);
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                Iterations,
+                HashAlgorithmName.SHA256,
+                HashSize);
 
             for (int i = 0; i < HashSize; i++)
             {
