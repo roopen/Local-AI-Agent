@@ -16,6 +16,7 @@ NOTE: Currently very much a Proof of Concept.
 - Windows or Linux OS
 - [LM Studio](https://lmstudio.ai/) running with an OpenAI-compliant local API
 - Internet access (application will not work if blocked by Firewall)
+- NodeJS 20
 
 ## Installation
 
