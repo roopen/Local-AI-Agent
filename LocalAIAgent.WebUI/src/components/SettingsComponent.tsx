@@ -60,6 +60,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
             onSave?.();
             setIsSaving(true);
         });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSaving, settings, userService]);
 
     useEffect(() => {
