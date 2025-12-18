@@ -34,12 +34,17 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <Target Name="GenerateUserApiClient" BeforeTargets="CoreBuild">
+  <Target Name="GenerateUserApiClient" BeforeTargets="CoreBuild" DependsOnTargets="RestoreDotNetTools">
     <PropertyGroup>
       <OpenApiInputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../LocalAIAgent.API/openapi/LocalAIAgent.API.json'))</OpenApiInputPath>
       <OpenApiOutputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/Generated/UserApi.cs'))</OpenApiOutputPath>
     </PropertyGroup>
+	  <Exec Command="dotnet tool restore" />
     <Exec Command="dotnet nswag openapi2csclient /input:$(OpenApiInputPath) /output:$(OpenApiOutputPath) /namespace:LocalAIAgent.Tests.Generated /className:UserClient" />
   </Target>
+
+	<Target Name="RestoreDotNetTools">
+		<Exec Command="dotnet tool restore" />
+	</Target>
 
 </Project>
