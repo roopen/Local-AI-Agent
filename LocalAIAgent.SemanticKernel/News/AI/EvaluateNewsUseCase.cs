@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Polly;
+using Polly.Retry;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -35,18 +37,17 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             foreach (NewsItem article in articles)
             {
-                // clear chat history to keep context small and focused on only the current article
                 chatHistory.Clear();
 
                 if (string.IsNullOrWhiteSpace(article.Content))
                     continue;
 
                 chatHistory.AddUserMessage(article.Content);
-                await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                    chatHistory,
-                                    openAiSettings,
-                                    kernel)
-                                    .ConfigureAwait(false))
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(chatHistory, openAiSettings, kernel, cts.Token).ConfigureAwait(false);
+
+                foreach (StreamingChatMessageContent? content in stream)
                 {
                     if (string.IsNullOrEmpty(content.Content))
                         continue;
@@ -97,11 +98,10 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 chatHistory.AddUserMessage(batchContent);
                 string jsonContent = string.Empty;
 
-                await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                    chatHistory,
-                                    openAiSettings,
-                                    kernel)
-                                    .ConfigureAwait(false))
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(chatHistory, openAiSettings, kernel, cts.Token).ConfigureAwait(false);
+
+                foreach (StreamingChatMessageContent? content in stream)
                 {
                     if (string.IsNullOrEmpty(content.Content))
                         continue;
@@ -124,7 +124,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         }
                         catch
                         {
-                            // Continue processing if batch parsing fails
                             continue;
                         }
                     }
@@ -157,6 +156,40 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                     result.Add(newsArticle);
                 }
             }
+        }
+
+        private async Task<List<StreamingChatMessageContent>> GetStreamWithRetryAsync(
+            ChatHistory history,
+            OpenAIPromptExecutionSettings settings,
+            Kernel kernelInstance,
+            CancellationToken cancellationToken)
+        {
+            AsyncRetryPolicy retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetryAsync(
+                    retryCount: 5,
+                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(20, attempt)), 
+                    onRetry: (ex, delay, attempt, ctx) =>
+                    {
+                        logger.LogWarning(ex, "LLM streaming attempt {Attempt} failed. Retrying in {Delay}.", attempt, delay);
+                    });
+
+            return await retryPolicy.ExecuteAsync(async ct =>
+            {
+                List<StreamingChatMessageContent> chunks = [];
+                await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
+                                    history,
+                                    settings,
+                                    kernelInstance,
+                                    ct)
+                                    .ConfigureAwait(false))
+                {
+                    if (content is null)
+                        continue;
+                    chunks.Add(content);
+                }
+                return chunks;
+            }, cancellationToken).ConfigureAwait(false);
         }
     }
 }
