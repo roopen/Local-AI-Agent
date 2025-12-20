@@ -4,6 +4,7 @@ using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.News.AI;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
@@ -88,6 +89,7 @@ namespace LocalAIAgent.API
 
             // Run initial news fetch on startup
             InitializeNewsCache(app);
+            LoadLLMOnStartup(app);
 
             app.Run();
         }
@@ -100,6 +102,17 @@ namespace LocalAIAgent.API
                 using IServiceScope scope = scopeFactory.CreateScope();
                 INewsService newsService = scope.ServiceProvider.GetRequiredService<INewsService>();
                 await newsService.GetNewsAsync();
+            });
+        }
+
+        private static void LoadLLMOnStartup(WebApplication app)
+        {
+            IServiceScopeFactory scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+            Task.Run(async () =>
+            {
+                using IServiceScope scope = scopeFactory.CreateScope();
+                ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
+                await loadLLMUseCase.LoadLLMUseCaseAsync();
             });
         }
     }
