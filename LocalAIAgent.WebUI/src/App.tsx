@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import LoginComponent from './components/LoginComponent';
 import UserService from './users/UserService';
@@ -26,11 +26,15 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const checkLoginStatus = async () => {
-            try {
-                const loginStatus = await userService.isLoggedIn();
-                setIsLoggedIn(loginStatus);
-                if (loginStatus) {
+        checkLoginStatus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const checkLoginStatus = async () => {
+        try {
+            const loginStatus = await userService.isLoggedIn();
+            setIsLoggedIn(loginStatus);
+            if (loginStatus) {
                 const currentUser = userService.getCurrentUser();
                 const userPreferences = await userService.getUserPreferences(currentUser!.id);
 
@@ -41,16 +45,13 @@ function App() {
                     setIsUserPreferencesSet(true);
                 }
             }
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        checkLoginStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleLogin = async () => {
-        setIsLoggedIn(true);
+        await checkLoginStatus();
     };
 
     if (isLoading) {
@@ -61,23 +62,30 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={
-                <ProtectedRoute condition={isLoggedIn} redirectTo="/login">
-                    <ProtectedRoute condition={isUserPreferencesSet} redirectTo="/setup">
-                        <MainApp />
-                    </ProtectedRoute>
-                </ProtectedRoute>}
+                    <ProtectedRoute condition={isLoggedIn && !isLoading} redirectTo="/login">
+                        <ProtectedRoute condition={isUserPreferencesSet} redirectTo="/setup">
+                            <MainApp />
+                        </ProtectedRoute>
+                    </ProtectedRoute>}
                 />
                 <Route path="/news" element={
-                    <ProtectedRoute condition={isUserPreferencesSet} redirectTo="/setup">
+                    <ProtectedRoute condition={isUserPreferencesSet && !isLoading} redirectTo="/setup">
                         <MainApp />
                     </ProtectedRoute>
                 } />
                 <Route path="/setup" element={
-                <ProtectedRoute condition={(isLoggedIn && !isUserPreferencesSet)} redirectTo="/login">
-                    <SetupComponent />
-                </ProtectedRoute>
+                    <ProtectedRoute condition={(isLoggedIn && !isUserPreferencesSet && !isLoading)} redirectTo="/login">
+                        <SetupComponent />
+                    </ProtectedRoute>
                 } />
-                <Route path="/login" element={<LoginComponent userService={userService} onLogin={handleLogin} />}/>
+                <Route
+                    path="/login"
+                    element={
+                        isLoggedIn
+                            ? <Navigate to="/" replace />
+                            : <LoginComponent userService={userService} onLogin={handleLogin} />
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );
