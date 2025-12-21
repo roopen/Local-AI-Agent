@@ -25,7 +25,8 @@ const Header = () => {
             <div style={{  }}>
                 <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '1vh', marginBottom: '1vh', width: '80%' }}>
+            <div style={{
+                display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '1vh', marginBottom: '1vh', width: '80%', position: 'sticky', top: '0'}}>
                 <Button
                     themeColor={'info'}
                     size={'large'}
@@ -67,7 +68,6 @@ const Header = () => {
                 }}
             >
                 <SettingsComponent />
-                <button onClick={closeModal}>Close</button>
             </Modal>
         </div>
     );
