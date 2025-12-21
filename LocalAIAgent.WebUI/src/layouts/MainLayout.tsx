@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import SettingsComponent from '../components/SettingsComponent';
 import UserService from '../users/UserService';
 import Modal from 'react-modal';
+import { Button } from '@progress/kendo-react-buttons';
 
 const Header = () => {
     const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -20,13 +21,26 @@ const Header = () => {
     };
 
     return (
-        <div style={{ marginBottom: 40 }}>
+        <div style={{ marginBottom: 5 }}>
             <div style={{  }}>
                 <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
             </div>
-            <div style={{ marginRight: 15, justifyContent: 'flex-end', padding: '10px' }}>
-                <button onClick={openModal} style={{ marginRight: '10px' }}>Settings</button>
-                <button onClick={handleLogout}>Logout</button>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '1vh', marginBottom: '1vh', width: '80%' }}>
+                <Button
+                    themeColor={'info'}
+                    size={'large'}
+                    onClick={openModal}
+                    style={{ width: "50%" }}>
+                    Settings
+                </Button>
+                <Button
+                    fillMode={'outline'}
+                    themeColor={'secondary'}
+                    size={'large'}
+                    style={{ width: "50%" }}
+                    onClick={handleLogout}>
+                    Logout
+                </Button>
             </div>
             <Modal
                 isOpen={modalIsOpen}

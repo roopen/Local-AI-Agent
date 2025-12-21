@@ -51,6 +51,7 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
             <hr style={{ marginTop: '3vh', marginBottom: '3vh' }} />
 
             <Button
+                themeColor={'primary'}
                 disabled={username.length === 0 || password.length === 0}
                 size={'large'}
                 style={{ width: "100%" }}
@@ -63,7 +64,7 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                     fillMode={'flat'}
                     size={'large'}
                     onClick={() => setIsRegister(!isRegister)}
-                    style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer', padding: '0' }}
+                    style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer', padding: '0', marginBottom: '4px' }}
                 >
                     {isRegister ? 'Login' : 'Register'}
                 </Button>
