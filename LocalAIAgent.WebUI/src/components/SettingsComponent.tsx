@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import UserService from "../users/UserService";
 import UserSettings from '../domain/UserSettings';
+import { Button, Chip } from '@progress/kendo-react-buttons';
+import { InputSeparator, InputSuffix, TextArea, TextBox } from '@progress/kendo-react-inputs';
 
 interface ChildComponentProps {
-  onSave?: () => Promise<void>;
+    onSave?: () => Promise<void>;
 }
 
 const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
@@ -25,7 +27,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
                 }
             });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -60,7 +62,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
             onSave?.();
             setIsSaving(true);
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSaving, settings, userService]);
 
     useEffect(() => {
@@ -110,71 +112,116 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
 
     return (
         <div style={{ backgroundColor: '#282c34', color: 'white', padding: '20px' }}>
-            <h1>Settings</h1>
+            <h1 style={{ marginTop: '0px', marginBottom: '10px' }}>Settings</h1>
             <div>
                 <h2>Prompt</h2>
-                <textarea
+                <TextArea
+                    autoSize={true}
+                    rows={2}
                     value={settings.prompt || ''}
                     onChange={(e) => {
                         const newSettings = new UserSettings(settings.likes, settings.dislikes, e.target.value);
                         setSettings(newSettings);
                     }}
                     placeholder="System prompt for the AI"
-                    rows={5}
                     style={{ width: 'calc(100% - 16px)', padding: '8px', boxSizing: 'border-box', backgroundColor: '#333', color: 'white', border: '1px solid #555' }}
                 />
             </div>
-            <div>
-                <h2>Likes</h2>
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                    {settings.likes.map(like => (
-                        <li key={like} style={{ marginBottom: '5px' }}>
-                            {like} <button onClick={() => removeLike(like)} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}>Remove</button>
-                        </li>
-                    ))}
-                </ul>
-                <input
-                    type="text"
-                    value={newLike}
-                    onChange={(e) => setNewLike(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addLike();
-                        }
-                    }}
-                    placeholder="Add a new like"
-                    style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '5px' }}
-                />
-                <button onClick={addLike} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>Add Like</button>
+            <div style={{ display: 'flex' }}>
+                <div style={{ flex: '1' }}>
+                    <h2>Likes</h2>
+                    <TextBox
+                        value={newLike}
+                        onChange={(e) => setNewLike(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addLike();
+                            }
+                        }}
+                        placeholder="Add a new like"
+                        suffix={() => (
+                            <>
+                                <InputSeparator />
+                                <InputSuffix >
+                                    <Button
+                                        onClick={addLike}
+                                        disabled={newLike.length === 0}
+                                        themeColor='tertiary'
+                                        fillMode={"flat"}
+                                        rounded={null} >
+                                        Add
+                                    </Button>
+                                </InputSuffix>
+                            </>
+                        )}
+                        style={{ width: '90%' }}
+                    />
+                    <ul style={{ listStyleType: 'none', padding: 0 }}>
+                        {settings.likes.map(like => (
+                            <Chip
+                                key={like}
+                                removable
+                                size={'large'}
+                                onClick={() => removeLike(like)}
+                                style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}
+                            >
+                                {like}
+                            </Chip>
+                        ))}
+                    </ul>
+                </div>
+                <div style={{ flex: '1' }}>
+                    <h2>Dislikes</h2>
+                    <TextBox
+                        value={newDislike}
+                        onChange={(e) => setNewDislike(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addDislike();
+                            }
+                        }}
+                        placeholder="Add a new dislike"
+                        suffix={() => (
+                            <>
+                                <InputSeparator />
+                                <InputSuffix >
+                                    <Button
+                                        onClick={addDislike}
+                                        disabled={newDislike.length === 0}
+                                        themeColor='primary'
+                                        fillMode={"flat"}
+                                        rounded={null} >
+                                        Add
+                                    </Button>
+                                </InputSuffix>
+                            </>
+                        )}
+                        style={{ width: '90%' }}
+                    />
+                    <ul style={{ listStyleType: 'none', padding: 0 }}>
+                        {settings.dislikes.map(dislike => (
+                            <Chip
+                                key={dislike}
+                                removable
+                                size={'large'}
+                                onClick={() => removeDislike(dislike)}
+                                style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}
+                            >
+                                {dislike}
+                            </Chip>
+                        ))}
+                    </ul>
+                </div>
             </div>
-            <div>
-                <h2>Dislikes</h2>
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                    {settings.dislikes.map(dislike => (
-                        <li key={dislike} style={{ marginBottom: '5px' }}>
-                            {dislike} <button onClick={() => removeDislike(dislike)} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}>Remove</button>
-                        </li>
-                    ))}
-                </ul>
-                <input
-                    type="text"
-                    value={newDislike}
-                    onChange={(e) => setNewDislike(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addDislike();
-                        }
-                    }}
-                    placeholder="Add a new dislike"
-                    style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '5px' }}
-                />
-                <button onClick={addDislike} style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' }}>Add Dislike</button>
-            </div>
-            <button onClick={handleSave} disabled={isSaving} style={{ minWidth: '160px', textAlign: 'center', marginTop: '20px', backgroundColor: '#555', color: 'white', border: 'none', padding: '10px', cursor: 'pointer' }}>
-                <span style={{...textStyle, display: 'inline-block'}}>{buttonText}</span>
-            </button>
+            <Button
+                themeColor={'secondary'}
+                onClick={handleSave}
+                disabled={isSaving}
+                style={{ minWidth: '160px', textAlign: 'center', marginTop: '20px', backgroundColor: '#555', color: 'white', border: 'none', padding: '10px', cursor: 'pointer' }}>
+                <span style={{ ...textStyle, display: 'inline-block' }}>{buttonText}</span>
+            </Button>
         </div>
     );
 };
