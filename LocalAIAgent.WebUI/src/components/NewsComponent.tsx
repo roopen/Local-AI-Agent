@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NewsStreamClient } from '../clients/NewsClient';
 import NewsArticle from '../domain/NewsArticle';
 import ChatComponent from './ChatComponent';
+import { Button } from '@progress/kendo-react-buttons';
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -61,26 +62,36 @@ const NewsComponent: React.FC = () => {
             <div>
                 <div>
                 </div>
-                <hr />
+                <hr style={{ marginBottom: '3vh' }} />
                 {articles.map((article, index) => (
                     <div key={index}>
-                        <h2>{article.Title}</h2>
-                        <p>{article.Summary}</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '35%', margin: '0 auto' }} >
-                            <a style={{ marginRight: 5 }} href={article.Link} target="_blank" rel="noopener noreferrer">
+                        <h2 style={{ marginBottom: '1vh', marginTop: '1vh' }}>{article.Title}</h2>
+                        <p style={{ marginBottom: '1.5vh', marginTop: '0vh' }}>{article.Summary}</p>
+                        <div style={{ margin: '0 auto', marginBottom: '1.5vh' }} >
+                            <Button
+                                themeColor={'tertiary'}
+                                fillMode={'outline'}
+                                style={{ marginRight: 5 }}
+                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}
+                                href={article.Link}
+                                target="_blank"
+                                rel="noopener noreferrer">
                                 Read the article at {article.Source} <span>&#x1F5D7;</span>
-                            </a>
-                            <a onClick={() => toggleChat(index)} style={{ cursor: 'pointer' }}>
+                            </Button>
+                            <Button
+                                fillMode={'outline'}
+                                onClick={() => toggleChat(index)}
+                                style={{ cursor: 'pointer' }}>
                                 AIChat
                                 <span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
-                            </a>
+                            </Button>
                         </div>
                         {selectedArticleIndex === index && (
                             <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
                                 <ChatComponent initialMessage={`I have a news article I'd like to talk about.\nNewsTitle: ${article.Title}\nNewsSummary: ${article.Summary}\nPublished: ${article.PublishDate}\nLink: ${article.Link}`} />
                             </div>
                         )}
-                        <hr style={{ width: '40%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
+                        <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
                     </div>
                 ))}
                 {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
