@@ -1,4 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
+import { Button } from '@progress/kendo-react-buttons';
+import { Input } from '@progress/kendo-react-inputs';
 import type { IUserService } from '../users/IUserService';
 
 interface LoginComponentProps {
@@ -30,30 +32,41 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
         <div>
             <h2>{isRegister ? 'Register' : 'Login'}</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
-                <input
+                <Input
                     type="text"
-                    placeholder="Username"
+                    label="Username"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => setUsername(e.value)}
                     onKeyDown={handleKeyDown}
                 />
-                <input
+                <Input
                     type="password"
-                    placeholder="Password"
+                    label="Password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.value)}
                     onKeyDown={handleKeyDown}
                 />
             </div>
-            <button onClick={handleAuth}>{isRegister ? 'Register' : 'Login'}</button>
+
+            <hr style={{ marginTop: '3vh', marginBottom: '3vh' }} />
+
+            <Button
+                disabled={username.length === 0 || password.length === 0}
+                size={'large'}
+                style={{ width: "100%" }}
+                onClick={handleAuth}>
+                {isRegister ? 'Register' : 'Login'}
+            </Button>
             <p>
                 {isRegister ? 'Already have an account? ' : "Don't have an account? "}
-                <button
+                <Button
+                    fillMode={'flat'}
+                    size={'large'}
                     onClick={() => setIsRegister(!isRegister)}
                     style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer', padding: '0' }}
                 >
                     {isRegister ? 'Login' : 'Register'}
-                </button>
+                </Button>
             </p>
         </div>
     );
