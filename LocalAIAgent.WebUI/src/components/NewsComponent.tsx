@@ -72,10 +72,7 @@ const NewsComponent: React.FC = () => {
                                 themeColor={'tertiary'}
                                 fillMode={'outline'}
                                 style={{ marginRight: 5 }}
-                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}
-                                href={article.Link}
-                                target="_blank"
-                                rel="noopener noreferrer">
+                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}>
                                 Read the article at {article.Source} <span>&#x1F5D7;</span>
                             </Button>
                             <Button

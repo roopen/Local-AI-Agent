@@ -20,6 +20,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
             string systemPrompt,
             bool allowFunctionUse = true)
         {
+#pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             return new OpenAIPromptExecutionSettings
             {
                 ChatSystemPrompt = systemPrompt,
@@ -30,6 +31,7 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 FrequencyPenalty = (double)FrequencyPenalty,
                 PresencePenalty = (double)PresencePenalty,
             };
+#pragma warning restore OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         }
     }
 }
