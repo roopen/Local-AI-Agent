@@ -168,11 +168,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount: 5,
-                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(20, attempt)), 
-                    onRetry: (ex, delay, attempt, ctx) =>
-                    {
-                        logger.LogWarning(ex, "LLM streaming attempt {Attempt} failed. Retrying in {Delay}.", attempt, delay);
-                    });
+                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(20, attempt)));
 
             return await retryPolicy.ExecuteAsync(async ct =>
             {
