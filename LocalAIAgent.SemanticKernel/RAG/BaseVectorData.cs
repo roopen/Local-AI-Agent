@@ -10,11 +10,11 @@ namespace LocalAIAgent.SemanticKernel.RAG
         [JsonIgnore]
         public ReadOnlyMemory<float> Vector { get; set; }
 
-        [VectorStoreRecordVector(768, DistanceFunction = DistanceFunction.CosineDistance)]
+        [VectorStoreVector(768, DistanceFunction = DistanceFunction.CosineDistance)]
         [JsonIgnore]
         public ReadOnlyMemory<float> DifferenceVector { get { return Vector; } }
 
-        [VectorStoreRecordVector(768, DistanceFunction = DistanceFunction.CosineSimilarity)]
+        [VectorStoreVector(768, DistanceFunction = DistanceFunction.CosineSimilarity)]
         [JsonIgnore]
         public ReadOnlyMemory<float> SimilarityVector { get { return Vector; } }
     }

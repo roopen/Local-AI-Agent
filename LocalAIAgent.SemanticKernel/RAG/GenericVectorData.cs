@@ -6,10 +6,10 @@ namespace LocalAIAgent.SemanticKernel.RAG
     {
         private sealed class GenericVectorData : BaseVectorData
         {
-            [VectorStoreRecordKey]
+            [VectorStoreKey]
             public string Key { get; set; } = Guid.CreateVersion7().ToString();
 
-            [VectorStoreRecordData]
+            [VectorStoreData]
             public string? Chunk { get; set; }
         }
     }

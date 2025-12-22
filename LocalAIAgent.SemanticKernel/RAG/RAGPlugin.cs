@@ -10,13 +10,13 @@ using UglyToad.PdfPig.Content;
 
 namespace LocalAIAgent.SemanticKernel.RAG
 {
-    internal partial class RAGService
+    internal partial class RAGService : IDisposable
     {
         private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingService;
         private readonly ChatContext _chatContext;
         private readonly INewsService _newsService;
-        private readonly InMemoryVectorStoreRecordCollection<string, GenericVectorData> _generalVectorStore;
-        private readonly InMemoryVectorStoreRecordCollection<string, NewsItem> _newsVectorStore;
+        private readonly InMemoryCollection<string, GenericVectorData> _generalVectorStore;
+        private readonly InMemoryCollection<string, NewsItem> _newsVectorStore;
         private readonly Dictionary<string, ReadOnlyMemory<float>> userDislikeVectors = [];
 
         public RAGService(IEmbeddingGenerator<string, Embedding<float>> embeddingService, ChatContext chatContext, INewsService newsService)
@@ -25,25 +25,20 @@ namespace LocalAIAgent.SemanticKernel.RAG
             _chatContext = chatContext;
             _newsService = newsService;
 
-            InMemoryVectorStoreRecordCollectionOptions<string, GenericVectorData> options = new()
+            InMemoryCollectionOptions options = new()
             {
                 EmbeddingGenerator = _embeddingService,
             };
             _generalVectorStore = new("Docs", options);
-
-            InMemoryVectorStoreRecordCollectionOptions<string, NewsItem> optionsNews = new()
-            {
-                EmbeddingGenerator = _embeddingService,
-            };
-            _newsVectorStore = new("News", optionsNews);
+            _newsVectorStore = new("News", options);
 
             _ = Initialize();
         }
 
         private async Task Initialize()
         {
-            await _generalVectorStore.CreateCollectionIfNotExistsAsync();
-            await _newsVectorStore.CreateCollectionIfNotExistsAsync();
+            await _generalVectorStore.EnsureCollectionExistsAsync();
+            await _newsVectorStore.EnsureCollectionExistsAsync();
             List<NewsItem> news = await _newsService.GetNewsAsync();
             foreach (NewsItem newsItem in news)
             {
@@ -70,9 +65,9 @@ namespace LocalAIAgent.SemanticKernel.RAG
         /// Saves a news item to the vector store.
         /// </summary>
         /// <returns>Returns database key/id for the item.</returns>
-        public async Task<string> SaveNewsAsync(NewsItem newsItem)
+        public async Task SaveNewsAsync(NewsItem newsItem)
         {
-            if (newsItem.Content is null) return string.Empty;
+            if (newsItem.Content is null) return;
 
             newsItem.Vector = await _embeddingService.GenerateVectorAsync(newsItem.Content);
 
@@ -81,10 +76,8 @@ namespace LocalAIAgent.SemanticKernel.RAG
 
             if (!NewsIsFilteredByUserPreferences(newsItem))
             {
-                return await _newsVectorStore.UpsertAsync(newsItem);
+                await _newsVectorStore.UpsertAsync(newsItem);
             }
-
-            return string.Empty;
         }
 
         private bool NewsIsFilteredByUserPreferences(NewsItem newsItem)
@@ -126,7 +119,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
         /// Saves string content to the vector store.
         /// </summary>
         /// <returns>Returns database key/id for the item.</returns>
-        public async Task<string> SaveTextAsync(string text)
+        public async Task SaveTextAsync(string text)
         {
             GenericVectorData document = new()
             {
@@ -134,7 +127,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                 Vector = await _embeddingService.GenerateVectorAsync(text),
             };
 
-            return await _generalVectorStore.UpsertAsync(document);
+            await _generalVectorStore.UpsertAsync(document);
         }
 
         [KernelFunction, Description("Search news articles from the RAG.")]
@@ -151,7 +144,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                 VectorProperty = x => x.SimilarityVector,
             };
 
-            IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, top, options);
+            IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchAsync(embedding, top, options);
 
             string response = string.Empty;
             await foreach (VectorSearchResult<NewsItem> result in searchResults)
@@ -177,7 +170,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                 VectorProperty = x => x.DifferenceVector,
             };
 
-            IAsyncEnumerable<VectorSearchResult<GenericVectorData>> searchResults = _generalVectorStore.SearchEmbeddingAsync(embedding, top, options);
+            IAsyncEnumerable<VectorSearchResult<GenericVectorData>> searchResults = _generalVectorStore.SearchAsync(embedding, top, options);
 
             string response = string.Empty;
             await foreach (VectorSearchResult<GenericVectorData> result in searchResults)
@@ -203,7 +196,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                     VectorProperty = x => x.DifferenceVector,
                 };
 
-                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, topPerDislike, options);
+                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchAsync(embedding, topPerDislike, options);
 
                 await foreach (VectorSearchResult<NewsItem> result in searchResults)
                 {
@@ -229,7 +222,7 @@ namespace LocalAIAgent.SemanticKernel.RAG
                     VectorProperty = x => x.SimilarityVector,
                 };
 
-                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchEmbeddingAsync(embedding, topPerInterest, options);
+                IAsyncEnumerable<VectorSearchResult<NewsItem>> searchResults = _newsVectorStore.SearchAsync(embedding, topPerInterest, options);
 
                 await foreach (VectorSearchResult<NewsItem> result in searchResults)
                 {
@@ -258,6 +251,11 @@ namespace LocalAIAgent.SemanticKernel.RAG
                 }
             }
             return text;
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
         }
     }
 }

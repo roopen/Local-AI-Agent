@@ -9,7 +9,7 @@ namespace LocalAIAgent.SemanticKernel.News
 {
     public partial class NewsItem : BaseVectorData
     {
-        [VectorStoreRecordKey]
+        [VectorStoreKey]
         [JsonIgnore]
         public string Id { get; }
         public DateTimeOffset PublishDate { get; }
@@ -18,12 +18,12 @@ namespace LocalAIAgent.SemanticKernel.News
         public List<string> Categories { get; } = [];
 
         [TextSearchResultValue]
-        [VectorStoreRecordData]
+        [VectorStoreData]
         [JsonIgnore]
         public string? Content => $"{Title}\n\n{Summary}";
         public string? Link { get; }
         [TextSearchResultValue]
-        [VectorStoreRecordData]
+        [VectorStoreData]
         public string? Source { get; }
 
         public NewsItem(SyndicationItem syndicationItem)
