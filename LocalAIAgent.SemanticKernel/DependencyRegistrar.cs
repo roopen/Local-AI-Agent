@@ -62,7 +62,8 @@ namespace LocalAIAgent.SemanticKernel
                     modelId: aiOptions.ModelId,
                     apiKey: aiOptions.ApiKey,
                     endpoint: new Uri(aiOptions.EndpointUrl),
-                    serviceId: "General"
+                    serviceId: "General",
+                    httpClient: new HttpClient() { Timeout = TimeSpan.FromSeconds(90) }
                 );
 
             kernelBuilder
