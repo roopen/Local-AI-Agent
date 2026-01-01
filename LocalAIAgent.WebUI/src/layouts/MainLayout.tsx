@@ -26,7 +26,7 @@ const Header = () => {
                 <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
             </div>
             <div style={{
-                display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '1vh', marginBottom: '1vh', width: '80%', position: 'sticky', top: '0'}}>
+                display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '3vh', marginBottom: '3vh', width: '80%', position: 'sticky', top: '0'}}>
                 <Button
                     themeColor={'info'}
                     size={'large'}
