@@ -20,6 +20,7 @@
     "@progress/kendo-theme-default": "^12.3.0",
     "@types/react-modal": "^3.16.3",
     "axios": "^1.10.0",
+    "openapi-typescript-codegen": "^0.30.0",
     "react": "^19.1.0",
     "react-css-theme-switcher": "^0.3.0",
     "react-dom": "^19.1.0",

@@ -230,6 +230,54 @@
         }
       }
     },
+    "/api/News/GetExpandedNews": {
+      "post": {
+        "tags": [
+          "News"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedNewsResult"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedNewsResult"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedNewsResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/UserPreferences/{userId}": {
       "get": {
         "tags": [
@@ -382,6 +430,36 @@
         },
         "additionalProperties": false
       },
+      "ExpandedNewsResult": {
+        "type": "object",
+        "properties": {
+          "articleWasTranslated": {
+            "type": "boolean"
+          },
+          "translation": {
+            "type": "string",
+            "nullable": true
+          },
+          "termsAndExplanations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TermStringExplanationStringKeyValuePair"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExplanationString": {
+        "type": "object",
+        "properties": {
+          "explanation": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "NewsArticle": {
         "required": [
           "categories",
@@ -480,6 +558,28 @@
         "type": "integer",
         "format": "int32"
       },
+      "TermString": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TermStringExplanationStringKeyValuePair": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/TermString"
+          },
+          "value": {
+            "$ref": "#/components/schemas/ExplanationString"
+          }
+        },
+        "additionalProperties": false
+      },
       "UserDto": {
         "type": "object",
         "properties": {
@@ -555,5 +655,16 @@
         "additionalProperties": false
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Login"
+    },
+    {
+      "name": "News"
+    },
+    {
+      "name": "UserPreferences"
+    }
+  ]
 }

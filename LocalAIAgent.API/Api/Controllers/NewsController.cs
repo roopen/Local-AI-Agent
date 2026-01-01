@@ -2,6 +2,7 @@ using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.SemanticKernel.News.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +14,7 @@ namespace LocalAIAgent.API.Api.Controllers
     public class NewsController(
         IGetNewsUseCase getNewsUseCase,
         IGetUserUseCase getUserUseCase,
+        INewsChatUseCase newsChatUseCase,
         NewsMetrics newsMetrics) : ControllerBase
     {
         [HttpGet("{userId}")]
@@ -49,6 +51,17 @@ namespace LocalAIAgent.API.Api.Controllers
             newsMetrics.RecordNewsArticleCount(news.NewsArticles.Count);
             newsMetrics.StopRecordingRequest();
             return Ok(news);
+        }
+
+        [HttpPost("GetExpandedNews")]
+        public async Task<ActionResult<ExpandedNewsResult>> GetExpandedNews([FromBody] string article)
+        {
+            newsMetrics.StartRecordingRequest();
+
+            ExpandedNewsResult result = await newsChatUseCase.GetExpandedNewsAsync(article);
+
+            newsMetrics.StopRecordingRequest();
+            return Ok(result);
         }
     }
 }

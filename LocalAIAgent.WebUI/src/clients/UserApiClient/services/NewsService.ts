@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { EvaluatedNewsArticles } from '../models/EvaluatedNewsArticles';
+import type { ExpandedNewsResult } from '../models/ExpandedNewsResult';
 import type { NewsItem } from '../models/NewsItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -38,6 +39,21 @@ export class NewsService {
             query: {
                 'userId': userId,
             },
+        });
+    }
+    /**
+     * @param requestBody
+     * @returns ExpandedNewsResult OK
+     * @throws ApiError
+     */
+    public static postApiNewsGetExpandedNews(
+        requestBody?: string,
+    ): CancelablePromise<ExpandedNewsResult> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/News/GetExpandedNews',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
 }
