@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2191419">
+﻿<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2191419">
   <PropertyGroup>
     <StartupCommand>npm run dev</StartupCommand>
     <EnvironmentVariables>$(EnvironmentVariables);ASPNETCORE_HTTPS_PORT=53146</EnvironmentVariables>

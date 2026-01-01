@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { NewsStreamClient } from '../clients/NewsClient';
+import { NewsStreamClient } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import ChatComponent from './ChatComponent';
 import { Button, Chip } from '@progress/kendo-react-buttons';
@@ -11,6 +11,7 @@ const NewsComponent: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const newsStreamClient = NewsStreamClient.getInstance();
 
     const toggleChat = (index: number) => {
         if (selectedArticleIndex === index) {
@@ -30,8 +31,6 @@ const NewsComponent: React.FC = () => {
     }, [isLoading]);
 
     useEffect(() => {
-        const newsStreamClient = NewsStreamClient.getInstance();
-
         const handleNewArticle = (newArticle: NewsArticle) => {
             setArticles(prevArticles => [...prevArticles, newArticle]);
         };
@@ -125,7 +124,9 @@ const NewsComponent: React.FC = () => {
                         </div>
                         {selectedArticleIndex === index && (
                             <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
-                                <ChatComponent initialMessage={`I have a news article I'd like to talk about.\nNewsTitle: ${article.Title}\nNewsSummary: ${article.Summary}\nPublished: ${article.PublishDate}\nLink: ${article.Link}`} />
+                                <ChatComponent
+                                    article={article}
+                                />
                             </div>
                         )}
                         <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
