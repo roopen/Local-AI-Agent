@@ -25,5 +25,5 @@ jobs:
       working-directory: LocalAIAgent.WebUI
 
     - name: Run npm build
-      run: npm build
+      run: npm run build
       working-directory: LocalAIAgent.WebUI
