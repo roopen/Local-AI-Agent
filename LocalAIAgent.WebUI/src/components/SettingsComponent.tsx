@@ -132,7 +132,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
                     <h2>Likes</h2>
                     <TextBox
                         value={newLike}
-                        onChange={(e) => setNewLike(e.target.value)}
+                        onChange={(e) => setNewLike(e.target.value as string)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -175,7 +175,7 @@ const SettingsComponent: React.FC<ChildComponentProps> = ({ onSave }) => {
                     <h2>Dislikes</h2>
                     <TextBox
                         value={newDislike}
-                        onChange={(e) => setNewDislike(e.target.value)}
+                        onChange={(e) => setNewDislike(e.target.value as string)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
