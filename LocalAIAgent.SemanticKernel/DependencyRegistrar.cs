@@ -19,6 +19,8 @@ namespace LocalAIAgent.SemanticKernel
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<ChatContext>();
+            services.AddMemoryCache();
+            services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
             services.AddKernel().GetSemanticKernelBuilder();
             IConfiguration configuration = services.AddConfigurations();
@@ -43,28 +45,27 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
 
             IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
             AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()
                 ?? throw new ArgumentNullException("AIOptions not found in configuration.");
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
             //kernelBuilder.Plugins.AddFromType<RAGService>();
 
             kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
-            kernelBuilder.AddInMemoryVectorStore();
-            //kernelBuilder.Services.AddInMemoryVectorStoreRecordCollection<int, NewsItem>("news");
+            kernelBuilder.Services.AddInMemoryVectorStore();
 
-#pragma warning disable SKEXP0070
-            // Experimental Google Gemini support
             //kernelBuilder.AddGoogleAIGeminiChatCompletion(aiOptions.ModelId, aiOptions.ApiKey);
-#pragma warning restore SKEXP0070
 
             kernelBuilder
                 .AddOpenAIChatCompletion(
                     modelId: aiOptions.ModelId,
                     apiKey: aiOptions.ApiKey,
                     endpoint: new Uri(aiOptions.EndpointUrl),
-                    serviceId: "General"
+                    serviceId: "General",
+                    httpClient: new HttpClient() { Timeout = TimeSpan.FromSeconds(90) }
                 );
 
             kernelBuilder

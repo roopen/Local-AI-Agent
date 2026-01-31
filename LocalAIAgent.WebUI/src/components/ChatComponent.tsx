@@ -1,21 +1,40 @@
 import { useState, type FormEvent, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { HubConnectionState } from "@microsoft/signalr";
 import { ChatConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
+import type NewsArticle from '../domain/NewsArticle';
+import { NewsClient } from '../clients/NewsClient';
+import type { ExpandedNewsResult } from '../clients/UserApiClient/models/ExpandedNewsResult';
 
-function ChatComponent({ initialMessage }: { initialMessage?: string }) {
+// eslint-disable-next-line complexity
+function ChatComponent({ article }: { article: NewsArticle }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connection, setConnection] = useState<ChatConnection | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [newsArticleExpandedDetails, setNewsArticleExpandedDetails] = useState<ExpandedNewsResult | null>(null);
+    const [loadingNewsDetails, setLoadingNewsDetails] = useState<boolean>(false);
 
     useEffect(() => {
         setConnection(new ChatConnection());
-    }, []);
+
+        const fetchExpandedDetails = async () => {
+            try {
+                const newsClient = NewsClient.getInstance();
+                const expandedDetails = await newsClient.getExpandedNews(article.Title + ' ' + article.Summary);
+                setNewsArticleExpandedDetails(expandedDetails);
+            } catch (err) {
+                console.error("Error fetching expanded news details:", err);
+            }
+        };
+
+        if (!loadingNewsDetails) {
+            fetchExpandedDetails();
+            setLoadingNewsDetails(true);
+        }
+    }, [article, newsArticleExpandedDetails]);
 
     useEffect(() => {
         if (!connection) return;
@@ -66,12 +85,6 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
     }, [connection]);
 
     useEffect(() => {
-        if (initialMessage && isConnected && connection) {
-            connection.sendMessage("User", initialMessage);
-        }
-    }, [initialMessage, isConnected, connection]);
-
-    useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
@@ -90,7 +103,12 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
         const user = "You";
         const message = input;
         setInput('');
+
         try {
+            if (messages.length === 0) {
+                const systemMessage = `${article.Title} ${article.Summary}`;
+                await connection.sendMessage('AI', systemMessage);
+            }
             await connection.sendMessage(user, message);
         } catch (err) {
             console.error("Failed to send message:", err);
@@ -113,22 +131,29 @@ function ChatComponent({ initialMessage }: { initialMessage?: string }) {
         <div style={{ display: 'flex', height: '100%' }}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '0 auto', padding: '10px' }}>
                 <div style={{ border: '1px solid #ccc', marginBottom: 10, flex: 1, overflow: 'hidden' }}>
+                    <div id="article-expanded-details" style={{ borderBottom: '1px solid #ccc', padding: '10px', maxHeight: '150px', overflowY: 'auto' }}>
+                        <span style={{ fontStyle: 'bold' }}>
+                            {newsArticleExpandedDetails?.articleWasTranslated ? `Translation: ${newsArticleExpandedDetails.translation}` : ''}
+                            {newsArticleExpandedDetails?.termsAndExplanations?.map(te => (
+                                <div key={te.key!.term}>
+                                    <strong>{te.key!.term}:</strong> {te.value!.explanation}
+                                </div>
+                            ))}
+                        </span>
+                    </div>
                     <div ref={messagesContainerRef} style={{ height: '100%', overflowY: 'auto', padding: 10 }}>
                         {messages.length === 0 ? (
-                            <p>No messages yet.</p>
+                            <p>Ask away.</p>
                         ) : (
                             messages.map((msg, idx) => (
-                                <div key={idx} style={{ margin: '5px 0' }}>
-                                    <div style={{ whiteSpace: 'pre-wrap' }}>
-                                        {msg.user}: <ReactMarkdown
-                                            remarkPlugins={[remarkGfm]}
-                                            components={{
-                                                a: ({ ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
-                                            }}
-                                        >{msg.message}</ReactMarkdown>
+                                (idx === 0) ? null : (
+                                    <div key={idx} style={{ margin: '5px 0', backgroundColor: idx % 2 !== 0 ? '#2f2e2e' : 'inherit' }}>
+                                        <div style={{ whiteSpace: 'pre-wrap' }}>
+                                            <strong>{msg.user}</strong>:<br/>
+                                            {msg.message}
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                )))
                         )}
                     </div>
                 </div>

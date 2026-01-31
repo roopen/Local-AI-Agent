@@ -17,14 +17,17 @@ namespace LocalAIAgent.API
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
             builder.AddServiceDefaults();
+
+            string sqldatasource = "DataSource=" + builder.Configuration.GetValue<string>("SQLITE_DATASOURCE");
             builder.Services.AddDbContext<UserContext>(options =>
-                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlite(sqldatasource));
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
             builder.Services.AddSemanticKernel();
-            builder.Services.AddScoped<LocalAIAgent.SemanticKernel.Chat.IChatService, LocalAIAgent.SemanticKernel.Chat.ChatService>();
+            builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
             builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();

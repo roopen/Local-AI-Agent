@@ -1,4 +1,4 @@
-import * as signalR from "@microsoft/signalr";
+﻿import * as signalR from "@microsoft/signalr";
 import ChatMessage from "../domain/ChatMessage";
 
 export class ChatConnection {

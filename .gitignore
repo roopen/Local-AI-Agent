@@ -373,3 +373,5 @@ FodyWeavers.xsd
 /LocalAIAgent.WebUI/dist
 /LocalAIAgent.WebUI/dist_electron
 *.db
+*.db-wal
+*.db-shm
