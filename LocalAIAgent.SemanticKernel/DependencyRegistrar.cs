@@ -19,6 +19,8 @@ namespace LocalAIAgent.SemanticKernel
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<ChatContext>();
+            services.AddMemoryCache();
+            services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
             services.AddKernel().GetSemanticKernelBuilder();
             IConfiguration configuration = services.AddConfigurations();

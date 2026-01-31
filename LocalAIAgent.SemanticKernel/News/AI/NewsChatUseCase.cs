@@ -9,7 +9,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 {
     public interface INewsChatUseCase
     {
-        IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(string userMessage);
+        IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(List<string> chatHistory);
 
         Task<ExpandedNewsResult> GetExpandedNewsAsync(string article);
     }
@@ -19,8 +19,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         Kernel kernel,
         AIOptions options) : INewsChatUseCase
     {
-        private ChatHistory ChatHistory { get; } = [];
-
         public async Task<ExpandedNewsResult> GetExpandedNewsAsync(string article)
         {
             string prompt =
@@ -52,21 +50,20 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             return ExpandedNewsResult.FromJson(result.Content);
         }
 
-        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(string userMessage)
+        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(List<string> messages)
         {
+            ChatHistory chatHistory = GetChatMessageContents(messages);
+            string newsArticle = chatHistory.First().Content ?? string.Empty;
+
             string prompt = $"You are a chat assistant." +
-                $"User is reading the following news summary: {userMessage} " +
-                $"Answer any questions the user has about the news article. " +
-                $"Keep your answers short and concise.";
+                $"Answer any questions the user has about the news article provided. News article: {newsArticle}" +
+                $"Keep your answers short and concise. Use tools only when required to.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: true);
 
-            ChatHistory.Clear();
-            ChatHistory.AddUserMessage(userMessage);
-
             await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                ChatHistory,
+                                chatHistory,
                                 openAiSettings,
                                 kernel)
                                 .ConfigureAwait(false))
@@ -76,6 +73,16 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                 yield return content;
             }
+        }
+
+        private static ChatHistory GetChatMessageContents(List<string> chatHistory)
+        {
+            ChatHistory chatMessages = [];
+            foreach (string message in chatHistory)
+            {
+                chatMessages.AddUserMessage(message);
+            }
+            return chatMessages;
         }
     }
 }

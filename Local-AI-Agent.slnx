@@ -1,0 +1,23 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="LocalAIAgent.API/LocalAIAgent.API.csproj" />
+  <Project Path="LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj" />
+  <Project Path="LocalAIAgent.ConsoleApp/LocalAIAgent.ConsoleApp.csproj" />
+  <Project Path="LocalAIAgent.Domain/LocalAIAgent.Domain.csproj" />
+  <Project Path="LocalAIAgent.SemanticKernel/LocalAIAgent.SemanticKernel.csproj" />
+  <Project Path="LocalAIAgent.ServiceDefaults/LocalAIAgent.ServiceDefaults.csproj" />
+  <Project Path="LocalAIAgent.Tests/LocalAIAgent.Tests.csproj" />
+  <Project Path="LocalAIAgent.WebUI/localaiagent.webui.esproj">
+    <Build Solution="*|Any CPU" />
+    <Deploy Solution="*|Any CPU" />
+  </Project>
+</Solution>

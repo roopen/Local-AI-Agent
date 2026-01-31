@@ -1,6 +1,5 @@
 ﻿import * as signalR from "@microsoft/signalr";
 import ChatMessage from "../domain/ChatMessage";
-import { type ExpandedNewsResult, NewsService } from "./UserApiClient";
 
 export class ChatConnection {
     private connection: signalR.HubConnection;

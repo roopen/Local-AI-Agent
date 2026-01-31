@@ -1,6 +1,4 @@
 import { useState, type FormEvent, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { HubConnectionState } from "@microsoft/signalr";
 import { ChatConnection } from '../clients/ChatClient';
 import ChatMessage from '../domain/ChatMessage';
@@ -17,6 +15,7 @@ function ChatComponent({ article }: { article: NewsArticle }) {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [newsArticleExpandedDetails, setNewsArticleExpandedDetails] = useState<ExpandedNewsResult | null>(null);
+    const [loadingNewsDetails, setLoadingNewsDetails] = useState<boolean>(false);
 
     useEffect(() => {
         setConnection(new ChatConnection());
@@ -31,8 +30,9 @@ function ChatComponent({ article }: { article: NewsArticle }) {
             }
         };
 
-        if (newsArticleExpandedDetails === null) {
+        if (!loadingNewsDetails) {
             fetchExpandedDetails();
+            setLoadingNewsDetails(true);
         }
     }, [article, newsArticleExpandedDetails]);
 
