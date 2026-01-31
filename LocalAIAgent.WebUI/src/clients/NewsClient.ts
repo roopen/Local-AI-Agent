@@ -18,13 +18,6 @@ export class NewsClient {
         return new Promise<ExpandedNewsResult>((resolve, reject) => {
             NewsService.postApiNewsGetExpandedNews(article)
                 .then((result: ExpandedNewsResult) => {
-                    console.log('getExpandedNews');
-                    console.log('article was translated:' + result.articleWasTranslated);
-                    console.log('translation:' + result.translation);
-                    for (const detail of result.termsAndExplanations!) {
-                        console.log('term:' + detail.key!.term);
-                        console.log('explanation:' + detail.value!.explanation);
-                    }
                     resolve(result);
                 })
                 .catch((err: Error) => {
