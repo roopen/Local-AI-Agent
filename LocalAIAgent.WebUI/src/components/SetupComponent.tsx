@@ -30,7 +30,7 @@ const SetupComponent: React.FC = () => {
         </div>
       )}
       {settingsCompleted && (
-        <button onClick={() => navigate("/news")} style={{ marginTop: 10 }}>Let's get started!</button>
+        <button onClick={() => navigate("/")} style={{ marginTop: 10 }}>Let's get started!</button>
       )}
     </div>
   );

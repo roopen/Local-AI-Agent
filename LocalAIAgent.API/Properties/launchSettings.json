@@ -14,7 +14,7 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
-      "applicationUrl": "https://apiainews.dev.localhost:7276;http://apiainews.dev.localhost:5140",
+      "applicationUrl": "https://apiainews.dev.localhost:7276",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

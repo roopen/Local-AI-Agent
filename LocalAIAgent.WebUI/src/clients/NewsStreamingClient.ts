@@ -35,7 +35,7 @@ export class NewsStreamClient {
     }
 
     private connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://localhost:7276/newsHub")
+        .withUrl("https://apiainews.dev.localhost:7276/newsHub")
         .withAutomaticReconnect()
         .build();
     

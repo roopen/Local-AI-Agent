@@ -8,16 +8,16 @@ interface LoginComponentProps {
     onLogin: () => void;
 }
 
+// eslint-disable-next-line complexity
 const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
     const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
     const [isRegister, setIsRegister] = useState(false);
 
     const handleAuth = async () => {
         if (isRegister) {
-            await userService.register({ username, password });
+            await userService.register({ username });
         } else {
-            await userService.login({ username, password });
+            await userService.login();
         }
         onLogin();
     };
@@ -30,29 +30,20 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
 
     return (
         <div>
-            <h2>{isRegister ? 'Register' : 'Login'}</h2>
+            <h2>AI News Stream</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
-                <Input
+                {isRegister ? (<Input
                     type="text"
                     label="Username"
                     value={username}
                     onChange={(e) => setUsername(e.value)}
                     onKeyDown={handleKeyDown}
-                />
-                <Input
-                    type="password"
-                    label="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.value)}
-                    onKeyDown={handleKeyDown}
-                />
+                />) : null}
             </div>
-
-            <hr style={{ marginTop: '3vh', marginBottom: '3vh' }} />
 
             <Button
                 themeColor={'primary'}
-                disabled={username.length === 0 || password.length === 0}
+                disabled={username.length === 0 && isRegister}
                 size={'large'}
                 style={{ width: "100%" }}
                 onClick={handleAuth}>

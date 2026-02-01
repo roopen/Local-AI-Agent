@@ -4,10 +4,13 @@ var sqlite = builder.AddSqlite("sqlite", "../LocalAIAgent.API/", "AINews.db");
 
 IResourceBuilder<ProjectResource> apiService = builder.AddProject<Projects.LocalAIAgent_API>("AINewsCurationAPI").WithReference(sqlite);
 
-builder.AddNpmApp("ainews", "../LocalAIAgent.WebUI", "dev")
+var frontend = builder.AddNpmApp("ainews", "../LocalAIAgent.WebUI", "dev")
     .WithReference(apiService)
-    .WithEnvironment("PORT", "53146")
-    .WithHttpsEndpoint(env: "PORT", name: "https")
-    .PublishAsDockerFile();
+    .WithHttpsEndpoint(port: 8888, env: "PORT", name: "https")
+    .WithEndpoint("https", endpoint =>
+    {
+        endpoint.IsProxied = false;
+        endpoint.TargetHost = "ainews.dev.localhost";
+    });
 
 builder.Build().Run();

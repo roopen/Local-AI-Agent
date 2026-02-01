@@ -6,6 +6,20 @@ import mkcert from 'vite-plugin-mkcert'
 export default defineConfig({
     plugins: [plugin(), mkcert()],
     server: {
-        port: parseInt(process.env.PORT || "53146"),
+        host: 'ainews.dev.localhost',
+        port: 8888,
+        strictPort: true,
+        allowedHosts: ['ainews.dev.localhost'],
+        hmr: {
+            host: 'ainews.dev.localhost'
+        },
+        proxy: {
+            '/api': {
+                target: 'https://apiainews.dev.localhost:7276',
+                changeOrigin: true,
+                secure: false, // Set to false if using self-signed certs
+                ws: true,
+            }
+        }
     }
 })
