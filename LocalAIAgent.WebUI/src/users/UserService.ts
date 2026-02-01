@@ -4,9 +4,7 @@ import type {
     AuthenticatorAssertionRawResponse,
     AuthenticatorAttestationRawResponse,
     CredentialCreateOptions,
-    RegisteredPublicKeyCredential,
-    UserRegistrationDto,
-    VerifyAssertionResult
+    RegisteredPublicKeyCredential
 } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
@@ -79,10 +77,10 @@ export default class UserService implements IUserService {
         return null;
     }
 
-    async register(user: UserRegistrationDto): Promise<User | null> {
-        if (!user.username) throw new Error("Username is required");
+    async register(username: string): Promise<User | null> {
+        if (!username) throw new Error("Username is required");
 
-        const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptions(user.username);
+        const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptions(username);
 
         const credential = await navigator.credentials.create({
             publicKey: {

@@ -1,7 +1,18 @@
 import UserService from './UserService';
-import { LoginService, UserPreferencesService } from '../clients/UserApiClient';
+import { 
+    LoginService, 
+    UserPreferencesService, 
+    Fido2Service,
+    UserVerificationRequirement,
+    AttestationConveyancePreference
+} from '../clients/UserApiClient';
 import UserSettings from '../domain/UserSettings';
-import type { UserRegistrationDto, UserLoginDto, UserDto, UserPreferenceDto } from '../clients/UserApiClient';
+import type { 
+    AssertionOptions,
+    CredentialCreateOptions,
+    UserPreferenceDto
+} from '../clients/UserApiClient';
+import type { UserDto } from '../clients/UserApiClient';
 
 jest.mock('../clients/UserApiClient', () => ({
     LoginService: {
@@ -14,125 +25,155 @@ jest.mock('../clients/UserApiClient', () => ({
         getApiUserPreferences: jest.fn(),
         postApiSavePreferences: jest.fn(),
     },
+    Fido2Service: {
+        postAssertionOptions: jest.fn(),
+        postMakeAssertion: jest.fn(),
+        postMakeCredentialOptions: jest.fn(),
+        postMakeCredential: jest.fn(),
+    },
     OpenAPI: {
         BASE: ''
+    },
+    PublicKeyCredentialType: {
+        PUBLIC_KEY: 'public-key'
+    },
+    UserVerificationRequirement: {
+        PREFERRED: 'preferred'
+    },
+    AttestationConveyancePreference: {
+        NONE: 'none'
     }
 }));
 
 const mockedLoginService = LoginService as jest.Mocked<typeof LoginService>;
 const mockedUserPreferencesService = UserPreferencesService as jest.Mocked<typeof UserPreferencesService>;
+const mockedFido2Service = Fido2Service as jest.Mocked<typeof Fido2Service>;
+
+const mockNavigatorCredentials = {
+    create: jest.fn(),
+    get: jest.fn(),
+};
+
+Object.defineProperty(global, 'navigator', {
+    writable: true,
+    value: {
+        credentials: mockNavigatorCredentials,
+    },
+});
 
 describe('UserService', () => {
     let userService: UserService;
 
     beforeEach(() => {
-        userService = UserService.getInstance();
         jest.clearAllMocks();
+        mockNavigatorCredentials.create.mockReset();
+        mockNavigatorCredentials.get.mockReset();
+        userService = UserService.getInstance();
     });
 
-    afterEach(() => {
-        userService.logout();
+    afterEach(async () => {
+        await userService.logout();
     });
 
     describe('login', () => {
-        it('should log in a user and return the mapped user object', async () => {
-            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
-            const loggedInUserFromApi = { id: 1, username: 'testuser' };
+        it('should perform Fido2 login sequence', async () => {
+            const assertionOptions: AssertionOptions = {
+                challenge: 'AAAA',
+                timeout: 60000,
+                rpId: 'localhost',
+                allowCredentials: [],
+                userVerification: UserVerificationRequirement.PREFERRED
+            };
+            mockedFido2Service.postAssertionOptions.mockResolvedValue(assertionOptions);
 
-            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
+            const credentialMock = {
+                id: 'AAAA',
+                rawId: new Uint8Array([1, 2, 3]).buffer,
+                type: 'public-key',
+                response: {
+                    authenticatorData: new Uint8Array([4, 5, 6]).buffer,
+                    clientDataJSON: new Uint8Array([7, 8, 9]).buffer,
+                    signature: new Uint8Array([10, 11, 12]).buffer,
+                },
+                getClientExtensionResults: jest.fn().mockReturnValue({})
+            };
+            mockNavigatorCredentials.get.mockResolvedValue(credentialMock);
 
-            const result = await userService.login(userCredentials);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mockedFido2Service.postMakeAssertion.mockResolvedValue({ status: 'ok', errorMessage: '' } as any);
 
-            expect(mockedLoginService.postApiLoginLogin).toHaveBeenCalledWith(userCredentials);
-            expect(result).toEqual({
-                id: '1',
-                name: 'testuser',
-            });
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
-            expect(await userService.isLoggedIn()).toBe(true);
-            expect(userService.getCurrentUser()).toEqual({
-                id: '1',
-                name: 'testuser',
-            });
-        });
+            const result = await userService.login();
 
-        it('should return null if login fails', async () => {
-            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
-            mockedLoginService.postApiLoginLogin.mockResolvedValue(null as unknown as UserDto);
-
-            const result = await userService.login(userCredentials);
-
+            expect(mockedFido2Service.postAssertionOptions).toHaveBeenCalled();
+            expect(mockNavigatorCredentials.get).toHaveBeenCalled();
+            expect(mockedFido2Service.postMakeAssertion).toHaveBeenCalledWith(expect.objectContaining({
+                id: 'AAAA'
+            }));
             expect(result).toBeNull();
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
-            expect(await userService.isLoggedIn()).toBe(false);
-            expect(userService.getCurrentUser()).toBeNull();
         });
     });
 
     describe('register', () => {
-        it('should register a user and return the mapped user object', async () => {
-            const newUser: UserRegistrationDto = { username: 'testuser', password: 'password' };
-            const registeredUserFromApi = { id: 1, username: 'testuser' };
+        it('should perform Fido2 registration sequence', async () => {
+            const username = 'testuser';
+            const credentialCreateOptions: CredentialCreateOptions = {
+                challenge: 'AAAA',
+                rp: { name: 'rp', id: 'rp-id' },
+                user: { id: 'AAAA', name: 'user', displayName: 'User' },
+                pubKeyCredParams: [],
+                timeout: 60000,
+                attestation: AttestationConveyancePreference.NONE
+            };
+            mockedFido2Service.postMakeCredentialOptions.mockResolvedValue(credentialCreateOptions);
 
-            mockedLoginService.postApiLoginRegister.mockResolvedValue(registeredUserFromApi);
+            const credentialMock = {
+                id: 'AAAA',
+                rawId: new Uint8Array([13, 14, 15]).buffer,
+                type: 'public-key',
+                response: {
+                    clientDataJSON: new Uint8Array([16, 17, 18]).buffer,
+                    attestationObject: new Uint8Array([19, 20, 21]).buffer,
+                    getTransports: jest.fn().mockReturnValue([])
+                },
+                getClientExtensionResults: jest.fn().mockReturnValue({})
+            };
+            mockNavigatorCredentials.create.mockResolvedValue(credentialMock);
 
-            const result = await userService.register(newUser);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mockedFido2Service.postMakeCredential.mockResolvedValue({ id: 1, user: { id: 1, name: 'testuser' } } as any);
 
-            expect(mockedLoginService.postApiLoginRegister).toHaveBeenCalledWith(newUser);
-            expect(result).toEqual({
-                id: '1',
-                name: 'testuser',
-            });
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(registeredUserFromApi);
-            expect(await userService.isLoggedIn()).toBe(true);
-            expect(userService.getCurrentUser()).toEqual({
-                id: '1',
-                name: 'testuser',
-            });
-        });
+            const result = await userService.register(username);
 
-        it('should return null if registration fails', async () => {
-            const newUser: UserRegistrationDto = { username: 'testuser', password: 'password' };
-            mockedLoginService.postApiLoginRegister.mockResolvedValue(null as unknown as UserDto);
-
-            const result = await userService.register(newUser);
-
+            expect(mockedFido2Service.postMakeCredentialOptions).toHaveBeenCalledWith(username);
+            expect(mockNavigatorCredentials.create).toHaveBeenCalled();
+            expect(mockedFido2Service.postMakeCredential).toHaveBeenCalledWith(expect.objectContaining({
+                id: 'AAAA'
+            }));
             expect(result).toBeNull();
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
-            expect(await userService.isLoggedIn()).toBe(false);
-            expect(userService.getCurrentUser()).toBeNull();
         });
     });
 
     describe('logout', () => {
         it('should log out the user', async () => {
-            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
-            const loggedInUserFromApi = { id: 1, username: 'testuser' };
-            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
-            mockedLoginService.postApiLoginLogout.mockResolvedValue({}); // Mock successful logout
+            mockedLoginService.postApiLoginLogout.mockResolvedValue(undefined);
             
-            await userService.login(userCredentials);
-            expect(await userService.isLoggedIn()).toBe(true);
-
             await userService.logout();
 
             expect(mockedLoginService.postApiLoginLogout).toHaveBeenCalled();
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
-            expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
     });
 
     describe('isLoggedIn and getCurrentUser', () => {
         it('should return false and null when no user is logged in', async () => {
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as unknown as UserDto);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as any);
             expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
 
         it('should return true and the user when a user is logged in', async () => {
-            const loggedInUserFromApi = { id: 1, username: 'testuser' };
+            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser' };
             mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
             expect(await userService.isLoggedIn()).toBe(true);
             expect(userService.getCurrentUser()).toEqual({
@@ -151,7 +192,7 @@ describe('UserService', () => {
     describe('getUserPreferences', () => {
         it('should return user settings if found', async () => {
             const userId = '1';
-            const preferencesFromApi = {
+            const preferencesFromApi: UserPreferenceDto = {
                 interests: ['coding', 'testing'],
                 dislikes: ['bugs'],
                 prompt: 'act as a senior developer',
@@ -179,15 +220,18 @@ describe('UserService', () => {
 
     describe('saveUserPreferences', () => {
         it('should throw an error if user is not logged in', async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as any);
+            await userService.isLoggedIn();
+
             const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
             await expect(userService.saveUserPreferences(preferences)).rejects.toThrow("User not logged in");
         });
 
         it('should save user preferences when user is logged in', async () => {
-            const userCredentials: UserLoginDto = { username: 'testuser', password: 'password' };
-            const loggedInUserFromApi = { id: 1, username: 'testuser' };
-            mockedLoginService.postApiLoginLogin.mockResolvedValue(loggedInUserFromApi);
-            await userService.login(userCredentials);
+            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser' };
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            await userService.isLoggedIn();
 
             const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
             await userService.saveUserPreferences(preferences);

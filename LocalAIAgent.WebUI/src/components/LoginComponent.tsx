@@ -15,7 +15,7 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
 
     const handleAuth = async () => {
         if (isRegister) {
-            await userService.register({ username });
+            await userService.register(username);
         } else {
             await userService.login();
         }
