@@ -33,13 +33,18 @@ namespace LocalAIAgent.API
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
             builder.Services.AddScoped<NewsMetrics>();
             builder.Services.AddMemoryCache();
+            builder.Services.AddDistributedMemoryCache();
 
             builder.Services.AddFido2(options =>
             {
                 options.ServerDomain = "ainews.dev.localhost";
                 options.ServerName = "AI News";
                 options.Origins = new HashSet<string> { "https://ainews.dev.localhost:8888" };
-            });
+            })
+                .AddCachedMetadataService(config =>
+                {
+                    config.AddFidoMetadataRepository();
+                });
 
             builder.Services.AddCors(options =>
             {

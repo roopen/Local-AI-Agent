@@ -24,9 +24,9 @@ namespace LocalAIAgent.API.Api.Controllers
         IFido2 fido2,
         IMemoryCache memoryCache,
         UserContext userContext,
-        ICreateUserUseCase createUserUseCase) : ControllerBase
+        ICreateUserUseCase createUserUseCase,
+        IMetadataService mds) : ControllerBase
     {
-        public static IMetadataService? _mds;
         private const string _credentialOptionsCacheKey = "fido2.credentialOptions";
         private const string _assertionOptionsCacheKey = "fido2.assertionOptions";
         private const string _userCacheKey = "fido2.user";
@@ -54,7 +54,8 @@ namespace LocalAIAgent.API.Api.Controllers
 
             var authenticatorSelection = new AuthenticatorSelection
             {
-                ResidentKey = ResidentKeyRequirement.Preferred,
+                AuthenticatorAttachment = AuthenticatorAttachment.Platform,
+                ResidentKey = ResidentKeyRequirement.Required,
                 UserVerification = UserVerificationRequirement.Required
             };
 
@@ -119,7 +120,9 @@ namespace LocalAIAgent.API.Api.Controllers
                 IsCredentialIdUniqueToUserCallback = IsCredentialIdUniqueToUserCallback
             }, cancellationToken: cancellationToken);
 
-            userContext.Fido2Credentials.Add(new Infrastructure.Models.Fido2Credential
+            await VerifyAuthenticator(credential, cancellationToken);
+
+            userContext.Fido2Credentials.Add(new Fido2Credential
             {
                 Id = credential.Id,
                 PublicKey = credential.PublicKey,
@@ -223,6 +226,22 @@ namespace LocalAIAgent.API.Api.Controllers
                 .Where(c => c.User.Id == user.Fido2Id)
                 .Select(c => new PublicKeyCredentialDescriptor(c.Id))
                 .ToList();
+        }
+
+        private async Task VerifyAuthenticator(RegisteredPublicKeyCredential credential, CancellationToken cancellationToken)
+        {
+            var entry = await mds.GetEntryAsync(credential.AaGuid, cancellationToken);
+
+            if (entry is not null)
+            {
+                foreach (var statusReport in entry.StatusReports)
+                {
+                    if (statusReport.Status is AuthenticatorStatus.REVOKED || statusReport.Status is AuthenticatorStatus.ATTESTATION_KEY_COMPROMISE)
+                    {
+                        throw new InvalidDataException("The authenticator used is compromised or revoked.");
+                    }
+                }
+            }
         }
 
         private async Task LogIn(User user)
