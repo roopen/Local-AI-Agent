@@ -74,6 +74,173 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username)
+        {
+            return MakeCredentialOptionsAsync(username, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "makeCredentialOptions"
+                    urlBuilder_.Append("makeCredentialOptions");
+                    urlBuilder_.Append('?');
+                    if (username != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("username")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(username, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<CredentialCreateOptions>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<RegisteredPublicKeyCredential> MakeCredentialAsync(AuthenticatorAttestationRawResponse body)
+        {
+            return MakeCredentialAsync(body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<RegisteredPublicKeyCredential> MakeCredentialAsync(AuthenticatorAttestationRawResponse body, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = Newtonsoft.Json.JsonConvert.SerializeObject(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.StringContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "makeCredential"
+                    urlBuilder_.Append("makeCredential");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<RegisteredPublicKeyCredential>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<UserDto> RegisterAsync(UserRegistrationDto body)
         {
             return RegisterAsync(body, System.Threading.CancellationToken.None);
@@ -989,6 +1156,371 @@ namespace LocalAIAgent.Tests.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Algorithm
+    {
+
+        __65535 = -65535,
+
+        __259 = -259,
+
+        __258 = -258,
+
+        __257 = -257,
+
+        __47 = -47,
+
+        __39 = -39,
+
+        __38 = -38,
+
+        __37 = -37,
+
+        __36 = -36,
+
+        __35 = -35,
+
+        __8 = -8,
+
+        __7 = -7,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AttestationConveyancePreference
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"none")]
+        None = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"indirect")]
+        Indirect = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"direct")]
+        Direct = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"enterprise")]
+        Enterprise = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AttestationResponse
+    {
+        [Newtonsoft.Json.JsonProperty("attestationObject", Required = Newtonsoft.Json.Required.AllowNull)]
+        public byte[] AttestationObject { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("clientDataJSON", Required = Newtonsoft.Json.Required.AllowNull)]
+        public byte[] ClientDataJSON { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("transports", Required = Newtonsoft.Json.Required.Always, ItemConverterType = typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AuthenticatorTransport> Transports { get; set; } = new System.Collections.ObjectModel.Collection<AuthenticatorTransport>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AttestationStatementFormatIdentifier
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"packed")]
+        Packed = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"tpm")]
+        Tpm = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"android-key")]
+        AndroidKey = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"android-safetynet")]
+        AndroidSafetynet = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"fido-u2f")]
+        FidoU2f = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"apple")]
+        Apple = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"none")]
+        None = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsClientInputs
+    {
+        [Newtonsoft.Json.JsonProperty("example.extension.bool", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? ExampleExtensionBool { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("exts", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? Exts { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("uvm", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? Uvm { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("credProps", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? CredProps { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("prf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsPRFInputs Prf { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("largeBlob", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsLargeBlobInputs LargeBlob { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("credentialProtectionPolicy", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CredentialProtectionPolicy CredentialProtectionPolicy { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("enforceCredentialProtectionPolicy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? EnforceCredentialProtectionPolicy { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsClientOutputs
+    {
+        [Newtonsoft.Json.JsonProperty("example.extension.bool", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? ExampleExtensionBool { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("appid", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Appid { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("exts", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Exts { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("uvm", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<System.Collections.Generic.ICollection<long>> Uvm { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("credProps", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public CredentialPropertiesOutput CredProps { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("prf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsPRFOutputs Prf { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("largeBlob", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsLargeBlobOutputs LargeBlob { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("credProtect", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CredentialProtectionPolicy CredProtect { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsLargeBlobInputs
+    {
+        [Newtonsoft.Json.JsonProperty("support", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public LargeBlobSupport Support { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("read", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Read { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("write", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Write { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsLargeBlobOutputs
+    {
+        [Newtonsoft.Json.JsonProperty("supported", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Supported { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("blob", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Blob { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("written", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Written { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsPRFInputs
+    {
+        [Newtonsoft.Json.JsonProperty("eval", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsPRFValues Eval { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("evalByCredential", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public StringAuthenticationExtensionsPRFValuesKeyValuePair EvalByCredential { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsPRFOutputs
+    {
+        [Newtonsoft.Json.JsonProperty("enabled", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Enabled { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("results", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsPRFValues Results { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticationExtensionsPRFValues
+    {
+        [Newtonsoft.Json.JsonProperty("first", Required = Newtonsoft.Json.Required.AllowNull)]
+        public byte[] First { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("second", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Second { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthenticatorAttachment
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"platform")]
+        Platform = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"cross-platform")]
+        CrossPlatform = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticatorAttestationRawResponse
+    {
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("rawId", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] RawId { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public PublicKeyCredentialType Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("response", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public AttestationResponse Response { get; set; } = new AttestationResponse();
+
+        [Newtonsoft.Json.JsonProperty("extensions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsClientOutputs Extensions { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("clientExtensionResults", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public AuthenticationExtensionsClientOutputs ClientExtensionResults { get; set; } = new AuthenticationExtensionsClientOutputs();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthenticatorSelection
+    {
+        [Newtonsoft.Json.JsonProperty("authenticatorAttachment", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public AuthenticatorAttachment AuthenticatorAttachment { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("residentKey", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ResidentKeyRequirement ResidentKey { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("requireResidentKey", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.Obsolete]
+        public bool RequireResidentKey { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("userVerification", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public UserVerificationRequirement UserVerification { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthenticatorTransport
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"usb")]
+        Usb = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"nfc")]
+        Nfc = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ble")]
+        Ble = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"smart-card")]
+        SmartCard = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"hybrid")]
+        Hybrid = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"internal")]
+        Internal = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CredentialCreateOptions
+    {
+        [Newtonsoft.Json.JsonProperty("rp", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public PublicKeyCredentialRpEntity Rp { get; set; } = new PublicKeyCredentialRpEntity();
+
+        [Newtonsoft.Json.JsonProperty("user", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Fido2User User { get; set; } = new Fido2User();
+
+        [Newtonsoft.Json.JsonProperty("challenge", Required = Newtonsoft.Json.Required.AllowNull)]
+        public byte[] Challenge { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("pubKeyCredParams", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Collections.Generic.ICollection<PubKeyCredParam> PubKeyCredParams { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("timeout", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long Timeout { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("attestation", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public AttestationConveyancePreference Attestation { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("attestationFormats", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore, ItemConverterType = typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public System.Collections.Generic.ICollection<AttestationStatementFormatIdentifier> AttestationFormats { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("authenticatorSelection", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticatorSelection AuthenticatorSelection { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("hints", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore, ItemConverterType = typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public System.Collections.Generic.ICollection<PublicKeyCredentialHint> Hints { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("excludeCredentials", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<PublicKeyCredentialDescriptor> ExcludeCredentials { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("extensions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsClientInputs Extensions { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CredentialPropertiesOutput
+    {
+        [Newtonsoft.Json.JsonProperty("rk", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Rk { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("authenticatorDisplayName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string AuthenticatorDisplayName { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CredentialProtectionPolicy
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"userVerificationOptional")]
+        UserVerificationOptional = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"userVerificationOptionalWithCredentialIDList")]
+        UserVerificationOptionalWithCredentialIDList = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"userVerificationRequired")]
+        UserVerificationRequired = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class EvaluatedNewsArticles
     {
         [Newtonsoft.Json.JsonProperty("newsArticles", Required = Newtonsoft.Json.Required.AllowNull)]
@@ -1024,6 +1556,32 @@ namespace LocalAIAgent.Tests.Generated
     {
         [Newtonsoft.Json.JsonProperty("explanation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Explanation { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Fido2User
+    {
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("displayName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string DisplayName { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LargeBlobSupport
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"required")]
+        Required = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"preferred")]
+        Preferred = 1,
 
     }
 
@@ -1081,6 +1639,116 @@ namespace LocalAIAgent.Tests.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PubKeyCredParam
+    {
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public PublicKeyCredentialType Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("alg", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Algorithm Alg { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicKeyCredentialDescriptor
+    {
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public PublicKeyCredentialType Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("transports", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore, ItemConverterType = typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public System.Collections.Generic.ICollection<AuthenticatorTransport> Transports { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PublicKeyCredentialHint
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"security-key")]
+        SecurityKey = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"client-device")]
+        ClientDevice = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"hybrid")]
+        Hybrid = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicKeyCredentialRpEntity
+    {
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("icon", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Icon { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PublicKeyCredentialType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"public-key")]
+        PublicKey = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"invalid")]
+        Invalid = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RegisteredPublicKeyCredential
+    {
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public PublicKeyCredentialType Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("publicKey", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] PublicKey { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("transports", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore, ItemConverterType = typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public System.Collections.Generic.ICollection<AuthenticatorTransport> Transports { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("signCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int SignCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("isBackupEligible", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool IsBackupEligible { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("isBackedUp", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool IsBackedUp { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("aaGuid", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AaGuid { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("user", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Fido2User User { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("attestationFormat", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string AttestationFormat { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("attestationObject", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] AttestationObject { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("attestationClientDataJson", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] AttestationClientDataJson { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum Relevancy
     {
 
@@ -1089,6 +1757,32 @@ namespace LocalAIAgent.Tests.Generated
         _1 = 1,
 
         _2 = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ResidentKeyRequirement
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"required")]
+        Required = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"preferred")]
+        Preferred = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"discouraged")]
+        Discouraged = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class StringAuthenticationExtensionsPRFValuesKeyValuePair
+    {
+        [Newtonsoft.Json.JsonProperty("key", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Key { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("value", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AuthenticationExtensionsPRFValues Value { get; set; }
 
     }
 
@@ -1161,6 +1855,21 @@ namespace LocalAIAgent.Tests.Generated
 
         [Newtonsoft.Json.JsonProperty("password", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Password { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum UserVerificationRequirement
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"required")]
+        Required = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"preferred")]
+        Preferred = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"discouraged")]
+        Discouraged = 2,
 
     }
 

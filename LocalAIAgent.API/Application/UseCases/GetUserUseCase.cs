@@ -13,9 +13,10 @@ namespace LocalAIAgent.API.Application.UseCases
         Task<Domain.User?> TryLogin(UserLoginDto request);
 
         Task<Domain.User?> GetUserById(int userId);
+        Task<Domain.User?> GetUserByName(string username);
     }
 
-    internal class GetUserUseCase(
+    internal sealed class GetUserUseCase(
         UserContext context,
         IPasswordHashService passwordHashUseCase) : IGetUserUseCase
     {
@@ -41,6 +42,13 @@ namespace LocalAIAgent.API.Application.UseCases
             User? user = await context.Users.AsNoTracking().Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == userId);
 
             return user?.MapToDomainUser();
+        }
+
+        public Task<Domain.User?> GetUserByName(string username)
+        {
+            User? user = context.Users.AsNoTracking().Include(u => u.Preferences).FirstOrDefault(u => u.Username == username);
+
+            return Task.FromResult(user?.MapToDomainUser());
         }
     }
 }

@@ -6,7 +6,7 @@ export class ChatConnection {
 
     constructor() {
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://localhost:7276/chatHub")
+            .withUrl("https://apiainews.dev.localhost:7276/chatHub")
             .withAutomaticReconnect()
             .build();
     }

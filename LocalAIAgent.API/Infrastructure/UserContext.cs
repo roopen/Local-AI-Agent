@@ -7,9 +7,14 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
 {
     public required DbSet<User> Users { get; set; }
     public required DbSet<UserPreferences> UserPreferences { get; set; }
+    public required DbSet<Fido2Credential> Fido2Credentials { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
         modelBuilder.Entity<User>()
             .HasOne(u => u.Preferences)
             .WithOne(p => p.User)

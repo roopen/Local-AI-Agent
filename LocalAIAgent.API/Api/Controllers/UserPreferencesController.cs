@@ -58,17 +58,4 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         await context.SaveChangesAsync();
         return Ok();
     }
-
-    [HttpPost("/api/user")]
-    public async Task<ActionResult<UserDto>> CreateUser([FromBody] UserDto userDto)
-    {
-        if (string.IsNullOrEmpty(userDto.Username))
-        {
-            return BadRequest("Username is required.");
-        }
-        User user = new User { Username = userDto.Username };
-        context.Users.Add(user);
-        await context.SaveChangesAsync();
-        return Ok(new UserDto { Id = user.Id, Username = user.Username });
-    }
 }

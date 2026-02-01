@@ -32,12 +32,20 @@ namespace LocalAIAgent.API
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
             builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
             builder.Services.AddScoped<NewsMetrics>();
+            builder.Services.AddMemoryCache();
+
+            builder.Services.AddFido2(options =>
+            {
+                options.ServerDomain = "ainews.dev.localhost";
+                options.ServerName = "AI News";
+                options.Origins = new HashSet<string> { "https://ainews.dev.localhost:8888" };
+            });
 
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowWebUI", policy =>
                 {
-                    policy.SetIsOriginAllowed(origin => new Uri(origin).IsLoopback)
+                    policy.WithOrigins("https://ainews.dev.localhost:8888")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
