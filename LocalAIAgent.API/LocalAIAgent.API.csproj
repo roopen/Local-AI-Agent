@@ -1,36 +1,46 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Fido2" Version="4.0.0" />
-    <PackageReference Include="Fido2.AspNet" Version="4.0.0" />
-    <PackageReference Include="Fido2.Models" Version="4.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Fido2" Version="4.0.0" />
+		<PackageReference Include="Fido2.AspNet" Version="4.0.0" />
+		<PackageReference Include="Fido2.Models" Version="4.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\LocalAIAgent.Domain\LocalAIAgent.Domain.csproj" />
-    <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
-    <ProjectReference Include="..\LocalAIAgent.ServiceDefaults\LocalAIAgent.ServiceDefaults.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\LocalAIAgent.Domain\LocalAIAgent.Domain.csproj" />
+		<ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
+		<ProjectReference Include="..\LocalAIAgent.ServiceDefaults\LocalAIAgent.ServiceDefaults.csproj" />
+	</ItemGroup>
 
-  <PropertyGroup>
-  	<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-  	<AnalysisMode>Recommended</AnalysisMode>
-  </PropertyGroup>
+	<PropertyGroup>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		<AnalysisMode>Recommended</AnalysisMode>
+	</PropertyGroup>
+
+	<Target Name="BuildReactApp" BeforeTargets="Build">
+		<Exec Command="npm install" WorkingDirectory="../localaiagent.webui" />
+		<Exec Command="npm run build -- --mode production" WorkingDirectory="../localaiagent.webui" />
+
+		<ItemGroup>
+			<ReactFiles Include="../localaiagent.webui/dist/**" />
+		</ItemGroup>
+		<Copy SourceFiles="@(ReactFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
+	</Target>
 
 </Project>

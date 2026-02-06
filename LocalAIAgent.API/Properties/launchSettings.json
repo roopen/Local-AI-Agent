@@ -8,7 +8,8 @@
       "applicationUrl": "http://apiainews.dev.localhost:5140",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "hotReloadEnabled": false
     },
     "https": {
       "commandName": "Project",
@@ -17,7 +18,8 @@
       "applicationUrl": "https://apiainews.dev.localhost:7276",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "hotReloadEnabled": false
     }
   }
 }

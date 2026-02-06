@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <base href="/" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+               connect-src 'self' https://*.dev.localhost:* wss://*.dev.localhost:* http://localhost:* ws://localhost:*;
+               img-src 'self' data:;
+               script-src 'self' 'unsafe-inline' 'unsafe-eval';
+               style-src 'self' 'unsafe-inline' https://unpkg.com http://www.w3.org;">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='21' y1='21' x2='28' y2='28' /><path d='M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12' opacity='0.6' /><path d='M16 28c6.63 0 12-5.37 12-12S22.63 4 16 4' opacity='1' /><rect x='11' y='11' width='10' height='10' rx='2' fill='currentColor' stroke='none' /><line x1='13' y1='15' x2='19' y2='15' stroke='white' stroke-width='1.5' /><line x1='13' y1='18' x2='17' y2='18' stroke='white' stroke-width='1.5' /></svg>" />
     <link id="kendo-light" href="https://unpkg.com/@progress/kendo-theme-default@12.3.0/dist/default-main.css" rel="stylesheet" />
     <link id="kendo-dark" href="https://unpkg.com/@progress/kendo-theme-default@12.3.0/dist/default-main-dark.css" rel="stylesheet" disabled />

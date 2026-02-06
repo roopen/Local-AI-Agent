@@ -18,7 +18,12 @@ namespace LocalAIAgent.API
 
             builder.AddServiceDefaults();
 
-            string sqldatasource = "DataSource=" + builder.Configuration.GetValue<string>("SQLITE_DATASOURCE");
+            if (builder.Environment.IsProduction())
+            {
+                builder.WebHost.UseKestrel();
+            }
+
+            string sqldatasource = "DataSource=" + (builder.Configuration.GetValue<string>("SQLITE_DATASOURCE") ?? "ainews.db");
             builder.Services.AddDbContext<UserContext>(options =>
                 options.UseSqlite(sqldatasource));
 
@@ -50,7 +55,7 @@ namespace LocalAIAgent.API
             {
                 options.AddPolicy("AllowWebUI", policy =>
                 {
-                    policy.WithOrigins("https://ainews.dev.localhost:8888")
+                    policy.WithOrigins("https://ainews.dev.localhost:8888", "https://apiainews.dev.localhost:7276", "https://localhost")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
@@ -84,7 +89,7 @@ namespace LocalAIAgent.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
 
-                app.MapGet("/", context =>
+                app.MapGet("/api", context =>
                 {
                     context.Response.Redirect("/swagger");
                     return Task.CompletedTask;
@@ -102,6 +107,14 @@ namespace LocalAIAgent.API
             app.MapControllers();
             app.MapHub<ChatHub>("/chatHub");
             app.MapHub<NewsHub>("/newsHub");
+
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+            app.UseFileServer(new FileServerOptions
+            {
+                RequestPath = "",
+                EnableDefaultFiles = true
+            });
 
             // Run initial news fetch on startup
             InitializeNewsCache(app);
