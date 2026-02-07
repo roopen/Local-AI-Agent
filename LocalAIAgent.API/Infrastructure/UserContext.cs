@@ -19,5 +19,10 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .HasOne(u => u.Preferences)
             .WithOne(p => p.User)
             .HasForeignKey<UserPreferences>(p => p.UserId);
+
+        modelBuilder.Entity<Fido2Credential>()
+            .HasOne(c => c.Owner)
+            .WithMany(u => u.Fido2Credentials)
+            .HasForeignKey(c => c.UserId);
     }
 }

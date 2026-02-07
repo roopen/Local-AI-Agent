@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import SettingsComponent from "./SettingsComponent";
-import { useNavigate } from "react-router-dom";
 import UserService from "../users/UserService";
 
 const SetupComponent: React.FC = () => {
   const [settingsCompleted, setSettingsCompleted] = useState(false);
-  const navigate = useNavigate();
   const userService = UserService.getInstance();
 
   const handleSettingsSaved = async () => {
@@ -30,7 +28,7 @@ const SetupComponent: React.FC = () => {
         </div>
       )}
       {settingsCompleted && (
-        <button onClick={() => navigate("/")} style={{ marginTop: 10 }}>Let's get started!</button>
+        <button onClick={() => { window.location.href = "/"; }} style={{ marginTop: 10 }}>Let's get started!</button>
       )}
     </div>
   );

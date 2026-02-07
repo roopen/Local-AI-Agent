@@ -35,7 +35,6 @@ namespace LocalAIAgent.API
             builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
             builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
-            builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
             builder.Services.AddScoped<NewsMetrics>();
             builder.Services.AddMemoryCache();
             builder.Services.AddDistributedMemoryCache();
@@ -44,7 +43,12 @@ namespace LocalAIAgent.API
             {
                 options.ServerDomain = "ainews.dev.localhost";
                 options.ServerName = "AI News";
-                options.Origins = new HashSet<string> { "https://ainews.dev.localhost:8888" };
+                options.Origins = new HashSet<string>
+                {
+                    "https://ainews.dev.localhost:8888",
+                    "https://ainews.dev.localhost:7276",
+                    "https://apiainews.dev.localhost:7276"
+                };
             })
                 .AddCachedMetadataService(config =>
                 {
@@ -55,7 +59,11 @@ namespace LocalAIAgent.API
             {
                 options.AddPolicy("AllowWebUI", policy =>
                 {
-                    policy.WithOrigins("https://ainews.dev.localhost:8888", "https://apiainews.dev.localhost:7276", "https://localhost")
+                    policy.WithOrigins(
+                        "https://ainews.dev.localhost:8888",
+                        "https://apiainews.dev.localhost:7276",
+                        "https://localhost",
+                        "https://ainews.dev.localhost:7276")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();

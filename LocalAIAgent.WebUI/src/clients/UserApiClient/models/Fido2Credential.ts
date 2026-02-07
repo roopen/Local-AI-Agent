@@ -17,6 +17,7 @@ export type Fido2Credential = {
     attestationFormat?: string | null;
     attestationObject?: string | null;
     attestationClientDataJson?: string | null;
+    credentialName: string | null;
     regDate?: string;
     signCount?: number;
 };

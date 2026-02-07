@@ -375,3 +375,4 @@ FodyWeavers.xsd
 *.db
 *.db-wal
 *.db-shm
+/LocalAIAgent.API/wwwroot

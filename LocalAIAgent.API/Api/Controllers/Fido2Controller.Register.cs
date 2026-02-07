@@ -1,17 +1,13 @@
 ﻿using Fido2NetLib;
 using Fido2NetLib.Objects;
-using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Buffers.Text;
-using System.Globalization;
-using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,37 +16,41 @@ namespace LocalAIAgent.API.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class Fido2Controller(
+    public partial class Fido2Controller(
         IFido2 fido2,
         IMemoryCache memoryCache,
         UserContext userContext,
-        ICreateUserUseCase createUserUseCase,
+        IGetUserUseCase getUserUseCase,
         IMetadataService mds) : ControllerBase
     {
-        private const string _credentialOptionsCacheKey = "fido2.credentialOptions";
-        private const string _assertionOptionsCacheKey = "fido2.assertionOptions";
-        private const string _userCacheKey = "fido2.user";
-
         [HttpPost]
         [Route("/makeCredentialOptions")]
         public async Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username)
         {
+            return await GetOptionsForNewUserCreation(username);
+        }
+
+        [HttpPost]
+        [Route("/makeCredential")]
+        public async Task<RegisteredPublicKeyCredential> MakeCredential(
+            [FromBody] CredentialRegistrationRequest attestationResponse,
+            CancellationToken cancellationToken)
+        {
+            return await CreateCredentialForNewUser(attestationResponse.Attestation, attestationResponse.CredentialName, cancellationToken);
+        }
+
+        private async Task<CredentialCreateOptions> GetOptionsForNewUserCreation(string username)
+        {
             if (string.IsNullOrEmpty(username))
                 throw new ArgumentNullException(nameof(username));
 
-            try
-            {
-                await createUserUseCase.CreateUser(new UserRegistrationDto { Username = username });
-            }
-            catch { }
-            User user = await GetUserAsync(username);
+            User user = new() { Fido2Id = GenerateCredentialId(), Username = username, Preferences = new() };
             var fido2User = new Fido2User
             {
                 DisplayName = user.Username,
                 Name = user.Username,
                 Id = user.Fido2Id
             };
-            var existingKeys = GetExistingCredentials(user);
 
             var authenticatorSelection = new AuthenticatorSelection
             {
@@ -70,7 +70,6 @@ namespace LocalAIAgent.API.Api.Controllers
                 new RequestNewCredentialParams
                 {
                     User = fido2User,
-                    ExcludeCredentials = existingKeys.ToList(),
                     AuthenticatorSelection = authenticatorSelection,
                     AttestationPreference = AttestationConveyancePreference.Direct,
                     Extensions = exts
@@ -83,10 +82,9 @@ namespace LocalAIAgent.API.Api.Controllers
             return options;
         }
 
-        [HttpPost]
-        [Route("/makeCredential")]
-        public async Task<RegisteredPublicKeyCredential> MakeCredential(
-            [FromBody] AuthenticatorAttestationRawResponse attestationResponse,
+        private async Task<RegisteredPublicKeyCredential> CreateCredentialForNewUser(
+            AuthenticatorAttestationRawResponse attestationResponse,
+            string credentialName,
             CancellationToken cancellationToken)
         {
             var clientData = CollectedClientData.FromRawAttestation(attestationResponse.Response.ClientDataJson);
@@ -104,7 +102,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
             async Task<bool> IsCredentialIdUniqueToUserCallback(IsCredentialIdUniqueToUserParams args, CancellationToken cancellationToken)
             {
-                var user = userContext.Fido2Credentials
+                var user = userContext.Fido2Credentials.AsNoTracking()
                     .FirstOrDefault(c => c.Id.SequenceEqual(args.CredentialId));
 
                 if (user is not null)
@@ -120,16 +118,18 @@ namespace LocalAIAgent.API.Api.Controllers
                 IsCredentialIdUniqueToUserCallback = IsCredentialIdUniqueToUserCallback
             }, cancellationToken: cancellationToken);
 
-            await VerifyAuthenticator(credential, cancellationToken);
+            var authenticator = await VerifyAuthenticator(credential, cancellationToken);
 
-            userContext.Fido2Credentials.Add(new Fido2Credential
+            user.Fido2Credentials.Add(new Fido2Credential
             {
                 Id = credential.Id,
                 PublicKey = credential.PublicKey,
-                User = fido2User,
+                UserFido2Id = fido2User.Id,
+                UserId = user.Id,
                 SignCount = credential.SignCount,
                 Type = credential.Type,
                 RegDate = DateTime.UtcNow,
+                CredentialName = authenticator?.MetadataStatement.Description ?? credentialName,
                 AaGuid = credential.AaGuid,
                 Transports = credential.Transports,
                 IsBackedUp = credential.IsBackedUp,
@@ -138,97 +138,33 @@ namespace LocalAIAgent.API.Api.Controllers
                 AttestationClientDataJson = credential.AttestationClientDataJson,
                 AttestationObject = credential.AttestationObject,
             });
+            userContext.Users.Add(user);
             await userContext.SaveChangesAsync(cancellationToken);
 
             memoryCache.Remove($"{_credentialOptionsCacheKey}.{clientData.Challenge}");
             memoryCache.Remove($"{_userCacheKey}.{clientData.Challenge}");
 
+            await LogIn(user);
+
             return credential;
         }
 
-        [HttpPost]
-        [Route("/assertionOptions")]
-        public async Task<AssertionOptions> AssertionOptionsPostAsync()
+        private static byte[] GenerateCredentialId(int length = 32)
         {
-            var exts = new AuthenticationExtensionsClientInputs()
-            {
-                Extensions = true,
-                UserVerificationMethod = true
-            };
-
-            var uv = UserVerificationRequirement.Required;
-            var options = fido2.GetAssertionOptions(new GetAssertionOptionsParams()
-            {
-                UserVerification = uv,
-                Extensions = exts
-            });
-
-            string challenge = Base64Url.EncodeToString(options.Challenge);
-            memoryCache.Set($"{_assertionOptionsCacheKey}.{challenge}", options, TimeSpan.FromMinutes(5));
-
-            return options;
-        }
-
-        [HttpPost]
-        [Route("/makeAssertion")]
-        public async Task<AttestationResult> MakeAssertion([FromBody] AuthenticatorAssertionRawResponse clientResponse, CancellationToken cancellationToken)
-        {
-            var clientData = CollectedClientData.FromRawAttestation(clientResponse.Response.ClientDataJson);
-            var options = memoryCache
-                .Get<AssertionOptions>($"{_assertionOptionsCacheKey}.{clientData.Challenge}")
-                ?? throw new InvalidOperationException("Assertion options not found for this user");
-
-            var credential = userContext.Fido2Credentials.Where(c => c.Id == clientResponse.RawId).FirstOrDefault()
-                ?? throw new InvalidDataException("Unknown credentials");
-
-            var storedCounter = credential.SignCount;
-
-            async Task<bool> IsUserHandleOwnerOfCredentialIdCallback(IsUserHandleOwnerOfCredentialIdParams args, CancellationToken cancellationToken)
-            {
-                var storedCreds = await userContext.Fido2Credentials.Where(c => c.User.Id == args.UserHandle).ToListAsync(cancellationToken);
-                return storedCreds.Exists(c => c.Id.SequenceEqual(args.CredentialId));
-            }
-
-            var res = await fido2.MakeAssertionAsync(new MakeAssertionParams
-            {
-                AssertionResponse = clientResponse,
-                OriginalOptions = options,
-                StoredPublicKey = credential.PublicKey,
-                StoredSignatureCounter = storedCounter,
-                IsUserHandleOwnerOfCredentialIdCallback = IsUserHandleOwnerOfCredentialIdCallback
-            }, cancellationToken: cancellationToken);
-
-            credential.SignCount = res.SignCount;
-            await userContext.SaveChangesAsync(cancellationToken);
-
-            memoryCache.Remove($"{_assertionOptionsCacheKey}.{clientData.Challenge}");
-
-            var userId = await userContext.Fido2Credentials
-                .Where(c => c.Id == clientResponse.RawId)
-                .Select(c => c.User.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            var user = await userContext.Users.Where(u => u.Fido2Id == userId).FirstOrDefaultAsync(cancellationToken)
-                ?? throw new InvalidDataException("user not found");
-
-            await LogIn(user);
-
-            return new AttestationResult { User = user, VerifyAssertionResult = res };
-        }
-
-        private async Task<User> GetUserAsync(string username)
-        {
-            return await userContext.Users.Where(u => u.Username == username).FirstOrDefaultAsync() ?? throw new InvalidDataException("user not found");
+            var credentialId = new byte[length];
+            RandomNumberGenerator.Fill(credentialId);
+            return credentialId;
         }
 
         private List<PublicKeyCredentialDescriptor> GetExistingCredentials(User user)
         {
             return userContext.Fido2Credentials
-                .Where(c => c.User.Id == user.Fido2Id)
+                .Where(c => c.UserFido2Id == user.Fido2Id)
                 .Select(c => new PublicKeyCredentialDescriptor(c.Id))
                 .ToList();
         }
 
-        private async Task VerifyAuthenticator(RegisteredPublicKeyCredential credential, CancellationToken cancellationToken)
+        private async Task<MetadataBLOBPayloadEntry?> VerifyAuthenticator(RegisteredPublicKeyCredential credential, CancellationToken cancellationToken)
         {
             var entry = await mds.GetEntryAsync(credential.AaGuid, cancellationToken);
 
@@ -242,33 +178,12 @@ namespace LocalAIAgent.API.Api.Controllers
                     }
                 }
             }
-        }
 
-        private async Task LogIn(User user)
-        {
-            List<Claim> claims =
-            [
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString(CultureInfo.InvariantCulture)),
-                new Claim(ClaimTypes.Role, "User"),
-                new Claim("amr", "mfa"),
-                new Claim("amr", "passwordless")
-            ];
-
-            ClaimsIdentity claimsIdentity = new(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(claimsIdentity),
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(3600)
-                });
+            return entry;
         }
     }
 
-    public class CollectedClientData
+    internal record CollectedClientData
     {
         [JsonPropertyName("type")]
         public required string Type { get; set; } // e.g., "webauthn.create" or "webauthn.get"
@@ -292,9 +207,9 @@ namespace LocalAIAgent.API.Api.Controllers
         }
     }
 
-    public record AttestationResult
+    public record CredentialRegistrationRequest
     {
-        public required VerifyAssertionResult VerifyAssertionResult { get; set; }
-        public required User User { get; set; }
+        public required AuthenticatorAttestationRawResponse Attestation { get; set; }
+        public required string CredentialName { get; set; }
     }
 }

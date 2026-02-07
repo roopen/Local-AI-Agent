@@ -2,8 +2,9 @@ import { LoginService, OpenAPI, UserPreferencesService, Fido2Service, PublicKeyC
 import type {
     AssertionOptions,
     AuthenticatorAssertionRawResponse,
-    AuthenticatorAttestationRawResponse,
     CredentialCreateOptions,
+    CredentialInfo,
+    CredentialRegistrationRequest,
     RegisteredPublicKeyCredential
 } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
@@ -19,6 +20,34 @@ export default class UserService implements IUserService {
     private _currentUser: User | null = null;
 
     private constructor() {
+    }
+
+    async getCredentials(): Promise<CredentialInfo[]> {
+        return await Fido2Service.getListCredentials();
+    }
+    
+    async removeCredential(id: string): Promise<void> {
+        await Fido2Service.postRemoveCredential(id);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async addCredential(): Promise<void> {
+        if (!this._currentUser) {
+            throw new Error("User must be logged in to add a credential.");
+        }
+
+        const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptionsExistingUser();
+
+        const credential = await this.getCredentialFromUser(options);
+
+        const authAttestationRawResponse = this.getAttestationRawResponse(credential, this._currentUser.name);
+
+        const requestBody: CredentialRegistrationRequest = {
+            attestation: authAttestationRawResponse.attestation,
+            credentialName: `${this._currentUser.name} additional credential`
+        };
+
+        await Fido2Service.postAddCredentialExistingUser(requestBody);
     }
 
     public static getInstance(): UserService {
@@ -82,44 +111,9 @@ export default class UserService implements IUserService {
 
         const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptions(username);
 
-        const credential = await navigator.credentials.create({
-            publicKey: {
-                timeout: options.timeout,
-                challenge: this.coerceToArrayBuffer(options.challenge, "challenge"),
-                user: {
-                    id: this.coerceToArrayBuffer(options.user.id, "user.id"),
-                    name: options.user.name!,
-                    displayName: options.user.displayName!
-                },
-                rp: {
-                    name: options.rp.name!,
-                    id: options.rp.id!
-                },
-                pubKeyCredParams: options.pubKeyCredParams!.map<PublicKeyCredentialParameters>(param => ({
-                    type: "public-key",
-                    alg: param.alg!
-                })),
-                authenticatorSelection: options.authenticatorSelection,
-                attestation: options.attestation,
-                excludeCredentials: options.excludeCredentials?.map<PublicKeyCredentialDescriptor>(cred => ({
-                    type: "public-key",
-                    id: this.coerceToArrayBuffer(cred.id, "excludeCredentials.id"),
-                })),
-            }
-        }) as PublicKeyCredential;
+        const credential = await this.getCredentialFromUser(options);
 
-        const authAttestationResponse = credential.response as AuthenticatorAttestationResponse;
-        const authAttestationRawResponse: AuthenticatorAttestationRawResponse = {
-            id: credential.id,
-            rawId: this.coerceToBase64Url(credential.rawId) as string,
-            type: PublicKeyCredentialType.PUBLIC_KEY,
-            response: {
-                clientDataJSON: this.coerceToBase64Url(authAttestationResponse.clientDataJSON) as string,
-                attestationObject: this.coerceToBase64Url(authAttestationResponse.attestationObject) as string,
-                transports: authAttestationResponse.getTransports ? (authAttestationResponse.getTransports() as AuthenticatorTransport[]) : [],
-            },
-            clientExtensionResults: UserService.mapClientExtensionResults(credential.getClientExtensionResults())
-        };
+        const authAttestationRawResponse = this.getAttestationRawResponse(credential, username);
 
         const registrationResult: RegisteredPublicKeyCredential = await Fido2Service.postMakeCredential(authAttestationRawResponse);
 
@@ -176,6 +170,55 @@ export default class UserService implements IUserService {
             interests: preferences.likes,
             dislikes: preferences.dislikes
         });
+    }
+
+    private async getCredentialFromUser(options: CredentialCreateOptions): Promise<PublicKeyCredential> {
+        return await navigator.credentials.create({
+            publicKey: {
+                timeout: options.timeout,
+                challenge: this.coerceToArrayBuffer(options.challenge, "challenge"),
+                user: {
+                    id: this.coerceToArrayBuffer(options.user.id, "user.id"),
+                    name: options.user.name!,
+                    displayName: options.user.displayName!
+                },
+                rp: {
+                    name: options.rp.name!,
+                    id: options.rp.id!
+                },
+                pubKeyCredParams: options.pubKeyCredParams!.map<PublicKeyCredentialParameters>(param => ({
+                    type: "public-key",
+                    alg: param.alg!
+                })),
+                authenticatorSelection: options.authenticatorSelection,
+                attestation: options.attestation,
+                excludeCredentials: options.excludeCredentials?.map<PublicKeyCredentialDescriptor>(cred => ({
+                    type: "public-key",
+                    id: this.coerceToArrayBuffer(cred.id, "excludeCredentials.id"),
+                })),
+            }
+        }) as PublicKeyCredential;
+    }
+
+    private getAttestationRawResponse(credential: PublicKeyCredential, username: string): CredentialRegistrationRequest {
+        const authAttestationResponse = credential.response as AuthenticatorAttestationResponse;
+        const authAttestationRawResponse: CredentialRegistrationRequest =
+        {
+            attestation: {
+            id: credential.id,
+            rawId: this.coerceToBase64Url(credential.rawId) as string,
+            type: PublicKeyCredentialType.PUBLIC_KEY,
+            response: {
+                clientDataJSON: this.coerceToBase64Url(authAttestationResponse.clientDataJSON) as string,
+                attestationObject: this.coerceToBase64Url(authAttestationResponse.attestationObject) as string,
+                transports: authAttestationResponse.getTransports ? (authAttestationResponse.getTransports() as AuthenticatorTransport[]) : [],
+            },
+            clientExtensionResults: UserService.mapClientExtensionResults(credential.getClientExtensionResults())
+        },
+        credentialName: `${username} credential`
+        };
+
+        return authAttestationRawResponse;
     }
 
     // eslint-disable-next-line complexity

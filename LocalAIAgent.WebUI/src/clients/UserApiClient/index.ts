@@ -27,8 +27,10 @@ export type { AuthenticatorAttestationRawResponse } from './models/Authenticator
 export type { AuthenticatorSelection } from './models/AuthenticatorSelection';
 export { AuthenticatorTransport } from './models/AuthenticatorTransport';
 export type { CredentialCreateOptions } from './models/CredentialCreateOptions';
+export type { CredentialInfo } from './models/CredentialInfo';
 export type { CredentialPropertiesOutput } from './models/CredentialPropertiesOutput';
 export { CredentialProtectionPolicy } from './models/CredentialProtectionPolicy';
+export type { CredentialRegistrationRequest } from './models/CredentialRegistrationRequest';
 export type { EvaluatedNewsArticles } from './models/EvaluatedNewsArticles';
 export type { ExpandedNewsResult } from './models/ExpandedNewsResult';
 export type { ExplanationString } from './models/ExplanationString';
