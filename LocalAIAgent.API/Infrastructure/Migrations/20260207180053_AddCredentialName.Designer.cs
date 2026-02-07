@@ -3,19 +3,41 @@ using System;
 using LocalAIAgent.API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace LocalAIAgent.API.Migrations
+namespace LocalAIAgent.API.Infrastructure.Migrations
 {
     [DbContext(typeof(UserContext))]
-    partial class UserContextModelSnapshot : ModelSnapshot
+    [Migration("20260207180053_AddCredentialName")]
+    partial class AddCredentialName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
+
+            modelBuilder.Entity("Fido2NetLib.Fido2User", b =>
+                {
+                    b.Property<byte[]>("Id")
+                        .HasColumnType("BLOB")
+                        .HasJsonPropertyName("id");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("TEXT")
+                        .HasJsonPropertyName("displayName");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT")
+                        .HasJsonPropertyName("name");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Fido2User");
+                });
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.Fido2Credential", b =>
                 {
@@ -59,16 +81,17 @@ namespace LocalAIAgent.API.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.Property<byte[]>("UserFido2Id")
-                        .IsRequired()
-                        .HasColumnType("BLOB");
-
-                    b.Property<int>("UserId")
+                    b.Property<int?>("UserId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("UserId1")
+                        .HasColumnType("BLOB");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1");
 
                     b.ToTable("Fido2Credentials");
                 });
@@ -130,13 +153,15 @@ namespace LocalAIAgent.API.Migrations
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.Fido2Credential", b =>
                 {
-                    b.HasOne("LocalAIAgent.API.Infrastructure.Models.User", "Owner")
+                    b.HasOne("LocalAIAgent.API.Infrastructure.Models.User", null)
                         .WithMany("Fido2Credentials")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
-                    b.Navigation("Owner");
+                    b.HasOne("Fido2NetLib.Fido2User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId1");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.UserPreferences", b =>

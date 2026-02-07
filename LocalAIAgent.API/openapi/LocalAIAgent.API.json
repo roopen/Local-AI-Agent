@@ -5,92 +5,6 @@
     "version": "1.0"
   },
   "paths": {
-    "/makeCredentialOptions": {
-      "post": {
-        "tags": [
-          "Fido2"
-        ],
-        "parameters": [
-          {
-            "name": "username",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CredentialCreateOptions"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CredentialCreateOptions"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CredentialCreateOptions"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/makeCredential": {
-      "post": {
-        "tags": [
-          "Fido2"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthenticatorAttestationRawResponse"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthenticatorAttestationRawResponse"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthenticatorAttestationRawResponse"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/assertionOptions": {
       "post": {
         "tags": [
@@ -161,6 +75,241 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AttestationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/makeCredentialOptionsExistingUser": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/addCredentialExistingUser": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/removeCredential": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/listCredentials": {
+      "get": {
+        "tags": [
+          "Fido2"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialInfo"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialInfo"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/makeCredentialOptions": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialCreateOptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/makeCredential": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPublicKeyCredential"
                 }
               }
             }
@@ -989,6 +1138,33 @@
         },
         "additionalProperties": false
       },
+      "CredentialInfo": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "byte",
+            "nullable": true
+          },
+          "regDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "aaGuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
       "CredentialPropertiesOutput": {
         "type": "object",
         "properties": {
@@ -1009,6 +1185,23 @@
           "userVerificationRequired"
         ],
         "type": "string"
+      },
+      "CredentialRegistrationRequest": {
+        "required": [
+          "attestation",
+          "credentialName"
+        ],
+        "type": "object",
+        "properties": {
+          "attestation": {
+            "$ref": "#/components/schemas/AuthenticatorAttestationRawResponse"
+          },
+          "credentialName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "EvaluatedNewsArticles": {
         "required": [
@@ -1071,6 +1264,9 @@
         "additionalProperties": false
       },
       "Fido2Credential": {
+        "required": [
+          "credentialName"
+        ],
         "type": "object",
         "properties": {
           "type": {
@@ -1118,6 +1314,10 @@
           "attestationClientDataJson": {
             "type": "string",
             "format": "byte",
+            "nullable": true
+          },
+          "credentialName": {
+            "type": "string",
             "nullable": true
           },
           "regDate": {

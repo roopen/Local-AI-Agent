@@ -5,6 +5,7 @@ namespace LocalAIAgent.Domain
     public class User
     {
         public required UserId Id { get; set; }
+        public required Fido2Id Fido2Id { get; set; }
         public required string Username { get; set; }
         public UserPreferences? Preferences { get; set; }
     }

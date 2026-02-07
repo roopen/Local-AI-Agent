@@ -11,6 +11,9 @@ describe('LoginComponent', () => {
         isLoggedIn: jest.fn(),
         getUserPreferences: jest.fn(),
         saveUserPreferences: jest.fn(),
+        getCredentials: jest.fn(),
+        removeCredential: jest.fn(),
+        addCredential: jest.fn(),
     };
 
     const mockOnLogin = jest.fn();

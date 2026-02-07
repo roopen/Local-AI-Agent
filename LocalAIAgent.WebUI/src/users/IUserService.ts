@@ -1,3 +1,4 @@
+import type { CredentialInfo } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
 import type UserSettings from "../domain/UserSettings";
 
@@ -9,4 +10,7 @@ export interface IUserService {
     isLoggedIn(): Promise<boolean>;
     getUserPreferences(userId: string): Promise<UserSettings | null>;
     saveUserPreferences(preferences: Omit<UserSettings, "id">): Promise<void>;
+    getCredentials(): Promise<CredentialInfo[]>;
+    removeCredential(id: string): Promise<void>;
+    addCredential(): Promise<void>;
 }
