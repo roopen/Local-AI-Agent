@@ -147,7 +147,9 @@ describe('UserService', () => {
             expect(mockedFido2Service.postMakeCredentialOptions).toHaveBeenCalledWith(username);
             expect(mockNavigatorCredentials.create).toHaveBeenCalled();
             expect(mockedFido2Service.postMakeCredential).toHaveBeenCalledWith(expect.objectContaining({
-                id: 'AAAA'
+                attestation: expect.objectContaining({
+                    id: 'AAAA'
+                })
             }));
             expect(result).toBeNull();
         });
