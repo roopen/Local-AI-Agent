@@ -16,6 +16,6 @@ namespace LocalAIAgent.API.Infrastructure.Models
         public required byte[] UserFido2Id { get; set; }
 
         [NotMapped]
-        public new Fido2User User { get; set; }
+        public new Fido2User? User { get; set; }
     }
 }
