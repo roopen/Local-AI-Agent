@@ -2,14 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Fido2Credential } from './Fido2Credential';
+import type { Fido2Id } from './Fido2Id';
+import type { UserId } from './UserId';
 import type { UserPreferences } from './UserPreferences';
 export type User = {
-    id?: number;
-    fido2Id: string | null;
-    username?: string | null;
-    passwordHash?: string | null;
+    id: UserId;
+    fido2Id: Fido2Id;
+    username: string | null;
     preferences?: UserPreferences;
-    fido2Credentials?: Array<Fido2Credential> | null;
 };
 

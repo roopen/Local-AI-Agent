@@ -33,6 +33,16 @@
 		<AnalysisMode>Recommended</AnalysisMode>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<DebugType>embedded</DebugType>
+		<IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+	</PropertyGroup>
+
 	<Target Name="BuildReactApp" BeforeTargets="Build">
 		<Exec Command="npm install" WorkingDirectory="../LocalAIAgent.WebUI" />
 		<Exec Command="npm run generate:api" WorkingDirectory="../LocalAIAgent.WebUI" />

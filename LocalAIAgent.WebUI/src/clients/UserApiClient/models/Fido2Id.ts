@@ -2,8 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type UserRegistrationDto = {
-    username?: string | null;
-    password?: string | null;
+export type Fido2Id = {
+    value?: string | null;
 };
 

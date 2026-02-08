@@ -1,12 +1,14 @@
 using LocalAIAgent.API.Api.Hubs;
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
+using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel;
 using LocalAIAgent.SemanticKernel.News;
 using LocalAIAgent.SemanticKernel.News.AI;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace LocalAIAgent.API
 {
@@ -18,12 +20,34 @@ namespace LocalAIAgent.API
 
             builder.AddServiceDefaults();
 
-            if (builder.Environment.IsProduction())
+            builder.WebHost.ConfigureKestrel(serverOptions =>
             {
-                builder.WebHost.UseKestrel();
+                serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
+            });
+
+            string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");
+            if (!string.IsNullOrEmpty(httpsUrl))
+            {
+                builder.WebHost.UseUrls(httpsUrl);
             }
 
-            string sqldatasource = "DataSource=" + (builder.Configuration.GetValue<string>("SQLITE_DATASOURCE") ?? "ainews.db");
+            string? connectionString = builder.Configuration.GetValue<string>("SQLITE_DATASOURCE");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                if (builder.Environment.IsDevelopment())
+                {
+                    connectionString = "ainews.db";
+                }
+                else
+                {
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string appFolder = Path.Combine(appData, "LocalAIAgent");
+                    Directory.CreateDirectory(appFolder);
+                    connectionString = Path.Combine(appFolder, "ainews.db");
+                }
+            }
+
+            string sqldatasource = "DataSource=" + connectionString;
             builder.Services.AddDbContext<UserContext>(options =>
                 options.UseSqlite(sqldatasource));
 
@@ -31,7 +55,7 @@ namespace LocalAIAgent.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
-            builder.Services.AddSemanticKernel();
+            builder.Services.AddSemanticKernel(builder.Configuration);
             builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
             builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
             builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
@@ -47,7 +71,8 @@ namespace LocalAIAgent.API
                 {
                     "https://ainews.dev.localhost:8888",
                     "https://ainews.dev.localhost:7276",
-                    "https://apiainews.dev.localhost:7276"
+                    "https://apiainews.dev.localhost:7276",
+                    "https://localhost:7276"
                 };
             })
                 .AddCachedMetadataService(config =>
@@ -63,7 +88,8 @@ namespace LocalAIAgent.API
                         "https://ainews.dev.localhost:8888",
                         "https://apiainews.dev.localhost:7276",
                         "https://localhost",
-                        "https://ainews.dev.localhost:7276")
+                        "https://ainews.dev.localhost:7276",
+                        "https://localhost:7276")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
@@ -139,7 +165,40 @@ namespace LocalAIAgent.API
                 using IServiceScope scope = scopeFactory.CreateScope();
                 INewsService newsService = scope.ServiceProvider.GetRequiredService<INewsService>();
                 await newsService.GetNewsAsync();
+
+                if (!app.Lifetime.ApplicationStarted.IsCancellationRequested)
+                {
+                    TaskCompletionSource<object> tcs = new();
+                    using CancellationTokenRegistration reg = app.Lifetime.ApplicationStarted.Register(() => tcs.SetResult(new object()));
+                    await tcs.Task;
+                }
+
+                OpenBrowser(app);
             });
+        }
+
+        private static void OpenBrowser(WebApplication app)
+        {
+            try
+            {
+                string? url = app.Urls.FirstOrDefault(static u => u.StartsWith("https", StringComparison.InvariantCultureIgnoreCase)) ?? app.Urls.FirstOrDefault();
+                if (!string.IsNullOrEmpty(url))
+                {
+                    url = url.Replace("0.0.0.0", "localhost")
+                             .Replace("[::]", "localhost")
+                             .Replace("+", "localhost")
+                             .Replace("*", "localhost");
+
+                    if (app.Environment.IsDevelopment())
+                        url = "https://ainews.dev.localhost:7276/";
+
+                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to launch browser: {ex.Message}");
+            }
         }
 
         private static void LoadLLMOnStartup(WebApplication app)
@@ -148,8 +207,24 @@ namespace LocalAIAgent.API
             Task.Run(async () =>
             {
                 using IServiceScope scope = scopeFactory.CreateScope();
-                ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
-                await loadLLMUseCase.LoadLLMUseCaseAsync();
+
+                UserContext userContext = scope.ServiceProvider.GetRequiredService<UserContext>();
+                AiSettings? settings = await userContext.AiSettings.FirstOrDefaultAsync();
+
+                if (settings is not null)
+                {
+                    IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                    configuration["AIOptions:ModelId"] = settings.ModelId;
+                    configuration["AIOptions:ApiKey"] = settings.ApiKey;
+                    configuration["AIOptions:EndpointUrl"] = settings.EndpointUrl;
+                    configuration["AIOptions:Temperature"] = settings.Temperature.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    configuration["AIOptions:TopP"] = settings.TopP.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    configuration["AIOptions:FrequencyPenalty"] = settings.FrequencyPenalty.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    configuration["AIOptions:PresencePenalty"] = settings.PresencePenalty.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                    ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
+                    await loadLLMUseCase.LoadLLMUseCaseAsync();
+                }
             });
         }
     }

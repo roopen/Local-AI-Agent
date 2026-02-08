@@ -42,14 +42,16 @@ namespace LocalAIAgent.API.Api.Controllers
                 .Get<AssertionOptions>($"{_assertionOptionsCacheKey}.{clientData.Challenge}")
                 ?? throw new InvalidOperationException("Assertion options not found for this user");
 
-            var credential = userContext.Fido2Credentials.Where(c => c.Id == clientResponse.RawId).FirstOrDefault()
+            var credential = await userContext.Fido2Credentials
+                .Where(c => c.Id == clientResponse.RawId)
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new InvalidDataException("Unknown credentials");
 
             var storedCounter = credential.SignCount;
 
             async Task<bool> IsUserHandleOwnerOfCredentialIdCallback(IsUserHandleOwnerOfCredentialIdParams args, CancellationToken cancellationToken)
             {
-                var storedCreds = await userContext.Fido2Credentials.Where(c => c.User.Id == args.UserHandle).ToListAsync(cancellationToken);
+                var storedCreds = await userContext.Fido2Credentials.Where(c => c.UserFido2Id == args.UserHandle).ToListAsync(cancellationToken);
                 return storedCreds.Exists(c => c.Id.SequenceEqual(args.CredentialId));
             }
 

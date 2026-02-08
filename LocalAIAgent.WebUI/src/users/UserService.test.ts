@@ -24,6 +24,8 @@ jest.mock('../clients/UserApiClient', () => ({
     UserPreferencesService: {
         getApiUserPreferences: jest.fn(),
         postApiSavePreferences: jest.fn(),
+        postApiSaveAiSettings: jest.fn(),
+        getApiAiSettings: jest.fn(),
     },
     Fido2Service: {
         postAssertionOptions: jest.fn(),

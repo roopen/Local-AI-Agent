@@ -14,7 +14,7 @@ namespace LocalAIAgent.SemanticKernel
 {
     public static class DependencyRegistrar
     {
-        public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
+        public static IServiceCollection AddSemanticKernel(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
@@ -22,9 +22,8 @@ namespace LocalAIAgent.SemanticKernel
             services.AddMemoryCache();
             services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
-            services.AddKernel().GetSemanticKernelBuilder();
-            IConfiguration configuration = services.AddConfigurations();
             AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
+            services.AddKernel().GetSemanticKernelBuilder(aiOptions);
             services.AddSingleton(aiOptions);
 
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
@@ -37,18 +36,13 @@ namespace LocalAIAgent.SemanticKernel
             return services;
         }
 
-        public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder)
+        public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder, AIOptions aiOptions)
         {
             kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
             //kernelBuilder.Services.AddSingleton<RAGService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
 
-            IConfiguration configuration = kernelBuilder.Services.AddConfigurations();
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-            AIOptions? aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()
-                ?? throw new ArgumentNullException("AIOptions not found in configuration.");
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
