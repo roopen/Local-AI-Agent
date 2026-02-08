@@ -183,7 +183,7 @@ namespace LocalAIAgent.API.Api.Controllers
         }
     }
 
-    internal record CollectedClientData
+    internal sealed record CollectedClientData
     {
         [JsonPropertyName("type")]
         public required string Type { get; set; } // e.g., "webauthn.create" or "webauthn.get"
