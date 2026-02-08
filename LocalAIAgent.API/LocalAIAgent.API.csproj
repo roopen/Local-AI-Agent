@@ -34,12 +34,12 @@
 	</PropertyGroup>
 
 	<Target Name="BuildReactApp" BeforeTargets="Build">
-		<Exec Command="npm install" WorkingDirectory="../localaiagent.webui" />
-		<Exec Command="npm run generate:api" WorkingDirectory="../localaiagent.webui" />
-		<Exec Command="npm run build -- --mode production" WorkingDirectory="../localaiagent.webui" />
+		<Exec Command="npm install" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<Exec Command="npm run generate:api" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<Exec Command="npm run build -- --mode production" WorkingDirectory="../LocalAIAgent.WebUI" />
 
 		<ItemGroup>
-			<ReactFiles Include="../localaiagent.webui/dist/**" />
+			<ReactFiles Include="../LocalAIAgent.WebUI/dist/**" />
 		</ItemGroup>
 		<Copy SourceFiles="@(ReactFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
 	</Target>
