@@ -7,6 +7,7 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AiSettingsDto } from './models/AiSettingsDto';
 export { Algorithm } from './models/Algorithm';
 export type { AssertionOptions } from './models/AssertionOptions';
 export type { AssertionResponse } from './models/AssertionResponse';
@@ -34,7 +35,7 @@ export type { CredentialRegistrationRequest } from './models/CredentialRegistrat
 export type { EvaluatedNewsArticles } from './models/EvaluatedNewsArticles';
 export type { ExpandedNewsResult } from './models/ExpandedNewsResult';
 export type { ExplanationString } from './models/ExplanationString';
-export type { Fido2Credential } from './models/Fido2Credential';
+export type { Fido2Id } from './models/Fido2Id';
 export type { Fido2User } from './models/Fido2User';
 export { LargeBlobSupport } from './models/LargeBlobSupport';
 export type { NewsArticle } from './models/NewsArticle';
@@ -52,10 +53,9 @@ export type { TermString } from './models/TermString';
 export type { TermStringExplanationStringKeyValuePair } from './models/TermStringExplanationStringKeyValuePair';
 export type { User } from './models/User';
 export type { UserDto } from './models/UserDto';
-export type { UserLoginDto } from './models/UserLoginDto';
+export type { UserId } from './models/UserId';
 export type { UserPreferenceDto } from './models/UserPreferenceDto';
 export type { UserPreferences } from './models/UserPreferences';
-export type { UserRegistrationDto } from './models/UserRegistrationDto';
 export { UserVerificationRequirement } from './models/UserVerificationRequirement';
 export type { VerifyAssertionResult } from './models/VerifyAssertionResult';
 

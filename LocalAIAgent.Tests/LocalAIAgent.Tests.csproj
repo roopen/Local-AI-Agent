@@ -32,7 +32,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LocalAIAgent.SemanticKernel\LocalAIAgent.SemanticKernel.csproj" />
-    <ProjectReference Include="..\LocalAIAgent.ConsoleApp\LocalAIAgent.ConsoleApp.csproj" />
     <ProjectReference Include="..\LocalAIAgent.API\LocalAIAgent.API.csproj" />
   </ItemGroup>
 

@@ -8,6 +8,7 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
     public required DbSet<User> Users { get; set; }
     public required DbSet<UserPreferences> UserPreferences { get; set; }
     public required DbSet<Fido2Credential> Fido2Credentials { get; set; }
+    public required DbSet<AiSettings> AiSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,5 +25,10 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .HasOne(c => c.Owner)
             .WithMany(u => u.Fido2Credentials)
             .HasForeignKey(c => c.UserId);
+
+        modelBuilder.Entity<AiSettings>()
+            .HasOne(s => s.UserPreferences)
+            .WithOne()
+            .HasForeignKey<AiSettings>(s => s.UserPreferencesId);
     }
 }

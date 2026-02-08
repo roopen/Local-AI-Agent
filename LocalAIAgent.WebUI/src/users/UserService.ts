@@ -10,6 +10,7 @@ import type {
 import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
+import AISettings from "../domain/AISettings";
 
 OpenAPI.BASE = "https://apiainews.dev.localhost:7276";
 OpenAPI.CREDENTIALS = "include";
@@ -20,6 +21,41 @@ export default class UserService implements IUserService {
     private _currentUser: User | null = null;
 
     private constructor() {
+    }
+
+    async getAiSettings(): Promise<AISettings> {
+        var user = this.getCurrentUser();
+        if (!user) {
+            throw new Error("User must be logged in to get AI settings.");
+        }
+        var aiSettings = await UserPreferencesService.postApiUserPreferencesApiGetAiSettings(parseInt(user.id, 10));
+
+        if (!aiSettings) {
+            return new AISettings();
+        }
+        
+        return new AISettings(
+            aiSettings.modelId || undefined,
+            aiSettings.apiKey || undefined,
+            aiSettings.endpointUrl || undefined,
+            aiSettings.temperature || undefined,
+            aiSettings.topP || undefined,
+            aiSettings.frequencyPenalty || undefined,
+            aiSettings.presencePenalty || undefined
+        );
+    }
+
+    async saveAiSettings(settings: AISettings): Promise<void> {
+        await UserPreferencesService.postApiSaveAiSettings({
+            userId: parseInt(this.getCurrentUser()!.id, 10),
+            modelId: settings.modelId,
+            apiKey: settings.apikey,
+            endpointUrl: settings.endpointUrl,
+            temperature: settings.temperature,
+            topP: settings.topP,
+            frequencyPenalty: settings.frequencyPenalty,
+            presencePenalty: settings.presencePenalty
+        });
     }
 
     async getCredentials(): Promise<CredentialInfo[]> {
