@@ -7,6 +7,7 @@ export default class AISettings {
     frequencyPenalty: number;
     presencePenalty: number;
 
+    // eslint-disable-next-line complexity
     constructor(
         modelId: string = 'gemma-3-27b-it-qat', 
         apikey: string = '', 

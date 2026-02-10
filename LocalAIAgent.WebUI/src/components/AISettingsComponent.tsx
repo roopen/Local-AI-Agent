@@ -28,6 +28,7 @@ const AISettingsComponent: React.FC = () => {
         }, 2000);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleChange = (field: keyof AISettings, value: any) => {
         const newSettings = new AISettings(
             settings.modelId, 

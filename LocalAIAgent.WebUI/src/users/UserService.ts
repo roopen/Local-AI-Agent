@@ -23,12 +23,13 @@ export default class UserService implements IUserService {
     private constructor() {
     }
 
+    // eslint-disable-next-line complexity
     async getAiSettings(): Promise<AISettings> {
-        var user = this.getCurrentUser();
+        const user = this.getCurrentUser();
         if (!user) {
             throw new Error("User must be logged in to get AI settings.");
         }
-        var aiSettings = await UserPreferencesService.postApiUserPreferencesApiGetAiSettings(parseInt(user.id, 10));
+        const aiSettings = await UserPreferencesService.postApiUserPreferencesApiGetAiSettings(parseInt(user.id, 10));
 
         if (!aiSettings) {
             return new AISettings();
