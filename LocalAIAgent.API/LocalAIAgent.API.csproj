@@ -44,7 +44,10 @@
 	</PropertyGroup>
 
 	<Target Name="BuildReactApp" BeforeTargets="Build">
-		<Exec Command="npm install" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<!-- Use npm ci in CI environments to prevent ENOTEMPTY errors and ensure deterministic builds -->
+		<Exec Command="npm ci" Condition="'$(CI)' == 'true'" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<Exec Command="npm install" Condition="'$(CI)' != 'true'" WorkingDirectory="../LocalAIAgent.WebUI" />
+		
 		<Exec Command="npm run generate:api" WorkingDirectory="../LocalAIAgent.WebUI" />
 		<Exec Command="npm run build -- --mode production" WorkingDirectory="../LocalAIAgent.WebUI" />
 
