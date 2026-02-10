@@ -15,6 +15,7 @@ jobs:
 
     env:
       Solution_Name: ${{ vars.SOLUTION_NAME }}
+      DOTNET_TFM: net10.0
 
     steps:
     - name: Checkout
@@ -70,13 +71,13 @@ jobs:
       run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/LocalAIAgent.API.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true /p:SkipClientBuild=true
 
     - name: Rename the executable
-      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/LocalAIAgent.API.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/LocalAIAgent.exe
+      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/LocalAIAgent.API.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/LocalAIAgent.exe
 
     - name: Remove .pdb files
-      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/*.pdb
+      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/*.pdb
 
     - name: Zip the publish folder
-      run: zip -j AINews.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/*
+      run: zip -j AINews.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/*
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -88,7 +89,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ env.VERSION }}
-        name: Release ${{ env.VERSION }}
+        name: AI News ${{ env.VERSION }}
         body: |
           New release created!
           - Tag: ${{ env.VERSION }}
