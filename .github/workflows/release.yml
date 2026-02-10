@@ -8,91 +8,100 @@ permissions:
   contents: write
 
 jobs:
-
-  build:
-  
+  tag_version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+      continue_release: ${{ steps.check_tag.outputs.continue_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract version
+        id: extract_version
+        run: |
+          BRANCH_NAME=${{ github.ref }}
+          VERSION=${BRANCH_NAME#refs/heads/rel/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Check and Create Tag
+        id: check_tag
+        run: |
+          VERSION=${{ steps.extract_version.outputs.version }}
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+            echo "Tag $VERSION already exists. Skipping release."
+            echo "continue_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Creating tag $VERSION"
+            git tag $VERSION
+            git push origin $VERSION
+            echo "continue_release=true" >> $GITHUB_OUTPUT
+          fi
 
+  build_and_release:
+    needs: tag_version
+    if: needs.tag_version.outputs.continue_release == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [win-x64, linux-x64, osx-x64]
+        include:
+          - target: win-x64
+            ext: .exe
+            asset_name: AINews-win-x64.zip
+          - target: linux-x64
+            ext: ""
+            asset_name: AINews-linux-x64.zip
+          - target: osx-x64
+            ext: ""
+            asset_name: AINews-osx-x64.zip
     env:
       Solution_Name: ${{ vars.SOLUTION_NAME }}
       DOTNET_TFM: net10.0
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Extract version from branch name
-      run: |
-          BRANCH_NAME=${{ github.ref }}
-          VERSION=${BRANCH_NAME#refs/heads/rel/}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-    - name: Check if tag exists
-      id: check_tag
-      run: |
-          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
-            echo "Tag $VERSION already exists."
-            echo "exists=true" >> $GITHUB_ENV
-          else
-            echo "exists=false" >> $GITHUB_ENV
-          fi
-
-    - name: Exit Workflow If Tag Already Exists
-      if: env.exists == 'true'
-      run: |
-        echo "Tag already exists. Exiting workflow."
-        exit 0
-
-    - name: Create tag
-      run: |
-          git tag $VERSION
-          git push origin $VERSION
+      - name: Checkout
+        uses: actions/checkout@v4
         
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Build WebUI
-      working-directory: LocalAIAgent.WebUI
-      run: |
-        npm ci
-        npm run generate:api
-        npm run build -- --mode production
+      - name: Build WebUI
+        working-directory: LocalAIAgent.WebUI
+        run: |
+          npm ci
+          npm run generate:api
+          npm run build -- --mode production
 
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-        
-    - name: Publish as Single Executable
-      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/LocalAIAgent.API.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true /p:SkipClientBuild=true
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
 
-    - name: Rename the executable
-      run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/LocalAIAgent.API.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/LocalAIAgent.exe
+      - name: Publish
+        run: dotnet publish LocalAIAgent.API/LocalAIAgent.API.csproj -c Release -r ${{ matrix.target }} --self-contained /p:PublishSingleFile=true /p:UseAppHost=true /p:SkipClientBuild=true
 
-    - name: Remove .pdb files
-      run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/*.pdb
+      - name: Rename executable
+        run: |
+          PUBLISH_DIR="LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/${{ matrix.target }}/publish"
+          mv "$PUBLISH_DIR/LocalAIAgent.API${{ matrix.ext }}" "$PUBLISH_DIR/LocalAIAgent${{ matrix.ext }}"
 
-    - name: Zip the publish folder
-      run: zip -j AINews.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/win-x64/publish/*
+      - name: Remove .pdb files
+        run: rm LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/${{ matrix.target }}/publish/*.pdb
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-       name: ${{ env.Solution_Name }}
-       path: AINews.zip
+      - name: Zip the publish folder
+        run: |
+          cd "LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/${{ matrix.target }}/publish"
+          zip -j "$GITHUB_WORKSPACE/${{ matrix.asset_name }}" *
 
-    - name: Create GitHub Release with ZIP
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ env.VERSION }}
-        name: AI News ${{ env.VERSION }}
-        body: |
-          New release created!
-          - Tag: ${{ env.VERSION }}
-        files: AINews.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.tag_version.outputs.version }}
+          name: AI News ${{ needs.tag_version.outputs.version }}
+          body: |
+            New release created!
+            - Tag: ${{ needs.tag_version.outputs.version }}
+          files: ${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
