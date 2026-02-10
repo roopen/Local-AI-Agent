@@ -44,7 +44,17 @@
 	</PropertyGroup>
 
 	<Target Name="BuildReactApp" BeforeTargets="Build">
-		<Exec Command="npm install" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<!-- Linux/Unix CI: Chain clean and install to prevent ENOTEMPTY race conditions -->
+		<Exec Command="rm -rf node_modules &amp;&amp; npm ci" Condition="'$(CI)' == 'true' AND '$(OS)' != 'Windows_NT'" WorkingDirectory="../LocalAIAgent.WebUI" />
+		
+		<!-- Windows CI: Clean first if exists -->
+		<Exec Command="rmdir /s /q node_modules" Condition="'$(CI)' == 'true' AND '$(OS)' == 'Windows_NT' AND Exists('../LocalAIAgent.WebUI/node_modules')" WorkingDirectory="../LocalAIAgent.WebUI" />
+		<!-- Windows CI: Run npm ci -->
+		<Exec Command="npm ci" Condition="'$(CI)' == 'true' AND '$(OS)' == 'Windows_NT'" WorkingDirectory="../LocalAIAgent.WebUI" />
+
+		<!-- Local Development: Standard install -->
+		<Exec Command="npm install" Condition="'$(CI)' != 'true'" WorkingDirectory="../LocalAIAgent.WebUI" />
+		
 		<Exec Command="npm run generate:api" WorkingDirectory="../LocalAIAgent.WebUI" />
 		<Exec Command="npm run build -- --mode production" WorkingDirectory="../LocalAIAgent.WebUI" />
 
