@@ -49,13 +49,25 @@ jobs:
           git tag $VERSION
           git push origin $VERSION
         
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Build WebUI
+      working-directory: LocalAIAgent.WebUI
+      run: |
+        npm ci
+        npm run generate:api
+        npm run build -- --mode production
+
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.0.x
         
     - name: Publish as Single Executable
-      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/LocalAIAgent.API.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true
+      run: dotnet publish /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/LocalAIAgent.API.csproj -c Release -r win-x64 --self-contained /p:PublishSingleFile=true /p:UseAppHost=true /p:SkipClientBuild=true
 
     - name: Rename the executable
       run: mv /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/LocalAIAgent.API.exe /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/LocalAIAgent.exe
@@ -64,7 +76,7 @@ jobs:
       run: rm /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/*.pdb
 
     - name: Zip the publish folder
-      run: zip -j LocalAIAgent.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/*
+      run: zip -j AINews.zip /home/runner/work/Local-AI-Agent/Local-AI-Agent/LocalAIAgent.API/bin/Release/net10.0/win-x64/publish/*
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
