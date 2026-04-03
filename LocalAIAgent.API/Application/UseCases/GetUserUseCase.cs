@@ -41,6 +41,16 @@ namespace LocalAIAgent.API.Application.UseCases
         {
             User? user = await context.Users.AsNoTracking().Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == userId);
 
+            if (user?.Preferences != null)
+            {
+                user.Preferences.FeedbackExamples = await context.NewsFeedback
+                    .AsNoTracking()
+                    .Where(f => f.UserPreferencesId == user.Preferences.Id)
+                    .OrderByDescending(f => f.CreatedAt)
+                    .Take(30)
+                    .ToListAsync();
+            }
+
             return user?.MapToDomainUser();
         }
 
