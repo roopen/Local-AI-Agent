@@ -1,27 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SettingsComponent from '../components/SettingsComponent';
 import UserService from '../users/UserService';
 import Modal from 'react-modal';
 import { Button } from '@progress/kendo-react-buttons';
 
-const Header = () => {
-    const [modalIsOpen, setModalIsOpen] = useState(false);
-
-    const openModal = () => {
-        setModalIsOpen(true);
-    };
-
-    const closeModal = () => {
-        setModalIsOpen(false);
-    };
-
+const Header = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; headerRef: React.RefObject<HTMLDivElement | null> }) => {
     const handleLogout = async () => {
         await UserService.getInstance().logout();
         window.location.reload();
     };
 
     return (
-        <div style={{ marginBottom: 5 }}>
+        <div ref={headerRef} style={{ marginBottom: 5 }}>
             <div style={{  }}>
                 <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
             </div>
@@ -30,7 +20,7 @@ const Header = () => {
                 <Button
                     themeColor={'info'}
                     size={'large'}
-                    onClick={openModal}
+                    onClick={onSettingsClick}
                     style={{ width: "50%" }}>
                     Settings
                 </Button>
@@ -43,6 +33,90 @@ const Header = () => {
                     Logout
                 </Button>
             </div>
+        </div>
+    );
+};
+
+const ScrollToTopButton = () => {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => setVisible(window.scrollY > 200);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <Button
+            themeColor={'info'}
+            size={'large'}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{
+                position: 'fixed',
+                bottom: '2rem',
+                right: '2rem',
+                zIndex: 1000,
+                borderRadius: '50%',
+                width: '3.5rem',
+                height: '3.5rem',
+                fontSize: '1.5rem',
+                lineHeight: 1,
+            }}>
+            ↑
+        </Button>
+    );
+};
+
+const FloatingSettingsButton = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; headerRef: React.RefObject<HTMLDivElement | null> }) => {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => setVisible(!entry.isIntersecting),
+            { threshold: 0 }
+        );
+        if (headerRef.current) observer.observe(headerRef.current);
+        return () => observer.disconnect();
+    }, [headerRef]);
+
+    if (!visible) return null;
+
+    return (
+        <Button
+            themeColor={'info'}
+            size={'large'}
+            onClick={onSettingsClick}
+            style={{
+                position: 'fixed',
+                bottom: '6.5rem',
+                right: '2rem',
+                zIndex: 1000,
+                borderRadius: '50%',
+                width: '3.5rem',
+                height: '3.5rem',
+                fontSize: '1.5rem',
+                lineHeight: 1,
+            }}>
+            ⚙️
+        </Button>
+    );
+};
+
+const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [modalIsOpen, setModalIsOpen] = useState(false);
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    const openModal = () => setModalIsOpen(true);
+    const closeModal = () => setModalIsOpen(false);
+
+    return (
+        <div>
+            <Header onSettingsClick={openModal} headerRef={headerRef} />
+            <main>{children}</main>
+            <ScrollToTopButton />
+            <FloatingSettingsButton onSettingsClick={openModal} headerRef={headerRef} />
             <Modal
                 isOpen={modalIsOpen}
                 onRequestClose={closeModal}
@@ -69,15 +143,6 @@ const Header = () => {
             >
                 <SettingsComponent />
             </Modal>
-        </div>
-    );
-};
-
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    return (
-        <div>
-            <Header />
-            <main>{children}</main>
         </div>
     );
 };

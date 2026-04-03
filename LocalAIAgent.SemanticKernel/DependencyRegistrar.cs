@@ -51,8 +51,6 @@ namespace LocalAIAgent.SemanticKernel
             kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
             kernelBuilder.Services.AddInMemoryVectorStore();
 
-            //kernelBuilder.AddGoogleAIGeminiChatCompletion(aiOptions.ModelId, aiOptions.ApiKey);
-
             kernelBuilder
                 .AddOpenAIChatCompletion(
                     modelId: aiOptions.ModelId,
