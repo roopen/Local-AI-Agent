@@ -19,7 +19,16 @@
             {
                 Prompt = preferences.Prompt,
                 Interests = preferences.Interests,
-                Dislikes = preferences.Dislikes
+                Dislikes = preferences.Dislikes,
+                FeedbackExamples = preferences.FeedbackExamples
+                    .Select(f => new Domain.NewsFeedbackExample
+                    {
+                        ArticleLink = f.ArticleLink,
+                        Title = f.ArticleTitle,
+                        Summary = f.ArticleSummary,
+                        IsLiked = f.IsLiked
+                    })
+                    .ToList()
             };
         }
     }

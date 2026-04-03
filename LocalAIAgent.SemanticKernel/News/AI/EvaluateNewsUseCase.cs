@@ -77,6 +77,11 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
             const int BatchSize = 5;
+            string feedbackSection = userPreferences.FeedbackExamples.Count > 0
+                ? "\nPast feedback from this user (use these as additional examples when judging relevancy):\n" +
+                  userPreferences.GetFeedbackExamplesAsString()
+                : string.Empty;
+
             string prompt =
                 "Evaluate the following news articles based on user preferences.\n" +
                 "Respond ONLY with a valid JSON array — no markdown, no extra text, no trailing commas.\n" +
@@ -93,7 +98,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt + "User's dislikes: \n" + userPreferences.GetUserDislikesAsString() + "\n" +
-                "User's likes: \n" + userPreferences.GetUserInterestsAsString(), allowFunctionUse: false);
+                "User's likes: \n" + userPreferences.GetUserInterestsAsString() +
+                feedbackSection, allowFunctionUse: false);
 
             List<NewsArticle> result = [];
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))

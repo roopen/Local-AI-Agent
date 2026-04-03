@@ -1,5 +1,15 @@
-﻿import { NewsService } from "./UserApiClient/services/NewsService";
+﻿import axios from "axios";
+import { NewsService } from "./UserApiClient/services/NewsService";
 import type { ExpandedNewsResult } from "./UserApiClient/models/ExpandedNewsResult";
+import { OpenAPI } from "./UserApiClient/core/OpenAPI";
+
+export interface NewsFeedbackDto {
+    userId: number;
+    articleLink: string;
+    articleTitle: string;
+    articleSummary: string;
+    isLiked: boolean;
+}
 
 export class NewsClient {
     private static _instance: NewsClient;
@@ -25,5 +35,13 @@ export class NewsClient {
                     reject(err);
                 });
         });
+    }
+
+    async submitFeedback(feedback: NewsFeedbackDto): Promise<void> {
+        await axios.post(
+            `${OpenAPI.BASE}/api/News/Feedback`,
+            feedback,
+            { withCredentials: true }
+        );
     }
 }

@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NewsStreamClient } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import ChatComponent from './ChatComponent';
 import { Button, Chip } from '@progress/kendo-react-buttons';
+import { NewsClient } from '../clients/NewsClient';
+import UserService from '../users/UserService';
+
+const newsClient = NewsClient.getInstance();
+const userService = UserService.getInstance();
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -11,6 +16,7 @@ const NewsComponent: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<Record<string, boolean>>({});
     const newsStreamClient = NewsStreamClient.getInstance();
 
     const toggleChat = (index: number) => {
@@ -20,6 +26,27 @@ const NewsComponent: React.FC = () => {
             setSelectedArticleIndex(index);
         }
     };
+
+    const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean) => {
+        const user = userService.getCurrentUser();
+        if (!user) return;
+
+        const key = article.Link;
+        if (feedback[key] === isLiked) return;
+
+        try {
+            await newsClient.submitFeedback({
+                userId: parseInt(user.id, 10),
+                articleLink: article.Link,
+                articleTitle: article.Title,
+                articleSummary: article.Summary,
+                isLiked
+            });
+            setFeedback(prev => ({ ...prev, [key]: isLiked }));
+        } catch (err) {
+            console.error('❌ Failed to submit feedback:', err);
+        }
+    }, [feedback]);
 
     useEffect(() => {
         if (isLoading) {
@@ -120,6 +147,22 @@ const NewsComponent: React.FC = () => {
                                 style={{ cursor: 'pointer' }}>
                                 AIChat
                                 <span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
+                            </Button>
+                            <Button
+                                fillMode={feedback[article.Link] === true ? 'solid' : 'outline'}
+                                themeColor={feedback[article.Link] === true ? 'success' : 'base'}
+                                style={{ marginLeft: 5, cursor: 'pointer' }}
+                                title="I liked this article"
+                                onClick={() => handleFeedback(article, true)}>
+                                👍
+                            </Button>
+                            <Button
+                                fillMode={feedback[article.Link] === false ? 'solid' : 'outline'}
+                                themeColor={feedback[article.Link] === false ? 'error' : 'base'}
+                                style={{ marginLeft: 5, cursor: 'pointer' }}
+                                title="I didn't like this article"
+                                onClick={() => handleFeedback(article, false)}>
+                                👎
                             </Button>
                         </div>
                         {selectedArticleIndex === index && (
