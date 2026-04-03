@@ -7,6 +7,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Polly;
 using Polly.Retry;
+using Serilog;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -44,13 +45,16 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                 chatHistory.AddUserMessage(article.Content);
 
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
                 List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(chatHistory, openAiSettings, kernel, cts.Token).ConfigureAwait(false);
 
                 foreach (StreamingChatMessageContent? content in stream)
                 {
                     if (string.IsNullOrEmpty(content.Content))
                         continue;
+
+                    Log.Debug($"Evaluating news. LLM response: {content.Content}");
+                    Console.WriteLine($"Evaluating news. LLM response: {content.Content}");
 
                     bool? isRelevantArticle = content.Content?.Trim().ToLowerInvariant() switch
                     {
@@ -73,13 +77,19 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
             const int BatchSize = 5;
-            string prompt = "Evaluate the following news articles based on user preferences. " +
-                "Respond with an array of evaluations using the following json structure and nothing else." +
-                "[{" +
-                "\"ArticleIndex\": 0," +
-                "\"Relevancy\": \"High|Medium|Low\"," +
-                "}]\n" +
-                "User preferences are as follows: ";
+            string prompt =
+                "Evaluate the following news articles based on user preferences.\n" +
+                "Respond ONLY with a valid JSON array — no markdown, no extra text, no trailing commas.\n" +
+                "Include one entry for EVERY article in the input, in order.\n" +
+                "Use this exact structure:\n" +
+                "[\n" +
+                "  {\"ArticleIndex\": 0, \"Relevancy\": \"High\"" +
+                "  {\"ArticleIndex\": 1, \"Relevancy\": \"Low\"" +
+                "]\n" +
+                "Rules:\n" +
+                "- ArticleIndex is the 0-based index of the article as presented in the input\n" +
+                "- Relevancy must be exactly one of: High, Low\n" +
+                "User preferences are as follows:\n";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt + "User's dislikes: \n" + userPreferences.GetUserDislikesAsString() + "\n" +
@@ -98,7 +108,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 chatHistory.AddUserMessage(batchContent);
                 string jsonContent = string.Empty;
 
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
                 List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(chatHistory, openAiSettings, kernel, cts.Token).ConfigureAwait(false);
 
                 foreach (StreamingChatMessageContent? content in stream)
@@ -107,25 +117,19 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         continue;
 
                     jsonContent += content.Content;
+                }
 
-                    if (jsonContent.StartsWith("```", StringComparison.InvariantCultureIgnoreCase) &&
-                        jsonContent.EndsWith("```", StringComparison.InvariantCultureIgnoreCase) &&
-                        jsonContent.Length > 3)
+                if (!string.IsNullOrWhiteSpace(jsonContent))
+                {
+                    try
                     {
-                        try
-                        {
-                            List<EvaluationResult> evaluations = EvaluationResult.Deserialize(jsonContent);
-
-                            if (evaluations != null)
-                            {
-                                AddResults(result, batch, evaluations);
-                                jsonContent = string.Empty;
-                            }
-                        }
-                        catch
-                        {
-                            continue;
-                        }
+                        List<EvaluationResult> evaluations = EvaluationResult.Deserialize(jsonContent);
+                        if (evaluations != null)
+                            AddResults(result, batch, evaluations);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Failed to deserialize LLM response: " + jsonContent);
                     }
                 }
             }

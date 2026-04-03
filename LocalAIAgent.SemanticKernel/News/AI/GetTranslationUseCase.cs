@@ -6,6 +6,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -72,11 +73,12 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
-            string prompt = $"You are a professional translator. " +
-                $"You must translate the 'Title' and 'Summary' fields of each JSON object in the following array into {targetLanguage}. " +
-                "The incoming text may change language between fields, so you must translate each field independently. " +
-                $"Respond with a valid JSON array of the translations, maintaining the same structure. " +
-                $"Do not include any other text or formatting.";
+            string prompt = $"You are a JSON translation API. " +
+                $"Translate the 'title' and 'summary' fields of each object in the provided JSON array into {targetLanguage}. " +
+                "Each field must be translated independently. " +
+                "Output ONLY a valid JSON array with the same structure as the input. " +
+                "Your response must start with '[' and end with ']'. " +
+                "Do not include explanations, greetings, markdown, code blocks, or any text outside the JSON array.";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 prompt, allowFunctionUse: false);
@@ -97,8 +99,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 result += content.Content;
             }
 
-            // clean result from markdown
-            result = result.Replace("```json", "").Replace("```", "").Trim();
+            // Extract the JSON array, discarding any reasoning or markdown the model emitted around it
+            Match jsonMatch = Regex.Match(result, @"\[[\s\S]*\]");
+            result = jsonMatch.Success ? jsonMatch.Value : result;
 
             try
             {

@@ -8,7 +8,9 @@ using LocalAIAgent.SemanticKernel.News;
 using LocalAIAgent.SemanticKernel.News.AI;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace LocalAIAgent.API
 {
@@ -16,145 +18,159 @@ namespace LocalAIAgent.API
     {
         public static void Main(string[] args)
         {
-            WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+                .CreateLogger();
 
-            builder.AddServiceDefaults();
-
-            builder.WebHost.ConfigureKestrel(serverOptions =>
+            try
             {
-                serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
-            });
+                WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-            string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");
-            if (!string.IsNullOrEmpty(httpsUrl))
-            {
-                builder.WebHost.UseUrls(httpsUrl);
-            }
+                builder.Host.UseSerilog();
 
-            string? connectionString = builder.Configuration.GetValue<string>("SQLITE_DATASOURCE");
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                if (builder.Environment.IsDevelopment())
+                builder.AddServiceDefaults();
+
+                builder.WebHost.ConfigureKestrel(serverOptions =>
                 {
-                    connectionString = "ainews.db";
+                    serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
+                });
+
+                string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");
+                if (!string.IsNullOrEmpty(httpsUrl))
+                {
+                    builder.WebHost.UseUrls(httpsUrl);
                 }
-                else
+
+                string? connectionString = builder.Configuration.GetValue<string>("SQLITE_DATASOURCE");
+                if (string.IsNullOrEmpty(connectionString))
                 {
-                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    string appFolder = Path.Combine(appData, "LocalAIAgent");
-                    Directory.CreateDirectory(appFolder);
-                    connectionString = Path.Combine(appFolder, "ainews.db");
+                    if (builder.Environment.IsDevelopment())
+                    {
+                        connectionString = "ainews.db";
+                    }
+                    else
+                    {
+                        string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                        string appFolder = Path.Combine(appData, "LocalAIAgent");
+                        Directory.CreateDirectory(appFolder);
+                        connectionString = Path.Combine(appFolder, "ainews.db");
+                    }
                 }
-            }
 
-            string sqldatasource = "DataSource=" + connectionString;
-            builder.Services.AddDbContext<UserContext>(options =>
-                options.UseSqlite(sqldatasource));
+                string sqldatasource = "DataSource=" + connectionString;
+                builder.Services.AddDbContext<UserContext>(options =>
+                    options.UseSqlite(sqldatasource));
 
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-            builder.Services.AddSignalR();
-            builder.Services.AddSemanticKernel(builder.Configuration);
-            builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
-            builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
-            builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
-            builder.Services.AddScoped<NewsMetrics>();
-            builder.Services.AddMemoryCache();
-            builder.Services.AddDistributedMemoryCache();
+                builder.Services.AddControllers();
+                builder.Services.AddEndpointsApiExplorer();
+                builder.Services.AddSwaggerGen();
+                builder.Services.AddSignalR();
+                builder.Services.AddSemanticKernel(builder.Configuration);
+                builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
+                builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
+                builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
+                builder.Services.AddScoped<NewsMetrics>();
+                builder.Services.AddMemoryCache();
+                builder.Services.AddDistributedMemoryCache();
 
-            builder.Services.AddFido2(options =>
-            {
-                options.ServerDomain = "ainews.dev.localhost";
-                options.ServerName = "AI News";
-                options.Origins = new HashSet<string>
+                builder.Services.AddFido2(options =>
                 {
+                    options.ServerDomain = "ainews.dev.localhost";
+                    options.ServerName = "AI News";
+                    options.Origins = new HashSet<string>
+                    {
                     "https://ainews.dev.localhost:8888",
                     "https://ainews.dev.localhost:7276",
                     "https://apiainews.dev.localhost:7276",
                     "https://localhost:7276"
-                };
-            })
-                .AddCachedMetadataService(config =>
+                    };
+                })
+                    .AddCachedMetadataService(config =>
+                    {
+                        config.AddFidoMetadataRepository();
+                    });
+
+                builder.Services.AddCors(options =>
                 {
-                    config.AddFidoMetadataRepository();
+                    options.AddPolicy("AllowWebUI", policy =>
+                    {
+                        policy.WithOrigins(
+                            "https://ainews.dev.localhost:8888",
+                            "https://apiainews.dev.localhost:7276",
+                            "https://localhost",
+                            "https://ainews.dev.localhost:7276",
+                            "https://localhost:7276")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    });
                 });
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowWebUI", policy =>
+                builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                    .AddCookie(options =>
+                    {
+                        options.Cookie.HttpOnly = true;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                        options.Cookie.SameSite = SameSiteMode.Strict;
+                        options.ExpireTimeSpan = TimeSpan.FromMinutes(3600);
+                        options.LoginPath = "/api/Login/login";
+                        options.AccessDeniedPath = "/";
+                    });
+
+
+                WebApplication app = builder.Build();
+
+                // Ensure database is created and migrations are applied
+                using (IServiceScope scope = app.Services.CreateScope())
                 {
-                    policy.WithOrigins(
-                        "https://ainews.dev.localhost:8888",
-                        "https://apiainews.dev.localhost:7276",
-                        "https://localhost",
-                        "https://ainews.dev.localhost:7276",
-                        "https://localhost:7276")
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
-                });
-            });
+                    UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
+                    dbContext.Database.Migrate();
+                }
 
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie(options =>
+                // Configure the HTTP request pipeline.
+                if (app.Environment.IsDevelopment())
                 {
-                    options.Cookie.HttpOnly = true;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    options.Cookie.SameSite = SameSiteMode.Strict;
-                    options.ExpireTimeSpan = TimeSpan.FromMinutes(3600);
-                    options.LoginPath = "/api/Login/login";
-                    options.AccessDeniedPath = "/";
+                    app.UseSwagger();
+                    app.UseSwaggerUI();
+
+                    app.MapGet("/api", context =>
+                    {
+                        context.Response.Redirect("/swagger");
+                        return Task.CompletedTask;
+                    });
+                }
+
+                app.UseHttpsRedirection();
+
+                app.UseCors("AllowWebUI");
+
+                app.UseAuthentication();
+                app.UseAuthorization();
+
+                app.MapDefaultEndpoints();
+                app.MapControllers();
+                app.MapHub<ChatHub>("/chatHub");
+                app.MapHub<NewsHub>("/newsHub");
+
+                app.UseDefaultFiles();
+                app.UseStaticFiles();
+                app.UseFileServer(new FileServerOptions
+                {
+                    RequestPath = "",
+                    EnableDefaultFiles = true
                 });
 
+                // Run initial news fetch on startup
+                InitializeNewsCache(app);
+                LoadLLMOnStartup(app);
 
-            WebApplication app = builder.Build();
-
-            // Ensure database is created and migrations are applied
-            using (IServiceScope scope = app.Services.CreateScope())
-            {
-                UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
-                dbContext.Database.Migrate();
+                app.Run();
             }
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            finally
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-
-                app.MapGet("/api", context =>
-                {
-                    context.Response.Redirect("/swagger");
-                    return Task.CompletedTask;
-                });
+                Log.CloseAndFlush();
             }
-
-            app.UseHttpsRedirection();
-
-            app.UseCors("AllowWebUI");
-
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.MapDefaultEndpoints();
-            app.MapControllers();
-            app.MapHub<ChatHub>("/chatHub");
-            app.MapHub<NewsHub>("/newsHub");
-
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
-            app.UseFileServer(new FileServerOptions
-            {
-                RequestPath = "",
-                EnableDefaultFiles = true
-            });
-
-            // Run initial news fetch on startup
-            InitializeNewsCache(app);
-            LoadLLMOnStartup(app);
-
-            app.Run();
         }
 
         private static void InitializeNewsCache(WebApplication app)
@@ -217,13 +233,13 @@ namespace LocalAIAgent.API
                     configuration["AIOptions:ModelId"] = settings.ModelId;
                     configuration["AIOptions:ApiKey"] = settings.ApiKey;
                     configuration["AIOptions:EndpointUrl"] = settings.EndpointUrl;
-                    configuration["AIOptions:Temperature"] = settings.Temperature.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    configuration["AIOptions:TopP"] = settings.TopP.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    configuration["AIOptions:FrequencyPenalty"] = settings.FrequencyPenalty.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    configuration["AIOptions:PresencePenalty"] = settings.PresencePenalty.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    configuration["AIOptions:Temperature"] = settings.Temperature.ToString(CultureInfo.InvariantCulture);
+                    configuration["AIOptions:TopP"] = settings.TopP.ToString(CultureInfo.InvariantCulture);
+                    configuration["AIOptions:FrequencyPenalty"] = settings.FrequencyPenalty.ToString(CultureInfo.InvariantCulture);
+                    configuration["AIOptions:PresencePenalty"] = settings.PresencePenalty.ToString(CultureInfo.InvariantCulture);
 
                     ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
-                    await loadLLMUseCase.LoadLLMUseCaseAsync();
+                    await loadLLMUseCase.LoadLLMUseCaseAsync(configuration["AIOptions:ModelId"]!);
                 }
             });
         }
