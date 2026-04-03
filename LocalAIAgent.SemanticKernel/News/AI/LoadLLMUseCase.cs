@@ -1,28 +1,72 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Serilog;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
     public interface ILoadLLMUseCase
     {
-        Task<bool> LoadLLMUseCaseAsync();
+        Task<bool> LoadLLMUseCaseAsync(string modelId);
     }
 
     internal class LoadLLMUseCase(
         [FromKeyedServices("General")] IChatCompletionService chatCompletion,
-        Kernel kernel) : ILoadLLMUseCase
+        Kernel kernel,
+        HttpClient httpClient) : ILoadLLMUseCase
     {
-        public async Task<bool> LoadLLMUseCaseAsync()
+        private const string LMStudioLoadUrl = "http://localhost:1234/api/v1/models/load";
+
+        private sealed record LoadModelRequest(
+            string Model,
+            int ContextLength,
+            bool FlashAttention,
+            bool EchoLoadConfig);
+
+        public async Task<bool> LoadLLMUseCaseAsync(string modelId)
         {
             try
             {
-                await chatCompletion.GetChatMessageContentAsync(string.Empty, kernel: kernel);
+                LoadModelRequest request = new(
+                    Model: modelId,
+                    ContextLength: 23322,
+                    FlashAttention: true,
+                    EchoLoadConfig: true);
+
+                using HttpRequestMessage httpRequest = new(HttpMethod.Post, LMStudioLoadUrl)
+                {
+                    Content = JsonContent.Create(request, options: new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+                    })
+                };
+
+                string? apiToken = Environment.GetEnvironmentVariable("LM_API_TOKEN");
+                if (!string.IsNullOrEmpty(apiToken))
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
+
+                using HttpResponseMessage response = await httpClient.SendAsync(httpRequest);
+                response.EnsureSuccessStatusCode();
+                Log.Debug($"LLM loaded by LM Studio: " + await response.Content.ReadAsStringAsync());
+                Console.WriteLine($"LLM loaded by LM Studio: " + await response.Content.ReadAsStringAsync());
                 return true;
             }
-            catch (Exception)
+            catch
             {
-                return false;
+                try
+                {
+                    ChatMessageContent response = await chatCompletion.GetChatMessageContentAsync("Hello", kernel: kernel);
+                    Log.Debug($"LLM Load response: {response}");
+                    Console.WriteLine($"LLM Load response: {response}");
+                    return true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             }
         }
     }
