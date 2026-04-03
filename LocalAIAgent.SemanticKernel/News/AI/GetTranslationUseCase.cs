@@ -17,7 +17,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
-        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
+        [FromKeyedServices("Translation")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options) : IGetTranslationUseCase
     {
