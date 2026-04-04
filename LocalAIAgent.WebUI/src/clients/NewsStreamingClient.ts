@@ -77,6 +77,8 @@ export class NewsStreamClient {
                         item.categories ?? [],
                         mapRelevancy(item.relevancy),
                         item.reasoning ?? null,
+                        item.topic ?? null,
+                        item.event ?? null,
                         item.inputTokens ?? null,
                         item.outputTokens ?? null
                     );

@@ -38,6 +38,8 @@ const newsArticle = new NewsArticle(
   'US',
   null,
   null,
+  null,
+  null,
 );
 
 describe('ChatComponent', () => {

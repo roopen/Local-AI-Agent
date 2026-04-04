@@ -9,6 +9,8 @@ export type NewsArticle = {
     categories?: Array<string> | null;
     relevancy: Relevancy;
     reasoning?: string | null;
+    topic?: string | null;
+    event?: string | null;
     inputTokens?: number | null;
     outputTokens?: number | null;
 };

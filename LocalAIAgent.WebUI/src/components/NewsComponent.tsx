@@ -12,11 +12,13 @@ const userService = UserService.getInstance();
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
-    const [selectedArticleIndex, setSelectedArticleIndex] = useState<number | null>(null);
+    const [selectedArticleLink, setSelectedArticleLink] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<Record<string, boolean>>({});
     const [pendingFeedback, setPendingFeedback] = useState<{ article: NewsArticle; isLiked: boolean } | null>(null);
     const [feedbackReason, setFeedbackReason] = useState('');
@@ -30,12 +32,8 @@ const NewsComponent: React.FC = () => {
         return () => mq.removeEventListener('change', handler);
     }, []);
 
-    const toggleChat = (index: number) => {
-        if (selectedArticleIndex === index) {
-            setSelectedArticleIndex(null);
-        } else {
-            setSelectedArticleIndex(index);
-        }
+    const toggleChat = (link: string) => {
+        setSelectedArticleLink(prev => prev === link ? null : link);
     };
 
     const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string) => {
@@ -113,12 +111,34 @@ const NewsComponent: React.FC = () => {
         return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [articles]);
 
-    const filteredArticles = useMemo(() => {
-        if (!selectedSource) {
-            return articles;
+    const topics = useMemo(() => {
+        const base = selectedSource ? articles.filter(a => a.Source === selectedSource) : articles;
+        const set = new Set<string>();
+        for (const a of base) {
+            if (a.Topic?.trim()) set.add(a.Topic.trim());
         }
-        return articles.filter(a => a.Source === selectedSource);
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [articles, selectedSource]);
+
+    const events = useMemo(() => {
+        const base = articles.filter(a =>
+            (!selectedSource || a.Source === selectedSource) &&
+            (!selectedTopic || (a.Topic?.trim() ?? '') === selectedTopic)
+        );
+        const set = new Set<string>();
+        for (const a of base) {
+            if (a.Event?.trim()) set.add(a.Event.trim());
+        }
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [articles, selectedSource, selectedTopic]);
+
+    const filteredArticles = useMemo(() => {
+        return articles.filter(a =>
+            (!selectedSource || a.Source === selectedSource) &&
+            (!selectedTopic || (a.Topic?.trim() ?? '') === selectedTopic) &&
+            (!selectedEvent || (a.Event?.trim() ?? '') === selectedEvent)
+        );
+    }, [articles, selectedSource, selectedTopic, selectedEvent]);
 
     const tokenStats = useMemo(() => {
         const withInput = filteredArticles.filter(a => a.InputTokens != null);
@@ -129,6 +149,39 @@ const NewsComponent: React.FC = () => {
         const avgOutput = withOutput.length > 0 ? withOutput.reduce((s, a) => s + a.OutputTokens!, 0) / withOutput.length : null;
         const avgTotal = withBoth.length > 0 ? withBoth.reduce((s, a) => s + a.InputTokens! + a.OutputTokens!, 0) / withBoth.length : null;
         return { avgInput, avgOutput, avgTotal };
+    }, [filteredArticles]);
+
+    const groupedArticles = useMemo(() => {
+        const topicOrder: string[] = [];
+        const topicMap = new Map<string, Map<string, NewsArticle[]>>();
+
+        for (const article of filteredArticles) {
+            const topicKey = article.Topic?.trim() ?? '';
+            const eventKey = article.Event?.trim() ?? '';
+
+            if (!topicMap.has(topicKey)) {
+                topicMap.set(topicKey, new Map());
+                topicOrder.push(topicKey);
+            }
+            const eventMap = topicMap.get(topicKey)!;
+            if (!eventMap.has(eventKey)) {
+                eventMap.set(eventKey, []);
+            }
+            eventMap.get(eventKey)!.push(article);
+        }
+
+        const sortedTopics = [
+            ...topicOrder.filter(k => k !== ''),
+            ...topicOrder.filter(k => k === '')
+        ];
+
+        return sortedTopics.map(topicKey => ({
+            topic: topicKey || null,
+            eventGroups: Array.from(topicMap.get(topicKey)!.entries()).map(([eventKey, arts]) => ({
+                event: eventKey || null,
+                articles: arts
+            }))
+        }));
     }, [filteredArticles]);
 
     return (
@@ -144,11 +197,11 @@ const NewsComponent: React.FC = () => {
                         {tokenStats.avgTotal != null && <> &nbsp;·&nbsp; Total: {Math.round(tokenStats.avgTotal).toLocaleString()}</>}
                     </p>
                 )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '3vh', marginTop: '3vh', width: '80%' }}>
-                    <span style={{ fontWeight: 600 }}>Filter by source:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', marginTop: '3vh', width: '80%' }}>
+                    <span style={{ fontWeight: 600 }}>Source:</span>
                     <Chip
                         selected={!selectedSource}
-                        onClick={() => setSelectedSource(null)}
+                        onClick={() => { setSelectedSource(null); setSelectedTopic(null); setSelectedEvent(null); }}
                         size={'large'}
                         fillMode={'outline'}
                         themeColor={'base'}
@@ -159,7 +212,7 @@ const NewsComponent: React.FC = () => {
                         <Chip
                             key={src}
                             selected={selectedSource === src}
-                            onClick={() => setSelectedSource(src)}
+                            onClick={() => { setSelectedSource(src); setSelectedTopic(null); setSelectedEvent(null); }}
                             size={'large'}
                             fillMode={'outline'}
                             themeColor={'base'}
@@ -168,84 +221,163 @@ const NewsComponent: React.FC = () => {
                         </Chip>
                     ))}
                 </div>
+                {topics.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', width: '80%' }}>
+                        <span style={{ fontWeight: 600 }}>Topic:</span>
+                        <Chip
+                            selected={!selectedTopic}
+                            onClick={() => { setSelectedTopic(null); setSelectedEvent(null); }}
+                            size={'large'}
+                            fillMode={'outline'}
+                            themeColor={'base'}
+                        >
+                            All
+                        </Chip>
+                        {topics.map(topic => (
+                            <Chip
+                                key={topic}
+                                selected={selectedTopic === topic}
+                                onClick={() => { setSelectedTopic(topic); setSelectedEvent(null); }}
+                                size={'large'}
+                                fillMode={'outline'}
+                                themeColor={'base'}
+                            >
+                                {topic}
+                            </Chip>
+                        ))}
+                    </div>
+                )}
+                {events.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '3vh', width: '80%' }}>
+                        <span style={{ fontWeight: 600 }}>Event:</span>
+                        <Chip
+                            selected={!selectedEvent}
+                            onClick={() => setSelectedEvent(null)}
+                            size={'large'}
+                            fillMode={'outline'}
+                            themeColor={'base'}
+                        >
+                            All
+                        </Chip>
+                        {events.map(event => (
+                            <Chip
+                                key={event}
+                                selected={selectedEvent === event}
+                                onClick={() => setSelectedEvent(event)}
+                                size={'large'}
+                                fillMode={'outline'}
+                                themeColor={'base'}
+                            >
+                                {event}
+                            </Chip>
+                        ))}
+                    </div>
+                )}
                 <hr style={{ marginBottom: '3vh' }} />
-                {filteredArticles.map((article, index) => (
-                    <div key={`${article.Link}-${index}`}>
-                        <h2 style={{ marginBottom: '1vh', marginTop: '1vh' }}>{article.Title}</h2>
-                        <p style={{ marginBottom: '1.5vh', marginTop: '0vh' }}>{article.Summary}</p>
-                        <div style={{ margin: '0 auto', marginBottom: '1.5vh' }} >
-                            <Button
-                                themeColor={'tertiary'}
-                                fillMode={'outline'}
-                                style={{ marginRight: 5 }}
-                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}>
-                                Read the article at {article.Source} <span>&#x1F5D7;</span>
-                            </Button>
-                            <Button
-                                fillMode={'outline'}
-                                onClick={() => toggleChat(index)}
-                                style={{ cursor: 'pointer' }}>
-                                AIChat
-                                <span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
-                            </Button>
-                            <Button
-                                fillMode={feedback[article.Link] === true ? 'solid' : 'outline'}
-                                themeColor={feedback[article.Link] === true ? 'success' : 'base'}
-                                style={{ marginLeft: 5, cursor: 'pointer' }}
-                                title="I liked this article"
-                                onClick={() => {
-                                    if (feedback[article.Link] === true) {
-                                        handleFeedback(article, true);
-                                    } else {
-                                        setPendingFeedback({ article, isLiked: true });
-                                        setFeedbackReason('');
-                                    }
-                                }}>
-                                👍
-                            </Button>
-                            <Button
-                                fillMode={feedback[article.Link] === false ? 'solid' : 'outline'}
-                                themeColor={feedback[article.Link] === false ? 'error' : 'base'}
-                                style={{ marginLeft: 5, cursor: 'pointer' }}
-                                title="I didn't like this article"
-                                onClick={() => {
-                                    if (feedback[article.Link] === false) {
-                                        handleFeedback(article, false);
-                                    } else {
-                                        setPendingFeedback({ article, isLiked: false });
-                                        setFeedbackReason('');
-                                    }
-                                }}>
-                                👎
-                            </Button>
-                            {(article.InputTokens != null || article.OutputTokens != null) && (
-                                <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: 0, marginBottom: '1.5vh' }}>
-                                    {(article.InputTokens != null || article.OutputTokens != null) && <>Token usage: </>}
-                                    {article.InputTokens != null && <>In: {article.InputTokens.toLocaleString()}</>}
-                                    {article.InputTokens != null && article.OutputTokens != null && <> &nbsp;·&nbsp; </>}
-                                    {article.OutputTokens != null && <>Out: {article.OutputTokens.toLocaleString()}</>}
-                                    {article.InputTokens != null && article.OutputTokens != null && (
-                                        <> &nbsp;·&nbsp; Total: {(article.InputTokens + article.OutputTokens).toLocaleString()}</>
-                                    )}
-                                </p>
-                            )}
-                        </div>
-                        {selectedArticleIndex === index && (
-                            <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
-                                <ChatComponent
-                                    article={article}
-                                />
+                {groupedArticles.map(({ topic, eventGroups }) => (
+                    <div key={topic ?? '__no_topic__'}>
+                        {topic && (
+                            <div style={{ fontSize: '1.25em', fontWeight: 700, marginTop: '5vh', marginBottom: '1.5vh', borderLeft: '4px solid #888', paddingLeft: '12px' }}>
+                                {topic.toUpperCase()}
                             </div>
                         )}
-                        <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
+                        {eventGroups.map(({ event, articles: groupArticles }) => (
+                            <div key={event ?? '__no_event__'}>
+                                {event && (
+                                    <div style={{ fontSize: '1.25em', fontWeight: 700, marginTop: '1.5vh', marginBottom: '1.5vh', paddingLeft: topic ? '16px' : '0', color: '#888' }}>
+                                        {event.toUpperCase()}
+                                    </div>
+                                )}
+                                {groupArticles.map((article) => (
+                                    <div key={article.Link}>
+                                        <h2 style={{ marginBottom: '1vh', marginTop: '1vh' }}>{article.Title}</h2>
+                                        <p style={{ marginBottom: '1.5vh', marginTop: '0vh' }}>{article.Summary}</p>
+                                        <div style={{ margin: '0 auto', marginBottom: '1.5vh' }}>
+                                            <Button
+                                                themeColor={'tertiary'}
+                                                fillMode={'outline'}
+                                                style={{ marginRight: 5 }}
+                                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}>
+                                                Read the article at {article.Source} <span>&#x1F5D7;</span>
+                                            </Button>
+                                            <Button
+                                                fillMode={'outline'}
+                                                onClick={() => toggleChat(article.Link)}
+                                                style={{ cursor: 'pointer' }}>
+                                                AIChat
+                                                <span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
+                                            </Button>
+                                            <Button
+                                                fillMode={feedback[article.Link] === true ? 'solid' : 'outline'}
+                                                themeColor={feedback[article.Link] === true ? 'success' : 'base'}
+                                                style={{ marginLeft: 5, cursor: 'pointer' }}
+                                                title="I liked this article"
+                                                onClick={() => {
+                                                    if (feedback[article.Link] === true) {
+                                                        handleFeedback(article, true);
+                                                    } else {
+                                                        setPendingFeedback({ article, isLiked: true });
+                                                        setFeedbackReason(article.Reasoning ?? '');
+                                                    }
+                                                }}>
+                                                👍
+                                            </Button>
+                                            <Button
+                                                fillMode={feedback[article.Link] === false ? 'solid' : 'outline'}
+                                                themeColor={feedback[article.Link] === false ? 'error' : 'base'}
+                                                style={{ marginLeft: 5, cursor: 'pointer' }}
+                                                title="I didn't like this article"
+                                                onClick={() => {
+                                                    if (feedback[article.Link] === false) {
+                                                        handleFeedback(article, false);
+                                                    } else {
+                                                        setPendingFeedback({ article, isLiked: false });
+                                                        setFeedbackReason('');
+                                                    }
+                                                }}>
+                                                👎
+                                            </Button>
+                                            {article.Reasoning && (
+                                                <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: '0.5vh', marginBottom: '0.5vh' }}>
+                                                    {article.Reasoning}
+                                                </p>
+                                            )}
+                                            {(article.InputTokens != null || article.OutputTokens != null) && (
+                                                <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: 0, marginBottom: '0.5vh' }}>
+                                                    Token usage: 
+                                                    {article.InputTokens != null && <>In: {article.InputTokens.toLocaleString()}</>}
+                                                    {article.InputTokens != null && article.OutputTokens != null && <> &nbsp;·&nbsp; </>}
+                                                    {article.OutputTokens != null && <>Out: {article.OutputTokens.toLocaleString()}</>}
+                                                    {article.InputTokens != null && article.OutputTokens != null && (
+                                                        <> &nbsp;·&nbsp; Total: {(article.InputTokens + article.OutputTokens).toLocaleString()}</>
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                        {selectedArticleLink === article.Link && (
+                                            <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
+                                                <ChatComponent article={article} />
+                                            </div>
+                                        )}
+                                        <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
                     </div>
                 ))}
                 {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
                 {!isLoading && filteredArticles.length === 0 && !error && <p>No articles found.</p>}
             </div>
             {pendingFeedback && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: isDark ? '#282c34' : 'white', color: isDark ? 'rgba(255,255,255,0.87)' : '#213547', padding: 24, borderRadius: 8, width: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: isDark ? '1px solid #444' : '1px solid #ccc' }}>
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{
+                        background: isDark ? '#282c34' : 'white', color: isDark ? 'rgba(255,255,255,0.87)' : '#213547',
+                        padding: 24, borderRadius: 8, width: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: isDark ? '1px solid #444' : '1px solid #ccc'
+                    }}>
                         <h3 style={{ marginTop: 0 }}>
                             {pendingFeedback.isLiked ? '👍 Why did you like this?' : '👎 Why didn\'t you like this?'}
                         </h3>

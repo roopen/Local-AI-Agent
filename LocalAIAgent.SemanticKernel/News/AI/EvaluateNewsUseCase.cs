@@ -9,6 +9,8 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using Polly;
 using Polly.Retry;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -29,10 +31,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
             const int BatchSize = 5;
-            string feedbackSection = userPreferences.FeedbackExamples.Count > 0
-                ? "\nPast feedback from this user (use these as additional examples when judging relevancy):\n" +
-                  userPreferences.GetFeedbackExamplesAsString()
-                : string.Empty;
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 userPreferences.BuildSystemPrompt(),
@@ -42,10 +40,16 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
                                         .Chunk(BatchSize);
 
+            string preferencesKey = GetPreferencesKey(userPreferences);
+
             foreach (NewsItem[] batch in articleBatches)
             {
                 chatHistory.Clear();
-                string batchContent = string.Join("\n---ARTICLE SEPARATOR---\n",
+
+                HashSet<string> knownTopics = LoadKnownTopicsAndEvents(preferencesKey);
+                string topicsEventsContext = FormatKnownTopicsAndEvents(knownTopics);
+
+                string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     batch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
                 chatHistory.AddUserMessage(batchContent);
@@ -92,6 +96,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                                 NewsLogging.LogTokenUsage(logger, totalInputTokens, totalOutputTokens, totalTokensUsed, null);
                             }
+                            UpdateKnownTopicsAndEvents(knownTopics, evaluations);
                             AddResults(result, batch, evaluations);
                         }
                     }
@@ -106,6 +111,67 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
 
             return new EvaluatedNewsArticles { NewsArticles = result, LowRelevancyPercentage = (decimal)filterPercentage };
+        }
+
+        private const string TopicsCacheKeyPrefix = "news_known_topics_";
+        private const string EventsCacheKeyPrefix = "news_known_events_";
+
+        private static string GetPreferencesKey(UserPreferences preferences) =>
+            Convert.ToHexString(SHA256.HashData(
+                Encoding.UTF8.GetBytes(preferences.Prompt + string.Join(",", preferences.Interests))));
+
+        private HashSet<string> LoadKnownTopicsAndEvents(string key)
+        {
+            HashSet<string> topics = memoryCache.GetOrCreate(TopicsCacheKeyPrefix + key, e =>
+            {
+                e.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24);
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            })!;
+
+            topics.RemoveWhere(t => t.Contains('/'));
+
+            return topics;
+        }
+
+        private static void UpdateKnownTopicsAndEvents(HashSet<string> topics, IEnumerable<EvaluationResult> evaluations)
+        {
+            foreach (EvaluationResult evalr in evaluations)
+            {
+                if (!string.IsNullOrWhiteSpace(evalr.Topic))
+                {
+                    string topic = NormalizeLabel(evalr.Topic);
+                    if (!string.IsNullOrWhiteSpace(topic) && !IsCompoundLabel(topic, topics))
+                        topics.Add(topic);
+                }
+            }
+        }
+
+        private static bool IsCompoundLabel(string label, HashSet<string> existing) =>
+            label.Contains('/') && label.Split('/').Select(p => p.Trim()).Any(existing.Contains);
+
+        private static string NormalizeLabel(string label)
+        {
+            label = label.Trim();
+            int start = 0;
+            while (start < label.Length && !char.IsAsciiLetter(label[start]))
+                start++;
+            return start > 0 ? label[start..] : label;
+        }
+
+        private static string FormatKnownTopicsAndEvents(HashSet<string> topics)
+        {
+            if (topics.Count == 0)
+                return string.Empty;
+
+            StringBuilder sb = new();
+            sb.AppendLine("Strict labeling constraints — you MUST follow these:");
+            if (topics.Count > 0)
+            {
+                sb.AppendLine($"- Topic MUST be one of these exact values: {string.Join(", ", topics)}");
+                sb.AppendLine("  Only introduce a new topic if none of the above fits. Never combine topics with slashes.");
+            }
+            sb.AppendLine();
+            return sb.ToString();
         }
 
         private static void AddResults(List<NewsArticle> result, NewsItem[] batch, List<EvaluationResult> evaluations)
@@ -124,6 +190,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         Categories = [],
                         Relevancy = evaluations[i].Relevancy,
                         Reasoning = evaluations[i].Reasoning,
+                        Topic = evaluations[i].Topic,
                         InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
                             ? evaluations[i].TokenUsage?.InputTokenCount : null,
                         OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
