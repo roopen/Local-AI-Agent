@@ -9,6 +9,7 @@ export interface NewsFeedbackDto {
     articleTitle: string;
     articleSummary: string;
     isLiked: boolean;
+    reason?: string;
 }
 
 export class NewsClient {

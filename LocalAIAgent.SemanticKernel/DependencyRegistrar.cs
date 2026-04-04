@@ -25,6 +25,7 @@ namespace LocalAIAgent.SemanticKernel
             AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
             services.AddKernel().GetSemanticKernelBuilder(aiOptions);
             services.AddSingleton(aiOptions);
+            services.AddMemoryCache();
 
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();

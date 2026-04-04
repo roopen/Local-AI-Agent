@@ -7,4 +7,5 @@ public class NewsFeedbackDto
     public required string ArticleTitle { get; set; }
     public required string ArticleSummary { get; set; }
     public required bool IsLiked { get; set; }
+    public string? Reason { get; set; }
 }

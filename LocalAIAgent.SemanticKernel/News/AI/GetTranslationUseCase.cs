@@ -76,7 +76,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             string prompt = $"You are a JSON translation API. " +
                 $"Translate the 'title' and 'summary' fields of each object in the provided JSON array into {targetLanguage}. " +
                 "Each field must be translated independently. " +
-                "Output ONLY a valid JSON array with the same structure as the input. " +
+                "Output ONLY a valid JSON array with the same structure as the input. (Do not think out loud!) " +
                 "Your response must start with '[' and end with ']'. " +
                 "Do not include explanations, greetings, markdown, code blocks, or any text outside the JSON array.";
 

@@ -6,8 +6,6 @@ namespace LocalAIAgent.SemanticKernel.News
 {
     public interface IGetNewsUseCase
     {
-        Task<List<NewsItem>> GetAsync(UserPreferences preferences);
-        Task<EvaluatedNewsArticles> GetAsyncV2(UserPreferences preferences);
         IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(UserPreferences preferences, CancellationToken cancellationToken);
     }
 
@@ -16,24 +14,6 @@ namespace LocalAIAgent.SemanticKernel.News
         IEvaluateNewsUseCase evaluateNewsUseCase,
         IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
     {
-        public async Task<List<NewsItem>> GetAsync(UserPreferences preferences)
-        {
-            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
-
-            return await evaluateNewsUseCase.EvaluateArticles(newsItems, preferences);
-        }
-
-        public async Task<EvaluatedNewsArticles> GetAsyncV2(UserPreferences preferences)
-        {
-            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
-
-            EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(newsItems, preferences);
-
-            evaluatedArticles.NewsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
-
-            return evaluatedArticles;
-        }
-
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
             UserPreferences preferences,
             [EnumeratorCancellation] CancellationToken cancellationToken)
