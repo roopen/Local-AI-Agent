@@ -36,6 +36,8 @@ const newsArticle = new NewsArticle(
   ['Technology', 'AI'],
   'High',
   'US',
+  null,
+  null,
 );
 
 describe('ChatComponent', () => {

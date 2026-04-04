@@ -9,6 +9,8 @@ class NewsArticle {
     readonly Categories: string[];
     readonly Relevancy: Relevancy;
     readonly Reasoning: string | null;
+    readonly InputTokens: number | null;
+    readonly OutputTokens: number | null;
 
     constructor(
         title: string,
@@ -18,7 +20,9 @@ class NewsArticle {
         source: string,
         categories: string[],
         relevancy: Relevancy,
-        reasoning: string | null
+        reasoning: string | null,
+        inputTokens: number | null,
+        outputTokens: number | null
     ) {
         this.Title = title;
         this.Summary = summary;
@@ -28,6 +32,8 @@ class NewsArticle {
         this.Categories = categories;
         this.Relevancy = relevancy;
         this.Reasoning = reasoning;
+        this.InputTokens = inputTokens;
+        this.OutputTokens = outputTokens;
     }
 }
 

@@ -358,94 +358,6 @@
         }
       }
     },
-    "/api/News/{userId}": {
-      "get": {
-        "tags": [
-          "News"
-        ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NewsItem"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NewsItem"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NewsItem"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/News/GetNewsV2": {
-      "post": {
-        "tags": [
-          "News"
-        ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluatedNewsArticles"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluatedNewsArticles"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluatedNewsArticles"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/News/GetExpandedNews": {
       "post": {
         "tags": [
@@ -490,6 +402,49 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/News/Feedback": {
+      "post": {
+        "tags": [
+          "News"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsFeedbackDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsFeedbackDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsFeedbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/News/FineTuningDataset": {
+      "get": {
+        "tags": [
+          "News"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1231,36 +1186,6 @@
         },
         "additionalProperties": false
       },
-      "EvaluatedNewsArticles": {
-        "required": [
-          "newsArticles"
-        ],
-        "type": "object",
-        "properties": {
-          "newsArticles": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NewsArticle"
-            },
-            "nullable": true
-          },
-          "highRelevancyPercentage": {
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "mediumRelevancyPercentage": {
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "lowRelevancyPercentage": {
-            "type": "number",
-            "format": "double"
-          }
-        },
-        "additionalProperties": false
-      },
       "ExpandedNewsResult": {
         "type": "object",
         "properties": {
@@ -1328,91 +1253,65 @@
         ],
         "type": "string"
       },
-      "NewsArticle": {
+      "NewsFeedbackDto": {
         "required": [
-          "categories",
-          "link",
-          "publishedDate",
-          "relevancy",
-          "source",
-          "summary",
-          "title"
+          "articleLink",
+          "articleSummary",
+          "articleTitle",
+          "isLiked",
+          "userId"
         ],
         "type": "object",
         "properties": {
-          "title": {
+          "userId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "articleLink": {
             "type": "string",
             "nullable": true
           },
-          "summary": {
+          "articleTitle": {
             "type": "string",
             "nullable": true
           },
-          "publishedDate": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "link": {
+          "articleSummary": {
             "type": "string",
             "nullable": true
           },
-          "source": {
-            "type": "string",
-            "nullable": true
+          "isLiked": {
+            "type": "boolean"
           },
-          "categories": {
-            "uniqueItems": true,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "nullable": true
-          },
-          "relevancy": {
-            "$ref": "#/components/schemas/Relevancy"
-          },
-          "reasoning": {
+          "reason": {
             "type": "string",
             "nullable": true
           }
         },
         "additionalProperties": false
       },
-      "NewsItem": {
+      "NewsFeedbackExample": {
+        "required": [
+          "articleLink",
+          "isLiked",
+          "summary",
+          "title"
+        ],
         "type": "object",
         "properties": {
-          "publishDate": {
+          "articleLink": {
             "type": "string",
-            "format": "date-time",
-            "readOnly": true
+            "nullable": true
           },
           "title": {
             "type": "string",
-            "nullable": true,
-            "readOnly": true
+            "nullable": true
           },
           "summary": {
             "type": "string",
-            "nullable": true,
-            "readOnly": true
+            "nullable": true
           },
-          "categories": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "nullable": true,
-            "readOnly": true
-          },
-          "link": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
-          },
-          "source": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
+          "isLiked": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -1539,15 +1438,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "Relevancy": {
-        "enum": [
-          0,
-          1,
-          2
-        ],
-        "type": "integer",
-        "format": "int32"
       },
       "ResidentKeyRequirement": {
         "enum": [
@@ -1695,6 +1585,13 @@
             "type": "array",
             "items": {
               "type": "string"
+            },
+            "nullable": true
+          },
+          "feedbackExamples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsFeedbackExample"
             },
             "nullable": true
           }

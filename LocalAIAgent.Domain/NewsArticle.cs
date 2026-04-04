@@ -10,6 +10,8 @@ namespace LocalAIAgent.Domain
         public required HashSet<string> Categories { get; set; }
         public required Relevancy Relevancy { get; set; }
         public string? Reasoning { get; set; }
+        public int? InputTokens { get; set; }
+        public int? OutputTokens { get; set; }
     }
 
     public enum Relevancy

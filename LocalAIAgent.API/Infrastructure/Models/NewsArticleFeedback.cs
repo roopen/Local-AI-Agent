@@ -7,6 +7,7 @@ public class NewsArticleFeedback
     public required string ArticleTitle { get; set; }
     public required string ArticleSummary { get; set; }
     public required bool IsLiked { get; set; }
+    public required string Reason { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int UserPreferencesId { get; set; }
     public UserPreferences? UserPreferences { get; set; }

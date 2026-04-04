@@ -1,11 +1,14 @@
 using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
+using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel.News.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.Json;
 
 namespace LocalAIAgent.API.Api.Controllers
 {
@@ -42,7 +45,15 @@ namespace LocalAIAgent.API.Api.Controllers
 
             if (existing is not null)
             {
+                if (existing.IsLiked == dto.IsLiked)
+                {
+                    userContext.NewsFeedback.Remove(existing);
+                    await userContext.SaveChangesAsync();
+                    return Ok();
+                }
+
                 existing.IsLiked = dto.IsLiked;
+                existing.Reason = dto.Reason ?? string.Empty;
                 existing.CreatedAt = DateTime.UtcNow;
             }
             else
@@ -53,12 +64,63 @@ namespace LocalAIAgent.API.Api.Controllers
                     ArticleTitle = dto.ArticleTitle,
                     ArticleSummary = dto.ArticleSummary,
                     IsLiked = dto.IsLiked,
+                    Reason = dto.Reason ?? string.Empty,
                     UserPreferencesId = preferences.Id
                 });
             }
 
             await userContext.SaveChangesAsync();
             return Ok();
+        }
+
+        [AllowAnonymous]
+        [HttpGet("FineTuningDataset")]
+        public async Task<IActionResult> GetFineTuningDataset()
+        {
+            const int BatchSize = 5;
+
+            List<UserPreferences> allPreferences = await userContext.UserPreferences
+                .Include(p => p.FeedbackExamples)
+                .Where(p => p.FeedbackExamples.Count > 0)
+                .ToListAsync();
+
+            StringBuilder sb = new();
+
+            foreach (UserPreferences preferences in allPreferences)
+            {
+                Domain.UserPreferences userPreferences = preferences.MapToDomainUserPreferences();
+                string systemPrompt = userPreferences.BuildSystemPrompt();
+
+                foreach (NewsArticleFeedback[] batch in preferences.FeedbackExamples.Chunk(BatchSize))
+                {
+                    string userContent = string.Join("\n---ARTICLE SEPARATOR---\n",
+                        batch.Select((f, i) =>
+                        {
+                            string source = Uri.TryCreate(f.ArticleLink, UriKind.Absolute, out Uri? uri)
+                                ? uri.DnsSafeHost
+                                : f.ArticleLink;
+                            return $"Article {i}:\n{f.ArticleTitle}\n\n{f.ArticleSummary}\nSource: {source}\n";
+                        }));
+
+                    string assistantContent = JsonSerializer.Serialize(
+                        batch.Select((f, i) => new { ArticleIndex = i, Relevancy = f.IsLiked ? "High" : "Low" }));
+
+                    var entry = new
+                    {
+                        messages = new object[]
+                        {
+                            new { role = "system", content = systemPrompt },
+                            new { role = "user", content = userContent },
+                            new { role = "assistant", content = assistantContent }
+                        }
+                    };
+
+                    sb.AppendLine(JsonSerializer.Serialize(entry));
+                }
+            }
+
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return File(bytes, "application/x-ndjson", "finetuning_dataset.jsonl");
         }
     }
 }

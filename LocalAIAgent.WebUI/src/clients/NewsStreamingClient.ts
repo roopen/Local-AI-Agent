@@ -1,8 +1,8 @@
 import * as signalR from "@microsoft/signalr";
 import NewsArticle from "../domain/NewsArticle";
 import type { Relevancy } from "../domain/Relevancy";
-import type { NewsArticle as NewsDto } from "./UserApiClient/models/NewsArticle";
-import { Relevancy as RelevancyDto } from "./UserApiClient/models/Relevancy";
+import type { NewsArticle as NewsDto } from "./newsHub/NewsArticle";
+import { Relevancy as RelevancyDto } from "./newsHub/Relevancy";
 import UserService from "../users/UserService";
 
 type ArticleCallback = (article: NewsArticle) => void;
@@ -76,7 +76,9 @@ export class NewsStreamClient {
                         item.source ?? '',
                         item.categories ?? [],
                         mapRelevancy(item.relevancy),
-                        item.reasoning ?? null
+                        item.reasoning ?? null,
+                        item.inputTokens ?? null,
+                        item.outputTokens ?? null
                     );
                     onArticleReceived(article);
                 },
