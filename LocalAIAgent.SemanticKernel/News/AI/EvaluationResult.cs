@@ -14,11 +14,24 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         public static List<EvaluationResult> Deserialize(string json)
         {
+            const string channelMarker = "<channel|>";
+            int markerIndex = json.IndexOf(channelMarker, StringComparison.Ordinal);
+            if (markerIndex >= 0)
+            {
+                json = json[(markerIndex + channelMarker.Length)..];
+                json = json[json.IndexOf('[', StringComparison.Ordinal)..];
+            }
+            else
+            {
+                json = json[json.LastIndexOf('[')..];
+            }
+
             string cleaned = json
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Replace("Relavancy", "Relevancy")
                 .Trim();
+
 
             return System.Text.Json.JsonSerializer.Deserialize<List<EvaluationResult>>(cleaned, options) ??
                    throw new InvalidOperationException("Failed to deserialize EvaluationResult from JSON.");
