@@ -59,20 +59,29 @@
 
             return
                 "Evaluate the following news articles based on user preferences.\n" +
-                "If the article matches a like and a dislike, prioritize the dislike.\n" +
-                "Respond ONLY with a valid JSON array \u2014 no markdown, no extra text, no trailing commas.\n" +
+                "Rules for the <|channel>thought block:\n" +
+                "- NO 'Final Check' or introductory sentences.\n" +
+                "- Use ONLY the following 4-line compressed format per article:\n" +
+                "  Art [Index]: {Topic Name}\n" +
+                "  Likes: {List found likes or 'None'}\n" +
+                "  Dislikes: {List found dislikes or 'None'}\n" +
+                "  Result: {Brief logic for High/Low}\n" +
+                "- Total thought block must be under 40 words per article." +
+                "DO NOT write sentences. DO NOT summarize the story." +
+                "Use the <|channel>thought block to perform a step-by-step analysis for each article. " +
+                "Compare the article content against likes, dislikes, and the user's prompt. " +
+                "If an article matches both a like and a dislike, explicitly resolve the conflict by prioritizing the dislike.\n\n" +
+                "After the <channel|> tag, respond ONLY with a valid JSON array — no markdown, no extra text, no trailing commas.\n" +
                 "Include one entry for EVERY article in the input, in order.\n" +
-                "Use this exact structure:\n" +
+                "Use this exact structure for the JSON:\n" +
                 "[\n" +
-                "  {\"ArticleIndex\": 0, \"Relevancy\": \"High\", \"Topic\": \"Technology\", \"Event\": \"AI arms race between US and China\", \"Reasoning\": \"Matches user interest in AI and geopolitics.\"},\n" +
-                "  {\"ArticleIndex\": 1, \"Relevancy\": \"Low\", \"Topic\": \"Sports\", \"Event\": \"\", \"Reasoning\": \"User has no interest in sports.\"}\n" +
-                "]\n" +
+                "  {\"ArticleIndex\": 0, \"Relevancy\": \"High\", \"Topic\": \"Technology\", \"Reasoning\": \"Matches your interest in AI breakthroughs.\"}\n" +
+                "]\n\n" +
                 "Rules:\n" +
                 "- ArticleIndex is the 0-based index of the article as presented in the input\n" +
                 "- Relevancy must be exactly one of: High, Low\n" +
-                "- Topic is a single short label for the subject area (e.g. Technology, Politics, Finance). Use ONE topic only — never combine multiple topics with slashes.\n" +
-                "- Event is the name of an ongoing real-world event the article is part of (e.g. war, election, crisis); leave empty string if the article is not about an ongoing event\n" +
-                "- Reasoning is a brief explanation of why the article received its Relevancy score\n" +
+                "- Topic is a single short label (e.g., Technology, Politics). Use ONE label only — no slashes.\n" +
+                "- Reasoning is a brief, user-friendly explanation for the UI. (Keep internal logic in the thought block).\n\n" +
                 "User preferences are as follows:\n" +
                 "User's dislikes: \n" + dislikes + "\n" +
                 "User's likes: \n" + likes + "\n" +

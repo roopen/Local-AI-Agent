@@ -30,7 +30,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
-            const int BatchSize = 5;
+            const int BatchSize = 3;
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
                 userPreferences.BuildSystemPrompt(),

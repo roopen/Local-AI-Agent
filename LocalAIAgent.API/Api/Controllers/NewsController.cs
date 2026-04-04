@@ -77,8 +77,6 @@ namespace LocalAIAgent.API.Api.Controllers
         [HttpGet("FineTuningDataset")]
         public async Task<IActionResult> GetFineTuningDataset()
         {
-            const int BatchSize = 5;
-
             List<UserPreferences> allPreferences = await userContext.UserPreferences
                 .Include(p => p.FeedbackExamples)
                 .Where(p => p.FeedbackExamples.Count > 0)
@@ -91,9 +89,17 @@ namespace LocalAIAgent.API.Api.Controllers
                 Domain.UserPreferences userPreferences = preferences.MapToDomainUserPreferences();
                 string systemPrompt = userPreferences.BuildSystemPrompt();
 
-                foreach (NewsArticleFeedback[] batch in preferences.FeedbackExamples.Chunk(BatchSize))
+                HashSet<string> knownTopics = new(StringComparer.OrdinalIgnoreCase);
+
+                int offset = 0;
+                while (offset < preferences.FeedbackExamples.Count)
                 {
-                    string userContent = string.Join("\n---ARTICLE SEPARATOR---\n",
+                    int batchSize = Random.Shared.Next(1, 3);
+                    NewsArticleFeedback[] batch = preferences.FeedbackExamples.Skip(offset).Take(batchSize).ToArray();
+                    offset += batchSize;
+                    string topicsContext = FormatKnownTopics(knownTopics);
+
+                    string userContent = topicsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                         batch.Select((f, i) =>
                         {
                             string source = Uri.TryCreate(f.ArticleLink, UriKind.Absolute, out Uri? uri)
@@ -102,8 +108,18 @@ namespace LocalAIAgent.API.Api.Controllers
                             return $"Article {i}:\n{f.ArticleTitle}\n\n{f.ArticleSummary}\nSource: {source}\n";
                         }));
 
-                    string assistantContent = JsonSerializer.Serialize(
-                        batch.Select((f, i) => new { ArticleIndex = i, Relevancy = f.IsLiked ? "High" : "Low" }));
+                    foreach (NewsArticleFeedback f in batch)
+                        if (!string.IsNullOrWhiteSpace(f.ArticleTopic))
+                            knownTopics.Add(f.ArticleTopic.Trim());
+
+                    string thinkBlock = BuildThinkBlock(batch);
+                    string assistantContent = thinkBlock + JsonSerializer.Serialize(
+                        batch.Select((f, i) => new
+                        {
+                            ArticleIndex = i,
+                            Relevancy = f.IsLiked ? "High" : "Low",
+                            Topic = f.ArticleTopic ?? string.Empty,
+                        }));
 
                     var entry = new
                     {
@@ -121,6 +137,35 @@ namespace LocalAIAgent.API.Api.Controllers
 
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             return File(bytes, "application/x-ndjson", "finetuning_dataset.jsonl");
+        }
+
+        private static string BuildThinkBlock(NewsArticleFeedback[] batch)
+        {
+            StringBuilder sb = new();
+            for (int i = 0; i < batch.Length; i++)
+            {
+                string reason = batch[i].Reason;
+                if (!string.IsNullOrWhiteSpace(reason))
+                    sb.AppendLine($"Article {i}: {reason}");
+            }
+
+            if (sb.Length == 0)
+                return string.Empty;
+
+            return $"<|think|>\n{sb}<|end|>\n";
+        }
+
+        private static string FormatKnownTopics(HashSet<string> topics)
+        {
+            if (topics.Count == 0)
+                return string.Empty;
+
+            StringBuilder sb = new();
+            sb.AppendLine("Strict labeling constraints — you MUST follow these:");
+            sb.AppendLine($"- Topic MUST be one of these exact values: {string.Join(", ", topics)}");
+            sb.AppendLine("  Only introduce a new topic if none of the above fits. Never combine topics with slashes.");
+            sb.AppendLine();
+            return sb.ToString();
         }
     }
 }
