@@ -9,6 +9,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public required Relevancy Relevancy { get; set; }
         public string? Category { get; set; }
         public string? Reasoning { get; set; }
+        public string? Topic { get; set; }
         public ChatTokenUsage? TokenUsage { get; set; }
 
         public static List<EvaluationResult> Deserialize(string json)

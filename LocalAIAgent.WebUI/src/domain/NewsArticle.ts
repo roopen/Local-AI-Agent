@@ -9,6 +9,8 @@ class NewsArticle {
     readonly Categories: string[];
     readonly Relevancy: Relevancy;
     readonly Reasoning: string | null;
+    readonly Topic: string | null;
+    readonly Event: string | null;
     readonly InputTokens: number | null;
     readonly OutputTokens: number | null;
 
@@ -21,6 +23,8 @@ class NewsArticle {
         categories: string[],
         relevancy: Relevancy,
         reasoning: string | null,
+        topic: string | null,
+        event: string | null,
         inputTokens: number | null,
         outputTokens: number | null
     ) {
@@ -32,6 +36,8 @@ class NewsArticle {
         this.Categories = categories;
         this.Relevancy = relevancy;
         this.Reasoning = reasoning;
+        this.Topic = topic;
+        this.Event = event;
         this.InputTokens = inputTokens;
         this.OutputTokens = outputTokens;
     }
