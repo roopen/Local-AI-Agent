@@ -9,6 +9,163 @@ import UserService from '../users/UserService';
 
 const newsClient = NewsClient.getInstance();
 const userService = UserService.getInstance();
+const newsStreamClient = NewsStreamClient.getInstance();
+
+interface TokenStatsBarProps {
+    avgInput: number | null;
+    avgOutput: number | null;
+    avgTotal: number | null;
+}
+
+function TokenStatsBar({ avgInput, avgOutput, avgTotal }: TokenStatsBarProps) {
+    return (
+        <p style={{ textAlign: 'center', fontSize: '0.8em', color: '#888', marginBottom: '1vh', marginTop: '1vh' }}>
+            Avg token usage per article:
+            {avgInput != null && <> &nbsp;In: {Math.round(avgInput).toLocaleString()}</>}
+            {avgInput != null && avgOutput != null && <> &nbsp;·&nbsp; </>}
+            {avgOutput != null && <>Out: {Math.round(avgOutput).toLocaleString()}</>}
+            {avgTotal != null && <> &nbsp;·&nbsp; Total: {Math.round(avgTotal).toLocaleString()}</>}
+        </p>
+    );
+}
+
+interface FeedbackModalProps {
+    pendingFeedback: { article: NewsArticle; isLiked: boolean };
+    feedbackReason: string;
+    isDark: boolean;
+    onReasonChange: (value: string) => void;
+    onCancel: () => void;
+    onSubmit: () => void;
+}
+
+function FeedbackModal({ pendingFeedback, feedbackReason, isDark, onReasonChange, onCancel, onSubmit }: FeedbackModalProps) {
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+            <div style={{
+                background: isDark ? '#282c34' : 'white', color: isDark ? 'rgba(255,255,255,0.87)' : '#213547',
+                padding: 24, borderRadius: 8, width: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: isDark ? '1px solid #444' : '1px solid #ccc'
+            }}>
+                <h3 style={{ marginTop: 0 }}>
+                    {pendingFeedback.isLiked ? '👍 Why did you like this?' : '👎 Why didn\'t you like this?'}
+                </h3>
+                <p style={{ fontSize: 13, color: isDark ? '#aaa' : '#555', marginTop: 0 }}>{pendingFeedback.article.Title}</p>
+                <TextArea
+                    value={feedbackReason}
+                    onChange={e => onReasonChange(e.value)}
+                    rows={4}
+                    placeholder="Enter your reason…"
+                    style={{ width: '100%' }}
+                />
+                <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <Button fillMode={'outline'} onClick={onCancel}>Cancel</Button>
+                    <Button themeColor={'primary'} disabled={!feedbackReason.trim()} onClick={onSubmit}>
+                        Submit
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ArticleStatusMessage({ isLoading, filteredCount, error, dots }: { isLoading: boolean; filteredCount: number; error: string | null; dots: number }) {
+    if (isLoading) return <p>Loading articles{'.'.repeat(dots)}</p>;
+    if (!isLoading && filteredCount === 0 && !error) return <p>No articles found.</p>;
+    return null;
+}
+
+function addArticleToMap(topicMap: Map<string, Map<string, NewsArticle[]>>, topicOrder: string[], article: NewsArticle) {
+    const topicKey = article.Topic?.trim() ?? '';
+    const eventKey = article.Event?.trim() ?? '';
+    if (!topicMap.has(topicKey)) {
+        topicMap.set(topicKey, new Map());
+        topicOrder.push(topicKey);
+    }
+    const eventMap = topicMap.get(topicKey)!;
+    if (!eventMap.has(eventKey)) {
+        eventMap.set(eventKey, []);
+    }
+    eventMap.get(eventKey)!.push(article);
+}
+
+function TokenTotal({ inputTokens, outputTokens }: { inputTokens: number | null; outputTokens: number | null }) {
+    if (inputTokens == null || outputTokens == null) return null;
+    return <> &nbsp;·&nbsp; Total: {(inputTokens + outputTokens).toLocaleString()}</>;
+}
+
+function ArticleTokenUsage({ inputTokens, outputTokens }: { inputTokens: number | null; outputTokens: number | null }) {
+    if (inputTokens == null && outputTokens == null) return null;
+    return (
+        <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: 0, marginBottom: '0.5vh' }}>
+            Token usage:
+            {inputTokens != null && <>In: {inputTokens.toLocaleString()}</>}
+            {inputTokens != null && outputTokens != null && <> &nbsp;·&nbsp; </>}
+            {outputTokens != null && <>Out: {outputTokens.toLocaleString()}</>}
+            <TokenTotal inputTokens={inputTokens} outputTokens={outputTokens} />
+        </p>
+    );
+}
+
+interface ArticleCardProps {
+    article: NewsArticle;
+    feedback: Record<string, boolean>;
+    isSelected: boolean;
+    onToggleChat: () => void;
+    onFeedbackClick: (isLiked: boolean) => void;
+}
+
+function ArticleCard({ article, feedback, isSelected, onToggleChat, onFeedbackClick }: ArticleCardProps) {
+    const liked = feedback[article.Link] === true;
+    const disliked = feedback[article.Link] === false;
+    return (
+        <div>
+            <h2 style={{ marginBottom: '1vh', marginTop: '1vh' }}>{article.Title}</h2>
+            <p style={{ marginBottom: '1.5vh', marginTop: '0vh' }}>{article.Summary}</p>
+            <div style={{ margin: '0 auto', marginBottom: '1.5vh' }}>
+                <Button
+                    themeColor={'tertiary'}
+                    fillMode={'outline'}
+                    style={{ marginRight: 5 }}
+                    onClick={() => window.open(article.Link, '_blank', 'noopener,noreferrer')}>
+                    Read the article at {article.Source} <span>&#x1F5D7;</span>
+                </Button>
+                <Button fillMode={'outline'} onClick={onToggleChat} style={{ cursor: 'pointer' }}>
+                    AIChat<span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
+                </Button>
+                <Button
+                    fillMode={liked ? 'solid' : 'outline'}
+                    themeColor={liked ? 'success' : 'base'}
+                    style={{ marginLeft: 5, cursor: 'pointer' }}
+                    title="I liked this article"
+                    onClick={() => onFeedbackClick(true)}>
+                    👍
+                </Button>
+                <Button
+                    fillMode={disliked ? 'solid' : 'outline'}
+                    themeColor={disliked ? 'error' : 'base'}
+                    style={{ marginLeft: 5, cursor: 'pointer' }}
+                    title="I didn't like this article"
+                    onClick={() => onFeedbackClick(false)}>
+                    👎
+                </Button>
+                {article.Reasoning && (
+                    <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: '0.5vh', marginBottom: '0.5vh' }}>
+                        {article.Reasoning}
+                    </p>
+                )}
+                <ArticleTokenUsage inputTokens={article.InputTokens} outputTokens={article.OutputTokens} />
+            </div>
+            {isSelected && (
+                <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
+                    <ChatComponent article={article} />
+                </div>
+            )}
+            <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
+        </div>
+    );
+}
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -23,7 +180,6 @@ const NewsComponent: React.FC = () => {
     const [pendingFeedback, setPendingFeedback] = useState<{ article: NewsArticle; isLiked: boolean } | null>(null);
     const [feedbackReason, setFeedbackReason] = useState('');
     const [isDark, setIsDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const newsStreamClient = NewsStreamClient.getInstance();
 
     useEffect(() => {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -133,11 +289,10 @@ const NewsComponent: React.FC = () => {
     }, [articles, selectedSource, selectedTopic]);
 
     const filteredArticles = useMemo(() => {
-        return articles.filter(a =>
-            (!selectedSource || a.Source === selectedSource) &&
-            (!selectedTopic || (a.Topic?.trim() ?? '') === selectedTopic) &&
-            (!selectedEvent || (a.Event?.trim() ?? '') === selectedEvent)
-        );
+        return articles
+            .filter(a => !selectedSource || a.Source === selectedSource)
+            .filter(a => !selectedTopic || (a.Topic?.trim() ?? '') === selectedTopic)
+            .filter(a => !selectedEvent || (a.Event?.trim() ?? '') === selectedEvent);
     }, [articles, selectedSource, selectedTopic, selectedEvent]);
 
     const tokenStats = useMemo(() => {
@@ -156,18 +311,7 @@ const NewsComponent: React.FC = () => {
         const topicMap = new Map<string, Map<string, NewsArticle[]>>();
 
         for (const article of filteredArticles) {
-            const topicKey = article.Topic?.trim() ?? '';
-            const eventKey = article.Event?.trim() ?? '';
-
-            if (!topicMap.has(topicKey)) {
-                topicMap.set(topicKey, new Map());
-                topicOrder.push(topicKey);
-            }
-            const eventMap = topicMap.get(topicKey)!;
-            if (!eventMap.has(eventKey)) {
-                eventMap.set(eventKey, []);
-            }
-            eventMap.get(eventKey)!.push(article);
+            addArticleToMap(topicMap, topicOrder, article);
         }
 
         const sortedTopics = [
@@ -188,15 +332,7 @@ const NewsComponent: React.FC = () => {
         <div>
             {error && <p>{error}</p>}
             <div>
-                {tokenStats && (
-                    <p style={{ textAlign: 'center', fontSize: '0.8em', color: '#888', marginBottom: '1vh', marginTop: '1vh' }}>
-                        Avg token usage per article:
-                        {tokenStats.avgInput != null && <> &nbsp;In: {Math.round(tokenStats.avgInput).toLocaleString()}</>}
-                        {tokenStats.avgInput != null && tokenStats.avgOutput != null && <> &nbsp;·&nbsp; </>}
-                        {tokenStats.avgOutput != null && <>Out: {Math.round(tokenStats.avgOutput).toLocaleString()}</>}
-                        {tokenStats.avgTotal != null && <> &nbsp;·&nbsp; Total: {Math.round(tokenStats.avgTotal).toLocaleString()}</>}
-                    </p>
-                )}
+                {tokenStats && <TokenStatsBar avgInput={tokenStats.avgInput} avgOutput={tokenStats.avgOutput} avgTotal={tokenStats.avgTotal} />}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', marginTop: '3vh', width: '80%' }}>
                     <span style={{ fontWeight: 600 }}>Source:</span>
                     <Chip
@@ -289,121 +425,41 @@ const NewsComponent: React.FC = () => {
                                     </div>
                                 )}
                                 {groupArticles.map((article) => (
-                                    <div key={article.Link}>
-                                        <h2 style={{ marginBottom: '1vh', marginTop: '1vh' }}>{article.Title}</h2>
-                                        <p style={{ marginBottom: '1.5vh', marginTop: '0vh' }}>{article.Summary}</p>
-                                        <div style={{ margin: '0 auto', marginBottom: '1.5vh' }}>
-                                            <Button
-                                                themeColor={'tertiary'}
-                                                fillMode={'outline'}
-                                                style={{ marginRight: 5 }}
-                                                onClick={() => window.open(article.Link, "_blank", "noopener,noreferrer")}>
-                                                Read the article at {article.Source} <span>&#x1F5D7;</span>
-                                            </Button>
-                                            <Button
-                                                fillMode={'outline'}
-                                                onClick={() => toggleChat(article.Link)}
-                                                style={{ cursor: 'pointer' }}>
-                                                AIChat
-                                                <span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
-                                            </Button>
-                                            <Button
-                                                fillMode={feedback[article.Link] === true ? 'solid' : 'outline'}
-                                                themeColor={feedback[article.Link] === true ? 'success' : 'base'}
-                                                style={{ marginLeft: 5, cursor: 'pointer' }}
-                                                title="I liked this article"
-                                                onClick={() => {
-                                                    if (feedback[article.Link] === true) {
-                                                        handleFeedback(article, true);
-                                                    } else {
-                                                        setPendingFeedback({ article, isLiked: true });
-                                                        setFeedbackReason(article.Reasoning ?? '');
-                                                    }
-                                                }}>
-                                                👍
-                                            </Button>
-                                            <Button
-                                                fillMode={feedback[article.Link] === false ? 'solid' : 'outline'}
-                                                themeColor={feedback[article.Link] === false ? 'error' : 'base'}
-                                                style={{ marginLeft: 5, cursor: 'pointer' }}
-                                                title="I didn't like this article"
-                                                onClick={() => {
-                                                    if (feedback[article.Link] === false) {
-                                                        handleFeedback(article, false);
-                                                    } else {
-                                                        setPendingFeedback({ article, isLiked: false });
-                                                        setFeedbackReason('');
-                                                    }
-                                                }}>
-                                                👎
-                                            </Button>
-                                            {article.Reasoning && (
-                                                <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: '0.5vh', marginBottom: '0.5vh' }}>
-                                                    {article.Reasoning}
-                                                </p>
-                                            )}
-                                            {(article.InputTokens != null || article.OutputTokens != null) && (
-                                                <p style={{ textAlign: 'center', fontSize: '0.72em', color: '#888', marginTop: 0, marginBottom: '0.5vh' }}>
-                                                    Token usage: 
-                                                    {article.InputTokens != null && <>In: {article.InputTokens.toLocaleString()}</>}
-                                                    {article.InputTokens != null && article.OutputTokens != null && <> &nbsp;·&nbsp; </>}
-                                                    {article.OutputTokens != null && <>Out: {article.OutputTokens.toLocaleString()}</>}
-                                                    {article.InputTokens != null && article.OutputTokens != null && (
-                                                        <> &nbsp;·&nbsp; Total: {(article.InputTokens + article.OutputTokens).toLocaleString()}</>
-                                                    )}
-                                                </p>
-                                            )}
-                                        </div>
-                                        {selectedArticleLink === article.Link && (
-                                            <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
-                                                <ChatComponent article={article} />
-                                            </div>
-                                        )}
-                                        <hr style={{ width: '60%', marginRight: '0 auto', marginLeft: '0 auto', marginTop: 5 }} />
-                                    </div>
+                                    <ArticleCard
+                                        key={article.Link}
+                                        article={article}
+                                        feedback={feedback}
+                                        isSelected={selectedArticleLink === article.Link}
+                                        onToggleChat={() => toggleChat(article.Link)}
+                                        onFeedbackClick={(isLiked) => {
+                                            if (feedback[article.Link] === isLiked) {
+                                                handleFeedback(article, isLiked);
+                                            } else {
+                                                setPendingFeedback({ article, isLiked });
+                                                setFeedbackReason(isLiked ? (article.Reasoning ?? '') : '');
+                                            }
+                                        }}
+                                    />
                                 ))}
                             </div>
                         ))}
                     </div>
                 ))}
-                {isLoading && <p>Loading articles{'.'.repeat(dots)}</p>}
-                {!isLoading && filteredArticles.length === 0 && !error && <p>No articles found.</p>}
+                <ArticleStatusMessage isLoading={isLoading} filteredCount={filteredArticles.length} error={error} dots={dots} />
             </div>
             {pendingFeedback && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }}>
-                    <div style={{
-                        background: isDark ? '#282c34' : 'white', color: isDark ? 'rgba(255,255,255,0.87)' : '#213547',
-                        padding: 24, borderRadius: 8, width: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: isDark ? '1px solid #444' : '1px solid #ccc'
-                    }}>
-                        <h3 style={{ marginTop: 0 }}>
-                            {pendingFeedback.isLiked ? '👍 Why did you like this?' : '👎 Why didn\'t you like this?'}
-                        </h3>
-                        <p style={{ fontSize: 13, color: isDark ? '#aaa' : '#555', marginTop: 0 }}>{pendingFeedback.article.Title}</p>
-                        <TextArea
-                            value={feedbackReason}
-                            onChange={e => setFeedbackReason(e.value)}
-                            rows={4}
-                            placeholder="Enter your reason…"
-                            style={{ width: '100%' }}
-                        />
-                        <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                            <Button fillMode={'outline'} onClick={() => setPendingFeedback(null)}>Cancel</Button>
-                            <Button
-                                themeColor={'primary'}
-                                disabled={!feedbackReason.trim()}
-                                onClick={async () => {
-                                    await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, feedbackReason.trim());
-                                    setPendingFeedback(null);
-                                    setFeedbackReason('');
-                                }}>
-                                Submit
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+                <FeedbackModal
+                    pendingFeedback={pendingFeedback}
+                    feedbackReason={feedbackReason}
+                    isDark={isDark}
+                    onReasonChange={setFeedbackReason}
+                    onCancel={() => setPendingFeedback(null)}
+                    onSubmit={async () => {
+                        await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, feedbackReason.trim());
+                        setPendingFeedback(null);
+                        setFeedbackReason('');
+                    }}
+                />
             )}
         </div>
     );

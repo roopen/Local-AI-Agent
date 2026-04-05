@@ -20,6 +20,45 @@ function mapRelevancy(relevancy: RelevancyDto): Relevancy {
     }
 }
 
+function extractTextFields(item: NewsDto) {
+    return {
+        title: item.title ?? '',
+        summary: item.summary ?? '',
+        link: item.link ?? '',
+        source: item.source ?? '',
+        categories: item.categories ?? [],
+    };
+}
+
+function extractNullableFields(item: NewsDto) {
+    return {
+        reasoning: item.reasoning ?? null,
+        topic: item.topic ?? null,
+        event: item.event ?? null,
+        inputTokens: item.inputTokens ?? null,
+        outputTokens: item.outputTokens ?? null,
+    };
+}
+
+function mapNewsDto(item: NewsDto): NewsArticle {
+    const { title, summary, link, source, categories } = extractTextFields(item);
+    const { reasoning, topic, event, inputTokens, outputTokens } = extractNullableFields(item);
+    return new NewsArticle(
+        title,
+        summary,
+        new Date(item.publishedDate),
+        link,
+        source,
+        categories,
+        mapRelevancy(item.relevancy),
+        reasoning,
+        topic,
+        event,
+        inputTokens,
+        outputTokens
+    );
+}
+
 export class NewsStreamClient {
     private static _instance: NewsStreamClient;
     private userService = UserService.getInstance();
@@ -67,23 +106,7 @@ export class NewsStreamClient {
             const stream = this.connection.stream("GetNewsStream", parseInt(currentUser.id, 10));
 
             stream.subscribe({
-                next: (item: NewsDto) => {
-                    const article = new NewsArticle(
-                        item.title ?? '',
-                        item.summary ?? '',
-                        new Date(item.publishedDate),
-                        item.link ?? '',
-                        item.source ?? '',
-                        item.categories ?? [],
-                        mapRelevancy(item.relevancy),
-                        item.reasoning ?? null,
-                        item.topic ?? null,
-                        item.event ?? null,
-                        item.inputTokens ?? null,
-                        item.outputTokens ?? null
-                    );
-                    onArticleReceived(article);
-                },
+                next: (item: NewsDto) => onArticleReceived(mapNewsDto(item)),
                 complete: () => {
                     console.log("✅ News stream completed.");
                     onComplete();
