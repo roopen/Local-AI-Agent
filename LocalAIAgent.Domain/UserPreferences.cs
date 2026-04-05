@@ -59,7 +59,7 @@
 
             return
                 "Evaluate the following news articles based on user preferences.\n" +
-                "Rules for the <|channel>thought block:\n" +
+                "Rules for the <|think>thought block:\n" +
                 "- NO 'Final Check' or introductory sentences.\n" +
                 "- Use ONLY the following 4-line compressed format per article:\n" +
                 "  Art [Index]: {Topic Name}\n" +
@@ -68,10 +68,10 @@
                 "  Result: {Brief logic for High/Low}\n" +
                 "- Total thought block must be under 40 words per article." +
                 "DO NOT write sentences. DO NOT summarize the story." +
-                "Use the <|channel>thought block to perform a step-by-step analysis for each article. " +
+                "Use the <|think>thought block to perform a step-by-step analysis for each article. " +
                 "Compare the article content against likes, dislikes, and the user's prompt. " +
                 "If an article matches both a like and a dislike, explicitly resolve the conflict by prioritizing the dislike.\n\n" +
-                "After the <channel|> tag, respond ONLY with a valid JSON array — no markdown, no extra text, no trailing commas.\n" +
+                "After the <think|> tag, respond ONLY with a valid JSON array — no markdown, no extra text, no trailing commas.\n" +
                 "Include one entry for EVERY article in the input, in order.\n" +
                 "Use this exact structure for the JSON:\n" +
                 "[\n" +
