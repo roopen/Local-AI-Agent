@@ -131,13 +131,16 @@ namespace LocalAIAgent.API.Api.Controllers
                         }
                     };
 
-                    sb.AppendLine(JsonSerializer.Serialize(entry));
+                    sb.AppendLine(JsonSerializer.Serialize(entry, _indentedOptions));
+                    sb.AppendLine();
                 }
             }
 
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             return File(bytes, "application/x-ndjson", "finetuning_dataset.jsonl");
         }
+
+        private static readonly JsonSerializerOptions _indentedOptions = new() { WriteIndented = true };
 
         private static string BuildThinkBlock(NewsArticleFeedback[] batch)
         {
