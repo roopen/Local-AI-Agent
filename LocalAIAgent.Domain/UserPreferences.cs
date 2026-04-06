@@ -75,13 +75,21 @@
                 "Include one entry for EVERY article in the input, in order.\n" +
                 "Use this exact structure for the JSON:\n" +
                 "[\n" +
-                "  {\"ArticleIndex\": 0, \"Relevancy\": \"High\", \"Topic\": \"Technology\", \"Reasoning\": \"Matches your interest in AI breakthroughs.\"}\n" +
+                "  {\"ArticleIndex\": 0, " +
+                "   \"Relevancy\": \"High\", " +
+                "   \"Topic\": \"Technology\", " +
+#if DEBUG
+                "   \"Reasoning\": \"Matches your interest in AI breakthroughs." +
+#endif
+                "\"}\n" +
                 "]\n\n" +
                 "Rules:\n" +
                 "- ArticleIndex is the 0-based index of the article as presented in the input\n" +
                 "- Relevancy must be exactly one of: High, Low\n" +
                 "- Topic is a single short label (e.g., Technology, Politics). Use ONE label only — no slashes.\n" +
+#if DEBUG
                 "- Reasoning is a brief, user-friendly explanation for the UI. (Keep internal logic in the thought block).\n\n" +
+#endif
                 "User preferences are as follows:\n" +
                 "User's dislikes: \n" + dislikes + "\n" +
                 "User's likes: \n" + likes + "\n" +

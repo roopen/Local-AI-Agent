@@ -3,6 +3,7 @@ import SettingsComponent from '../components/SettingsComponent';
 import UserService from '../users/UserService';
 import Modal from 'react-modal';
 import { Button } from '@progress/kendo-react-buttons';
+import { NewsStreamClient } from '../clients/NewsStreamingClient';
 
 const Header = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; headerRef: React.RefObject<HTMLDivElement | null> }) => {
     const handleLogout = async () => {
@@ -54,10 +55,6 @@ const ScrollToTopButton = () => {
             size={'large'}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={{
-                position: 'fixed',
-                bottom: '2rem',
-                right: '2rem',
-                zIndex: 1000,
                 borderRadius: '50%',
                 width: '3.5rem',
                 height: '3.5rem',
@@ -66,6 +63,84 @@ const ScrollToTopButton = () => {
             }}>
             ↑
         </Button>
+    );
+};
+
+const ScrollToBottomButton = () => {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
+            setVisible(!atBottom);
+        };
+        handleScroll();
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <Button
+            themeColor={'info'}
+            size={'large'}
+            onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+            style={{
+                borderRadius: '50%',
+                width: '3.5rem',
+                height: '3.5rem',
+                fontSize: '1.5rem',
+                lineHeight: 1,
+            }}>
+            ↓
+        </Button>
+    );
+};
+
+const LoadingSpinner = () => {
+    const [isLoading, setIsLoading] = useState(false);
+    const newsStreamClient = NewsStreamClient.getInstance();
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIsLoading(newsStreamClient.isLoading);
+        }, 100);
+        return () => clearInterval(interval);
+    }, [newsStreamClient]);
+
+    if (!isLoading) return null;
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                bottom: '2rem',
+                right: '6.5rem',
+                zIndex: 1000,
+                width: '3.5rem',
+                height: '3.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
+            <div
+                style={{
+                    width: '2rem',
+                    height: '2rem',
+                    border: '3px solid rgba(255,255,255,0.3)',
+                    borderTop: '3px solid #007bff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                }}
+            />
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
     );
 };
 
@@ -89,10 +164,6 @@ const FloatingSettingsButton = ({ onSettingsClick, headerRef }: { onSettingsClic
             size={'large'}
             onClick={onSettingsClick}
             style={{
-                position: 'fixed',
-                bottom: '6.5rem',
-                right: '2rem',
-                zIndex: 1000,
                 borderRadius: '50%',
                 width: '3.5rem',
                 height: '3.5rem',
@@ -115,8 +186,22 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div>
             <Header onSettingsClick={openModal} headerRef={headerRef} />
             <main>{children}</main>
-            <ScrollToTopButton />
-            <FloatingSettingsButton onSettingsClick={openModal} headerRef={headerRef} />
+            <LoadingSpinner />
+            <div
+                style={{
+                    position: 'fixed',
+                    bottom: '2rem',
+                    right: '2rem',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column-reverse',
+                    gap: '1rem',
+                }}
+            >
+                <ScrollToBottomButton />
+                <ScrollToTopButton />
+                <FloatingSettingsButton onSettingsClick={openModal} headerRef={headerRef} />
+            </div>
             <Modal
                 isOpen={modalIsOpen}
                 onRequestClose={closeModal}

@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -17,7 +18,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
-        [FromKeyedServices("Translation")] IChatCompletionService chatCompletion,
+        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options) : IGetTranslationUseCase
     {
@@ -30,8 +31,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         {
             PropertyNameCaseInsensitive = true
         };
-
-        private readonly ChatHistory chatHistory = [];
 
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
@@ -53,13 +52,14 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             if (articlesToTranslate.Count is 0) return articles;
 
-            // Process articles in batches of 5
-            for (int i = 0; i < articlesToTranslate.Count; i += 5)
+            // Process batches of 1 in parallel
+            List<Task> batchTasks = [];
+            for (int i = 0; i < articlesToTranslate.Count; i += 1)
             {
-                int batchSize = Math.Min(5, articlesToTranslate.Count - i);
-                List<NewsArticle> batch = articlesToTranslate.Skip(i).Take(batchSize).ToList();
-                await TranslateBatchAsync(batch, targetLanguage);
+                List<NewsArticle> batch = articlesToTranslate.Skip(i).Take(1).ToList();
+                batchTasks.Add(TranslateBatchAsync(batch, targetLanguage));
             }
+            await Task.WhenAll(batchTasks);
             stopwatch.Stop();
             Console.WriteLine($"GetTranslationUseCase: Translated {articlesToTranslate.Count} articles in {stopwatch.ElapsedMilliseconds} ms.");
 
@@ -68,24 +68,44 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         private record TranslationDto(string Title, string Summary);
 
-        private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage)
+        private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage, int attempt = 0)
         {
             var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
-            string prompt = $"You are a JSON translation API. " +
-                $"Translate the 'title' and 'summary' fields of each object in the provided JSON array into {targetLanguage}. " +
-                "Each field must be translated independently. " +
-                "Output ONLY a valid JSON array with the same structure as the input. (Do not think out loud!) " +
-                "Your response must start with '[' and end with ']'. " +
-                "Do not include explanations, greetings, markdown, code blocks, or any text outside the JSON array.";
+            string systemPrompt = $@"
+                <|turn>system
+                You are a translation specialist. Your mission is to translate news articles into {targetLanguage}.
+                
+                CRITICAL WORKFLOW:
+                1. Inside the <|think>thought block, you MUST perform a 'Draft Translation'.
+                2. List the Article Index.
+                3. Write out the {targetLanguage} translation for the Title and Summary as plain text.
+                4. ONLY THEN, construct the JSON array using those drafts.
+                
+                RULES:
+                - If the JSON output contains any words from the source language, the task is a failure.
+                - Output ONLY the JSON array after the <think|> tag.
+                - No markdown, no intro.
+                
+                [EXAMPLE]
+                User: [{{""title"": ""Mímir Kristjánsson sendte meldinger"", ""summary"": ""Dette er en test""}}]
+                Model:
+                <|think>thought
+                Draft Art 0:
+                Title: Mímir Kristjánsson sent messages.
+                <think|>
+                [{{""title"": ""Mímir Kristjánsson sent messages"", ""summary"": ""This is a test""}}]
+                [END EXAMPLE]
+                <|turn>";
 
             OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                prompt, allowFunctionUse: false);
+                systemPrompt, allowFunctionUse: false);
 
-            chatHistory.Clear();
-            chatHistory.AddUserMessage(combinedText);
-            string result = string.Empty;
+            ChatHistory chatHistory = [];
+            chatHistory.AddUserMessage($"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}");
+
+            StringBuilder resultBuilder = new();
 
             await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
                                 chatHistory,
@@ -96,12 +116,22 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 if (string.IsNullOrEmpty(content.Content))
                     continue;
 
-                result += content.Content;
+                resultBuilder.Append(content.Content);
             }
+            string result = resultBuilder.ToString();
 
             // Extract the JSON array, discarding any reasoning or markdown the model emitted around it
             Match jsonMatch = Regex.Match(result, @"\[[\s\S]*\]");
             result = jsonMatch.Success ? jsonMatch.Value : result;
+
+            result = SanitizeJsonResponse(result);
+
+            //bool translationSuccessful = await VerifyTranslations(result, targetLanguage);
+
+            //if (!translationSuccessful && attempt < 1) await TranslateBatchAsync(batch, targetLanguage, attempt + 1);
+
+            //if (!translationSuccessful)
+            //    batch = [];
 
             try
             {
@@ -124,6 +154,159 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 Console.WriteLine($"Error deserializing translation response: {ex.Message}");
                 Console.WriteLine($"LLM Response: {result}");
             }
+        }
+
+        private async Task<bool> VerifyTranslations(string translations, string targetLanguage)
+        {
+            string systemPrompt = $@"
+                <|turn>system
+                Use the <|think> block ONLY for internal reasoning. 
+                Do NOT reveal the content of the <|think> block in the final output.
+                
+                Your task:
+                - You will receive a JSON array of article objects from the user.
+                - For EACH article, verify whether BOTH 'title' and 'summary' are written in {targetLanguage}.
+                - Return a JSON array where each element corresponds to the input article and has the structure:
+                  {{ ""isValid"": true }} or {{ ""isValid"": false }}.
+                
+                Rules:
+                1. Output MUST be a valid JSON array.
+                2. The final JSON MUST contain exactly one object per input article.
+                3. The final JSON MUST be entirely in {targetLanguage}.
+                4. Do NOT include markdown, comments, explanations, or any text outside the JSON array.
+                5. Do NOT output <|think> or <|chain> blocks in the final answer.
+                6. Your response MUST start with '[' and end with ']'.
+                
+                [EXAMPLE]
+                Input:
+                [
+                  {{ ""title"": ""Mímir Kristjánsson sendte truende meldinger"", ""summary"": ""Stortingsrepresentanten beklager."" }},
+                  {{ ""title"": ""Hello world"", ""summary"": ""This is English"" }}
+                ]
+                
+                Output:
+                <|think>
+                Identify languages:
+                - Article 1: Norwegian → not {targetLanguage}
+                - Article 2: English → not {targetLanguage}
+                </think>
+                [
+                  {{ ""isValid"": false }},
+                  {{ ""isValid"": false }}
+                ]
+                [END EXAMPLE]
+                <|turn>
+                ";
+
+
+            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
+                systemPrompt, allowFunctionUse: false);
+
+            ChatHistory chatHistory = [];
+            chatHistory.AddUserMessage(
+                $"<|turn>user\r\n" +
+                $"Verify that ALL of the following texts are in {targetLanguage}:\r\n" +
+                $"{translations}<|turn>\r\n" +
+                $"<|turn>model");
+            StringBuilder resultBuilder = new();
+
+            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
+                                chatHistory,
+                                openAiSettings,
+                                kernel)
+                                .ConfigureAwait(false))
+            {
+                if (string.IsNullOrEmpty(content.Content))
+                    continue;
+
+                resultBuilder.Append(content.Content);
+            }
+            string result = resultBuilder.ToString();
+
+            // Extract the JSON array; fall back to wrapping a lone object in brackets.
+            Match jsonMatch = Regex.Match(result, @"\[[\s\S]*\]");
+            if (jsonMatch.Success)
+            {
+                result = jsonMatch.Value;
+            }
+            else
+            {
+                Match objMatch = Regex.Match(result, @"\{[\s\S]*\}");
+                result = objMatch.Success ? $"[{objMatch.Value}]" : result;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<TranslationVerificationResult[]>(result, s_jsonDeserializerOptions)?.All(r => r.IsValid) ?? false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                return false;
+            }
+        }
+
+        // Repairs common invalid-JSON patterns emitted by LLMs before deserialization.
+        private static string SanitizeJsonResponse(string json)
+        {
+            // \' is not a valid JSON escape sequence
+            json = json.Replace("\\'", "'");
+
+            // Fix unescaped double quotes inside string values using a state machine.
+            // Heuristic: a '"' that is followed (ignoring spaces) by ':', ',', '}', ']', or EOF
+            // is treated as a string delimiter; anything else is an embedded quote and gets escaped.
+            StringBuilder sb = new System.Text.StringBuilder(json.Length);
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = 0; i < json.Length; i++)
+            {
+                char c = json[i];
+
+                if (escaped)
+                {
+                    sb.Append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\')
+                {
+                    sb.Append(c);
+                    escaped = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    if (!inString)
+                    {
+                        inString = true;
+                        sb.Append(c);
+                        continue;
+                    }
+
+                    // Look ahead past whitespace to decide if this closes the string.
+                    int j = i + 1;
+                    while (j < json.Length && json[j] == ' ') j++;
+                    char next = j < json.Length ? json[j] : '\0';
+
+                    if (next is ':' or ',' or '}' or ']' or '\0')
+                    {
+                        inString = false;
+                        sb.Append(c);
+                    }
+                    else
+                    {
+                        sb.Append("\\\"");
+                    }
+                    continue;
+                }
+
+                sb.Append(c);
+            }
+
+            return sb.ToString();
         }
     }
 }

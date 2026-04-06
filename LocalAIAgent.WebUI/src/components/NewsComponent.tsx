@@ -237,18 +237,21 @@ const NewsComponent: React.FC = () => {
         };
 
         const handleStreamEnd = () => {
-            setIsLoading(false);
+            setIsLoading(newsStreamClient.isLoading);
         };
 
         const handleError = (err: Error) => {
             setError(`Error loading articles: ${err.message}`);
             console.error(err);
-            setIsLoading(false);
+            setIsLoading(newsStreamClient.isLoading);
+        };
+
+        const handleLoadingChange = (loading: boolean) => {
+            setIsLoading(loading);
         };
 
         console.log('Starting news stream...');
-        setIsLoading(true);
-        newsStreamClient.start(handleNewArticle, handleStreamEnd, handleError);
+        newsStreamClient.start(handleNewArticle, handleStreamEnd, handleError, handleLoadingChange);
 
         return () => {
             console.log('Stopping news stream...');

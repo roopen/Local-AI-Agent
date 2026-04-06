@@ -46,7 +46,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 chatHistory.Clear();
 
-                HashSet<string> knownTopics = LoadKnownTopicsAndEvents(preferencesKey);
+                HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
                 string topicsEventsContext = FormatKnownTopicsAndEvents(knownTopics);
 
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
@@ -114,13 +114,12 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         }
 
         private const string TopicsCacheKeyPrefix = "news_known_topics_";
-        private const string EventsCacheKeyPrefix = "news_known_events_";
 
         private static string GetPreferencesKey(UserPreferences preferences) =>
             Convert.ToHexString(SHA256.HashData(
                 Encoding.UTF8.GetBytes(preferences.Prompt + string.Join(",", preferences.Interests))));
 
-        private HashSet<string> LoadKnownTopicsAndEvents(string key)
+        private HashSet<string> LoadKnownTopics(string key)
         {
             HashSet<string> topics = memoryCache.GetOrCreate(TopicsCacheKeyPrefix + key, e =>
             {
@@ -189,7 +188,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         Source = batch[i].Source ?? string.Empty,
                         Categories = [],
                         Relevancy = evaluations[i].Relevancy,
+#if DEBUG
                         Reasoning = evaluations[i].Reasoning,
+#endif
                         Topic = evaluations[i].Topic,
                         InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
                             ? evaluations[i].TokenUsage?.InputTokenCount : null,
