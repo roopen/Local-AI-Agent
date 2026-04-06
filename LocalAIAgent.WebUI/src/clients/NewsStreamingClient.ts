@@ -8,6 +8,7 @@ import UserService from "../users/UserService";
 type ArticleCallback = (article: NewsArticle) => void;
 type CompletionCallback = () => void;
 type ErrorCallback = (error: Error) => void;
+type LoadingChangeCallback = (isLoading: boolean) => void;
 
 function mapRelevancy(relevancy: RelevancyDto): Relevancy {
     switch (relevancy) {
@@ -62,6 +63,11 @@ function mapNewsDto(item: NewsDto): NewsArticle {
 export class NewsStreamClient {
     private static _instance: NewsStreamClient;
     private userService = UserService.getInstance();
+    private _isLoading = false;
+
+    public get isLoading(): boolean {
+        return this._isLoading;
+    }
 
     private constructor() {
     }
@@ -85,7 +91,8 @@ export class NewsStreamClient {
     async start(
         onArticleReceived: ArticleCallback,
         onComplete: CompletionCallback,
-        onError: ErrorCallback
+        onError: ErrorCallback,
+        onLoadingChange: LoadingChangeCallback
     ): Promise<void> {
         if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
             return;
@@ -100,6 +107,8 @@ export class NewsStreamClient {
         }
 
         try {
+            this._isLoading = true;
+            onLoadingChange(true);
             await this.connection.start();
             console.log("✅ Connected to SignalR hub.");
 
@@ -108,15 +117,21 @@ export class NewsStreamClient {
             stream.subscribe({
                 next: (item: NewsDto) => onArticleReceived(mapNewsDto(item)),
                 complete: () => {
+                    this._isLoading = false;
+                    onLoadingChange(false);
                     console.log("✅ News stream completed.");
                     onComplete();
                 },
                 error: (err) => {
+                    this._isLoading = false;
+                    onLoadingChange(false);
                     console.error("❌ News stream error:", err);
                     onError(err);
                 }
             });
         } catch (err) {
+            this._isLoading = false;
+            onLoadingChange(false);
             const error = err instanceof Error ? err : new Error("Failed to connect to SignalR hub");
             console.error(`❌ ${error.message}`);
             onError(error);
@@ -129,6 +144,7 @@ export class NewsStreamClient {
         }
 
         try {
+            this._isLoading = false;
             await this.connection.stop();
             console.log("🛑 Disconnected from SignalR hub.");
         } catch (err) {

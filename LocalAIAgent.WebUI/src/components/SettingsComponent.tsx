@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import PromptSettingsComponent from './PromptSettingsComponent';
 import AuthenticationSettingsComponent from './AuthenticationSettingsComponent';
-import AISettingsComponent from './AISettingsComponent';
 import { Button, ButtonGroup } from '@progress/kendo-react-buttons';
 
 interface SettingsComponentProps {
@@ -35,7 +34,7 @@ const TabButton: React.FC<TabButtonProps> = ({ isActive, onClick, children, styl
 );
 
 const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
-    const [activeTab, setActiveTab] = useState<'prompt' | 'auth' | 'aisettings'>('prompt');
+    const [activeTab, setActiveTab] = useState<'prompt' | 'auth'>('prompt');
 
     return (
         <div style={{ backgroundColor: '#282c34', color: 'white', padding: '20px' }}>
@@ -56,18 +55,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
                     >
                         Authentication
                     </TabButton>
-                    <TabButton 
-                        isActive={activeTab === 'aisettings'} 
-                        onClick={() => setActiveTab('aisettings')}
-                    >
-                        AI Settings
-                    </TabButton>
                 </ButtonGroup>
             </div>
 
             {activeTab === 'prompt' && <PromptSettingsComponent onSave={onSave} />}
             {activeTab === 'auth' && <AuthenticationSettingsComponent />}
-            {activeTab === 'aisettings' && <AISettingsComponent />}
         </div>
     );
 };
