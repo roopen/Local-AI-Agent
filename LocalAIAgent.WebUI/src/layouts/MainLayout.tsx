@@ -100,16 +100,29 @@ const ScrollToBottomButton = () => {
 
 const LoadingSpinner = () => {
     const [isLoading, setIsLoading] = useState(false);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    const [articleCount, setArticleCount] = useState(0);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const newsStreamClient = NewsStreamClient.getInstance();
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setIsLoading(newsStreamClient.isLoading);
+            const loading = newsStreamClient.isLoading;
+            setIsLoading(loading);
+            if (loading) setHasLoadedOnce(true);
+            setArticleCount(newsStreamClient.articleCount);
+
+            const start = newsStreamClient.loadStartTime;
+            const end = newsStreamClient.loadEndTime;
+            if (start) {
+                const elapsed = ((end ?? new Date()).getTime() - start.getTime()) / 1000;
+                setElapsedSeconds(Math.floor(elapsed));
+            }
         }, 100);
         return () => clearInterval(interval);
     }, [newsStreamClient]);
 
-    if (!isLoading) return null;
+    if (!hasLoadedOnce) return null;
 
     return (
         <div
@@ -121,25 +134,35 @@ const LoadingSpinner = () => {
                 width: '3.5rem',
                 height: '3.5rem',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: '0.2rem',
             }}>
-            <div
-                style={{
-                    width: '2rem',
-                    height: '2rem',
-                    border: '3px solid rgba(255,255,255,0.3)',
-                    borderTop: '3px solid #007bff',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
-                }}
-            />
-            <style>{`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}</style>
+            <div style={{ fontSize: '0.6rem', color: '#aaa', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap', marginBottom: '0.2rem' }}>
+                <div>{articleCount} articles</div>
+                <div>{elapsedSeconds > 60 ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s` : `${elapsedSeconds}s`}</div>
+            </div>
+            {isLoading && (
+                <>
+                    <div
+                        style={{
+                            width: '2rem',
+                            height: '2rem',
+                            border: '3px solid rgba(255,255,255,0.3)',
+                            borderTop: '3px solid #007bff',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                        }}
+                    />
+                    <style>{`
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `}</style>
+                </>
+            )}
         </div>
     );
 };

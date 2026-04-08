@@ -64,9 +64,24 @@ export class NewsStreamClient {
     private static _instance: NewsStreamClient;
     private userService = UserService.getInstance();
     private _isLoading = false;
+    private _articleCount = 0;
+    private _loadStartTime: Date | null = null;
+    private _loadEndTime: Date | null = null;
 
     public get isLoading(): boolean {
         return this._isLoading;
+    }
+
+    public get articleCount(): number {
+        return this._articleCount;
+    }
+
+    public get loadStartTime(): Date | null {
+        return this._loadStartTime;
+    }
+
+    public get loadEndTime(): Date | null {
+        return this._loadEndTime;
     }
 
     private constructor() {
@@ -108,6 +123,9 @@ export class NewsStreamClient {
 
         try {
             this._isLoading = true;
+            this._articleCount = 0;
+            this._loadStartTime = new Date();
+            this._loadEndTime = null;
             onLoadingChange(true);
             await this.connection.start();
             console.log("✅ Connected to SignalR hub.");
@@ -115,15 +133,20 @@ export class NewsStreamClient {
             const stream = this.connection.stream("GetNewsStream", parseInt(currentUser.id, 10));
 
             stream.subscribe({
-                next: (item: NewsDto) => onArticleReceived(mapNewsDto(item)),
+                next: (item: NewsDto) => {
+                    this._articleCount++;
+                    onArticleReceived(mapNewsDto(item));
+                },
                 complete: () => {
                     this._isLoading = false;
+                    this._loadEndTime = new Date();
                     onLoadingChange(false);
                     console.log("✅ News stream completed.");
                     onComplete();
                 },
                 error: (err) => {
                     this._isLoading = false;
+                    this._loadEndTime = new Date();
                     onLoadingChange(false);
                     console.error("❌ News stream error:", err);
                     onError(err);
@@ -131,6 +154,7 @@ export class NewsStreamClient {
             });
         } catch (err) {
             this._isLoading = false;
+            this._loadEndTime = new Date();
             onLoadingChange(false);
             const error = err instanceof Error ? err : new Error("Failed to connect to SignalR hub");
             console.error(`❌ ${error.message}`);

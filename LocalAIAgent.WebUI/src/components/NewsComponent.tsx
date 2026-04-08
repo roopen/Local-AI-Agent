@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NewsStreamClient } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import ChatComponent from './ChatComponent';
+import FeedbackModal from './FeedbackModal';
 import { Button, Chip } from '@progress/kendo-react-buttons';
-import { TextArea } from '@progress/kendo-react-inputs';
 import { NewsClient } from '../clients/NewsClient';
 import UserService from '../users/UserService';
+import UserSettings from '../domain/UserSettings';
 
 const newsClient = NewsClient.getInstance();
 const userService = UserService.getInstance();
@@ -26,47 +27,6 @@ function TokenStatsBar({ avgInput, avgOutput, avgTotal }: TokenStatsBarProps) {
             {avgOutput != null && <>Out: {Math.round(avgOutput).toLocaleString()}</>}
             {avgTotal != null && <> &nbsp;·&nbsp; Total: {Math.round(avgTotal).toLocaleString()}</>}
         </p>
-    );
-}
-
-interface FeedbackModalProps {
-    pendingFeedback: { article: NewsArticle; isLiked: boolean };
-    feedbackReason: string;
-    isDark: boolean;
-    onReasonChange: (value: string) => void;
-    onCancel: () => void;
-    onSubmit: () => void;
-}
-
-function FeedbackModal({ pendingFeedback, feedbackReason, isDark, onReasonChange, onCancel, onSubmit }: FeedbackModalProps) {
-    return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-            <div style={{
-                background: isDark ? '#282c34' : 'white', color: isDark ? 'rgba(255,255,255,0.87)' : '#213547',
-                padding: 24, borderRadius: 8, width: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: isDark ? '1px solid #444' : '1px solid #ccc'
-            }}>
-                <h3 style={{ marginTop: 0 }}>
-                    {pendingFeedback.isLiked ? '👍 Why did you like this?' : '👎 Why didn\'t you like this?'}
-                </h3>
-                <p style={{ fontSize: 13, color: isDark ? '#aaa' : '#555', marginTop: 0 }}>{pendingFeedback.article.Title}</p>
-                <TextArea
-                    value={feedbackReason}
-                    onChange={e => onReasonChange(e.value)}
-                    rows={4}
-                    placeholder="Enter your reason…"
-                    style={{ width: '100%' }}
-                />
-                <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <Button fillMode={'outline'} onClick={onCancel}>Cancel</Button>
-                    <Button themeColor={'primary'} disabled={!feedbackReason.trim()} onClick={onSubmit}>
-                        Submit
-                    </Button>
-                </div>
-            </div>
-        </div>
     );
 }
 
@@ -178,8 +138,18 @@ const NewsComponent: React.FC = () => {
     const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<Record<string, boolean>>({});
     const [pendingFeedback, setPendingFeedback] = useState<{ article: NewsArticle; isLiked: boolean } | null>(null);
-    const [feedbackReason, setFeedbackReason] = useState('');
     const [isDark, setIsDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const [correctedTopic, setCorrectedTopic] = useState('');
+    const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+
+    useEffect(() => {
+        const user = userService.getCurrentUser();
+        if (user) {
+            userService.getUserPreferences(user.id)
+                .then(prefs => setUserSettings(prefs))
+                .catch(err => console.error('Failed to load user preferences:', err));
+        }
+    }, []);
 
     useEffect(() => {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -192,7 +162,7 @@ const NewsComponent: React.FC = () => {
         setSelectedArticleLink(prev => prev === link ? null : link);
     };
 
-    const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string) => {
+    const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string, correctedTopic?: string, selectedLikes?: string[], selectedDislikes?: string[]) => {
         const user = userService.getCurrentUser();
         if (!user) return;
 
@@ -205,8 +175,11 @@ const NewsComponent: React.FC = () => {
                 articleLink: article.Link,
                 articleTitle: article.Title,
                 articleSummary: article.Summary,
+                articleTopic: correctedTopic ?? article.Topic ?? '',
                 isLiked,
-                reason
+                reason,
+                selectedLikes,
+                selectedDislikes
             });
             if (isToggleOff) {
                 setFeedback(prev => {
@@ -439,7 +412,7 @@ const NewsComponent: React.FC = () => {
                                                 handleFeedback(article, isLiked);
                                             } else {
                                                 setPendingFeedback({ article, isLiked });
-                                                setFeedbackReason(isLiked ? (article.Reasoning ?? '') : '');
+                                                setCorrectedTopic(article.Topic?.trim() ?? '');
                                             }
                                         }}
                                     />
@@ -452,17 +425,18 @@ const NewsComponent: React.FC = () => {
             </div>
             {pendingFeedback && (
                 <FeedbackModal
-                    pendingFeedback={pendingFeedback}
-                    feedbackReason={feedbackReason}
-                    isDark={isDark}
-                    onReasonChange={setFeedbackReason}
-                    onCancel={() => setPendingFeedback(null)}
-                    onSubmit={async () => {
-                        await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, feedbackReason.trim());
-                        setPendingFeedback(null);
-                        setFeedbackReason('');
-                    }}
-                />
+                            pendingFeedback={pendingFeedback}
+                            correctedTopic={correctedTopic}
+                            userSettings={userSettings}
+                            isDark={isDark}
+                            onTopicChange={setCorrectedTopic}
+                            onCancel={() => setPendingFeedback(null)}
+                            onSubmit={async (reason, selectedLikes, selectedDislikes) => {
+                                await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, reason, correctedTopic, selectedLikes, selectedDislikes);
+                                setPendingFeedback(null);
+                                setCorrectedTopic('');
+                            }}
+                        />
             )}
         </div>
     );

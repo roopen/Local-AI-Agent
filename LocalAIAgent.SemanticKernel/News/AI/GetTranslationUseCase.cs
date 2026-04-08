@@ -43,11 +43,10 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             foreach (BaseNewsClientSettings source in sourcesToTranslate)
             {
-                string host = source.Host;
                 string sourceName = source.ClientName.Replace("Client", null).ToLowerInvariant();
 
                 // Filter articles that belong to the current source and require translation
-                articlesToTranslate.AddRange(articles.Where(a => a.Source.Contains(host) || a.Source.Contains(sourceName)));
+                articlesToTranslate.AddRange(articles.Where(a => MatchesHost(a.Source, source.Host) || a.Source.Contains(sourceName)));
             }
 
             if (articlesToTranslate.Count is 0) return articles;
@@ -75,17 +74,18 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             string systemPrompt = $@"
                 <|turn>system
-                You are a translation specialist. Your mission is to translate news articles into {targetLanguage}.
-                
+                You are a translation specialist proficient in multiple languages, including Traditional Chinese (Taiwanese context), Japanese, Korean, and many others. Your mission is to translate news articles into {targetLanguage}.
+
                 CRITICAL WORKFLOW:
-                1. Inside the <|think>thought block, you MUST perform a 'Draft Translation'.
-                2. List the Article Index.
-                3. Write out the {targetLanguage} translation for the Title and Summary as plain text.
-                4. ONLY THEN, construct the JSON array using those drafts.
-                
+                1. Inside the <|think> block, you MUST perform a 'Draft Translation'.
+                2. For each article, identify the source language (e.g., Traditional Chinese).
+                3. Perform a careful translation of the Title and Summary into {targetLanguage}, ensuring cultural nuances and specific terminology are preserved.
+                4. List the Article Index and write out the {targetLanguage} translation for the Title and Summary as plain text within the <|think> block.
+                5. ONLY THEN, construct the JSON array using those drafts.
+
                 RULES:
                 - If the JSON output contains any words from the source language, the task is a failure.
-                - Output ONLY the JSON array after the <think|> tag.
+                - Output ONLY the JSON array after the </think> tag.
                 - No markdown, no intro.
                 
                 [EXAMPLE]
@@ -244,6 +244,35 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 Console.WriteLine(ex);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Returns true when <paramref name="articleSource"/> belongs to the same site as
+        /// <paramref name="settingsHost"/>, including sibling subdomains.
+        /// e.g. "news.ltn.com.tw" matches settings host "www.ltn.com.tw" via shared parent "ltn.com.tw".
+        /// </summary>
+        private static bool MatchesHost(string articleSource, string settingsHost)
+        {
+            if (articleSource.Equals(settingsHost, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Article is a subdomain of the settings host (e.g. "foo.example.com" under "example.com")
+            if (articleSource.EndsWith("." + settingsHost, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Strip one subdomain level from the settings host and retry, so that sibling subdomains
+            // ("news.ltn.com.tw", "ent.ltn.com.tw") all match a configured host like "www.ltn.com.tw"
+            // by sharing the parent domain "ltn.com.tw".
+            int dot = settingsHost.IndexOf('.');
+            if (dot >= 0)
+            {
+                string parent = settingsHost[(dot + 1)..];
+                if (articleSource.Equals(parent, StringComparison.OrdinalIgnoreCase)
+                    || articleSource.EndsWith("." + parent, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         // Repairs common invalid-JSON patterns emitted by LLMs before deserialization.

@@ -13,7 +13,7 @@ namespace LocalAIAgent.SemanticKernel.News
         private string GetHostFromBaseUrl()
         {
             Uri uri = new(BaseUrl);
-            return uri.Host;
+            return uri.DnsSafeHost;
         }
 
         public abstract List<string> GetNewsUrls();
