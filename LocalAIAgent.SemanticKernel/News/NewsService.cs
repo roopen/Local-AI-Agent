@@ -45,25 +45,27 @@ namespace LocalAIAgent.SemanticKernel.News
         internal async Task<int> LoadAllNews()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            int feedCount = 0;
 
-            foreach (BaseNewsClientSettings settings in newsClientSettingsList.Distinct())
-            {
-                using HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
-
-                foreach (string url in settings.GetNewsUrls())
+            List<Task<SyndicationFeed>> tasks = newsClientSettingsList
+                .Distinct()
+                .SelectMany(settings =>
                 {
-                    SyndicationFeed feed = await GetNews(httpClient, url);
+                    HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
+                    return settings.GetNewsUrls().Select(url => GetNews(httpClient, url));
+                })
+                .ToList();
 
-                    CacheNewsArticles(feed);
+            SyndicationFeed[] feeds = await Task.WhenAll(tasks);
 
-                    feedCount = feed.Items.Count();
-                }
+            foreach (SyndicationFeed feed in feeds)
+            {
+                CacheNewsArticles(feed);
             }
+
             stopwatch.Stop();
             Console.WriteLine($"NewsService: Loaded all news in {stopwatch.ElapsedMilliseconds} ms.");
 
-            return feedCount;
+            return feeds.Sum(f => f.Items.Count());
         }
 
         private void CacheNewsArticles(SyndicationFeed feed)

@@ -63,6 +63,7 @@ namespace LocalAIAgent.API.Api.Controllers
                     ArticleLink = dto.ArticleLink,
                     ArticleTitle = dto.ArticleTitle,
                     ArticleSummary = dto.ArticleSummary,
+                    ArticleTopic = dto.ArticleTopic,
                     IsLiked = dto.IsLiked,
                     Reason = dto.Reason ?? string.Empty,
                     UserPreferencesId = preferences.Id
