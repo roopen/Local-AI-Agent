@@ -67,7 +67,7 @@
                 "  Dislikes: {List found dislikes or 'None'}\n" +
                 "  Result: {Brief logic for High/Low}\n" +
                 "- Total thought block must be under 40 words per article." +
-                "DO NOT write sentences. DO NOT summarize the story." +
+                "DO NOT write sentences. DO NOT summarize the story. DO NOT add comments in the JSON." +
                 "Use the <|think>thought block to perform a step-by-step analysis for each article. " +
                 "Compare the article content against likes, dislikes, and the user's prompt. " +
                 "If an article matches both a like and a dislike, explicitly resolve the conflict by prioritizing the dislike.\n\n" +
@@ -86,7 +86,7 @@
                 "Rules:\n" +
                 "- ArticleIndex is the 0-based index of the article as presented in the input\n" +
                 "- Relevancy must be exactly one of: High, Low\n" +
-                "- Topic is a single short label (e.g., Technology, Politics). Use ONE label only — no slashes.\n" +
+                "- Topic is a single short label (e.g., Technology, Politics). Use ONE label only — no slashes. Leave empty if Relevancy is Low\n" +
 #if DEBUG
                 "- Reasoning is a brief, user-friendly explanation for the UI. (Keep internal logic in the thought block).\n\n" +
 #endif
