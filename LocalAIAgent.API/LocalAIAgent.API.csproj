@@ -9,12 +9,12 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.5" />
 		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
-		<PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.14" />
-		<PackageReference Include="Microsoft.Bcl.TimeProvider" Version="9.0.14" />
+		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.5" />
 		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-		<PackageReference Include="Fido2" Version="4.0.0" />
-		<PackageReference Include="Fido2.AspNet" Version="4.0.0" />
-		<PackageReference Include="Fido2.Models" Version="4.0.0" />
+		<PackageReference Include="Fido2" Version="4.0.1" />
+		<PackageReference Include="Fido2.AspNet" Version="4.0.1" />
+		<PackageReference Include="Fido2.Models" Version="4.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
 		<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.7" />
 		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.7" />

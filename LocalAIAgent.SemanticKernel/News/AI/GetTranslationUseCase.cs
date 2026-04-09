@@ -73,29 +73,31 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
             string systemPrompt = $@"
-                <|turn>system
-                You are a translation specialist proficient in multiple languages, including Traditional Chinese (Taiwanese context), Japanese, Korean, and many others. Your mission is to translate news articles into {targetLanguage}.
-
-                CRITICAL WORKFLOW:
-                1. Inside the <|think> block, you MUST perform a 'Draft Translation'.
-                2. For each article, identify the source language (e.g., Traditional Chinese).
-                3. Perform a careful translation of the Title and Summary into {targetLanguage}, ensuring cultural nuances and specific terminology are preserved.
-                4. List the Article Index and write out the {targetLanguage} translation for the Title and Summary as plain text within the <|think> block.
-                5. ONLY THEN, construct the JSON array using those drafts.
-
-                RULES:
-                - If the JSON output contains any words from the source language, the task is a failure.
-                - Output ONLY the JSON array after the </think> tag.
-                - No markdown, no intro.
+                <|think|>
+                ## Role
+                Translate news JSON objects into {targetLanguage}. 
+                
+                ## Critical Logic (<|channel>thought)
+                For each article:
+                1. Identify Source Language (e.g., Traditional Chinese).
+                2. List 2-3 'Anchor Terms' (e.g., OPEC+, AFP, technical nouns) and their {targetLanguage} equivalents.
+                3. Explicitly set internal state to {targetLanguage} mode.
+                *Do NOT write full draft sentences here.*
+                
+                ## Output Rules
+                - Provide ONLY the JSON array after the <channel|> tag.
+                - Translate 'title' and 'summary' only.
+                - Strict JSON: No markdown, no trailing commas, start with '['.
                 
                 [EXAMPLE]
-                User: [{{""title"": ""Mímir Kristjánsson sendte meldinger"", ""summary"": ""Dette er en test""}}]
+                User: [{{""title"": ""OPEC+：能源設施修復費時"", ""summary"": ""法新社報導...""}}]
                 Model:
-                <|think>thought
-                Draft Art 0:
-                Title: Mímir Kristjánsson sent messages.
-                <think|>
-                [{{""title"": ""Mímir Kristjánsson sent messages"", ""summary"": ""This is a test""}}]
+                <|channel>thought
+                - Art 0: Traditional Chinese. 
+                - Anchors: OPEC+ (OPEC+), 法新社 (AFP), 修復 (Repair).
+                - Mode: {targetLanguage}.
+                <channel|>
+                [{{""title"": ""OPEC+: Energy Facility Repairs Are Time-Consuming"", ""summary"": ""AFP reports...""}}]
                 [END EXAMPLE]
                 <|turn>";
 
