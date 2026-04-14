@@ -18,7 +18,6 @@ namespace LocalAIAgent.SemanticKernel
         {
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
-            services.AddSingleton<ChatContext>();
             services.AddMemoryCache();
             services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
@@ -41,14 +40,11 @@ namespace LocalAIAgent.SemanticKernel
 
         public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder, AIOptions aiOptions)
         {
-            kernelBuilder.Services.AddSingleton<ChatContext>();
-            //kernelBuilder.Services.AddSingleton<RAGService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
 
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
-            //kernelBuilder.Plugins.AddFromType<RAGService>();
 
             kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
             kernelBuilder.Services.AddInMemoryVectorStore();

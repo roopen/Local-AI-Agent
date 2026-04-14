@@ -8,6 +8,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using OpenAI.Chat;
 using Polly;
 using Polly.Retry;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
@@ -159,16 +160,25 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         private static string FormatKnownTopicsAndEvents(HashSet<string> topics)
         {
             if (topics.Count == 0)
-                return string.Empty;
+                return "Topic Rule: Assign a single, broad category (e.g., Finance, Tech, Politics). No slashes.\n";
 
             StringBuilder sb = new();
-            sb.AppendLine("Before assigning a topic to an article, see if it fits any of the already known topics. AVOID introducing new topics unnecessarily." +
-                "Never use slashes in topic names.");
+            sb.AppendLine("### Topic Categorization Rules");
+            sb.AppendLine("1. **Subject vs. Cause Rule**: Categorize by the *Main Subject*, not the *Cause*.");
+            sb.AppendLine("   - If the subject is Stocks, Inflation, or Markets, use **Finance**, even if the cause is a war or treaty.");
+            sb.AppendLine("   - If the subject is a Missile Strike, Diplomatic Meeting, or Treaty, use **Geopolitics**.");
+
+            sb.AppendLine("2. **Topic Definitions**:");
+            sb.AppendLine("   - **Finance**: Stock prices, indices (S&P 500), inflation (CPI/Wholesale), central banks, oil *prices*.");
+            sb.AppendLine("   - **Geopolitics**: Military actions, international sanctions, state-level negotiations, borders.");
+
             if (topics.Count > 0)
             {
-                sb.AppendLine($"- {string.Join(", ", topics)}");
+                sb.AppendLine("\n[Known Topics]:");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {string.Join(", ", topics.OrderBy(x => x))}");
+                sb.AppendLine();
             }
-            sb.AppendLine();
+
             return sb.ToString();
         }
 

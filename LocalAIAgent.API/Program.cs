@@ -67,7 +67,6 @@ namespace LocalAIAgent.API
                 builder.Services.AddSwaggerGen();
                 builder.Services.AddSignalR();
                 builder.Services.AddSemanticKernel(builder.Configuration);
-                builder.Services.AddScoped<SemanticKernel.Chat.IChatService, SemanticKernel.Chat.ChatService>();
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
                 builder.Services.AddScoped<NewsMetrics>();
