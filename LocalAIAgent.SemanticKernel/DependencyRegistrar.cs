@@ -22,6 +22,12 @@ namespace LocalAIAgent.SemanticKernel
             services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
             AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
+            if (aiOptions is not null)
+            {
+                if (string.IsNullOrWhiteSpace(aiOptions.ModelId))
+                    aiOptions.ModelId = "unsloth/gemma-4-e4b-it";
+            }
+
             services.AddKernel().GetSemanticKernelBuilder(aiOptions);
             services.AddSingleton(aiOptions);
             services.AddMemoryCache();
