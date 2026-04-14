@@ -163,7 +163,7 @@ namespace LocalAIAgent.API
 
                 // Run initial news fetch on startup
                 InitializeNewsCache(app);
-                LoadLLMOnStartup(app);
+                LoadLLMOnStartup(app).Wait();
 
                 app.Run();
             }
@@ -217,10 +217,10 @@ namespace LocalAIAgent.API
             }
         }
 
-        private static void LoadLLMOnStartup(WebApplication app)
+        private static async Task LoadLLMOnStartup(WebApplication app)
         {
             IServiceScopeFactory scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-            Task.Run(async () =>
+            await Task.Run(async () =>
             {
                 using IServiceScope scope = scopeFactory.CreateScope();
 
