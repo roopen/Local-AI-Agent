@@ -67,10 +67,10 @@
 			<ReactFiles Include="../LocalAIAgent.WebUI/dist/**" />
 		</ItemGroup>
 		<Copy SourceFiles="@(ReactFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
-		<!-- Re-register all wwwroot files after copy so new hash-named assets are included in publish/self-extract bundle -->
+		<!-- Re-register all wwwroot files after copy so new hash-named assets are included in publish -->
 		<ItemGroup>
 			<Content Remove="wwwroot/**" />
-			<Content Include="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+			<Content Include="wwwroot/**" CopyToPublishDirectory="PreserveNewest" />
 		</ItemGroup>
 	</Target>
 
