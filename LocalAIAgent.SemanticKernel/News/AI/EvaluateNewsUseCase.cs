@@ -162,11 +162,11 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 return string.Empty;
 
             StringBuilder sb = new();
-            sb.AppendLine("Strict labeling constraints — you MUST follow these:");
+            sb.AppendLine("Before assigning a topic to an article, see if it fits any of the already known topics. AVOID introducing new topics unnecessarily." +
+                "Never use slashes in topic names.");
             if (topics.Count > 0)
             {
-                sb.AppendLine($"- Topic MUST be one of these exact values: {string.Join(", ", topics)}");
-                sb.AppendLine("  Only introduce a new topic if none of the above fits. Never combine topics with slashes.");
+                sb.AppendLine($"- {string.Join(", ", topics)}");
             }
             sb.AppendLine();
             return sb.ToString();
