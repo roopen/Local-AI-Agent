@@ -1,4 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Serilog;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -13,7 +16,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
     internal class LoadLLMUseCase(
         IConfiguration configuration,
-        HttpClient httpClient) : ILoadLLMUseCase
+        HttpClient httpClient,
+        Kernel kernel) : ILoadLLMUseCase
     {
         private sealed record LoadModelRequest(
             string Model,
@@ -27,6 +31,13 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 ?? throw new InvalidOperationException("AIOptions:EndpointUrl is not configured.");
             string modelId = configuration["AIOptions:ModelId"]
                 ?? throw new InvalidOperationException("AIOptions:ModelId is not configured.");
+
+            if (await IsModelResponsiveAsync(modelId))
+            {
+                Log.Information("LLM model {ModelId} is already loaded and responsive, skipping explicit load", modelId);
+                return true;
+            }
+
             Uri lmStudioLoadUrl = new(new Uri(endpointUrl), "/api/v1/models/load");
 
             try
@@ -57,6 +68,29 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to load LLM model {ModelId}", modelId);
+                return false;
+            }
+        }
+
+        private async Task<bool> IsModelResponsiveAsync(string modelId)
+        {
+            try
+            {
+                IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
+                ChatHistory probe = [new ChatMessageContent(AuthorRole.User, "ping")];
+                OpenAIPromptExecutionSettings settings = new()
+                {
+                    ModelId = modelId,
+                    MaxTokens = 1,
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+                };
+                IReadOnlyList<ChatMessageContent> result = await chatCompletion
+                    .GetChatMessageContentsAsync(probe, settings, kernel);
+                return result.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "LLM model {ModelId} probe failed, will attempt explicit load", modelId);
                 return false;
             }
         }
