@@ -31,6 +31,8 @@ namespace LocalAIAgent.SemanticKernel
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
             services.AddScoped<INewsChatUseCase, NewsChatUseCase>();
             services.AddScoped<ILoadLLMUseCase, LoadLLMUseCase>();
+            services.AddScoped<IGetLMStudioModelsUseCase, GetLMStudioModelsUseCase>();
+            services.AddScoped<IDownloadLLMModelUseCase, DownloadLLMModelUseCase>();
 
             services.AddNewsClients();
 

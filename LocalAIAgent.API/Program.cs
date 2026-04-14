@@ -241,7 +241,7 @@ namespace LocalAIAgent.API
                 }
 
                 ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
-                await loadLLMUseCase.LoadLLMUseCaseAsync(configuration["AIOptions:ModelId"]!);
+                await loadLLMUseCase.LoadLLMUseCaseAsync();
             });
         }
     }
