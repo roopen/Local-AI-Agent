@@ -103,7 +103,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 Instructions = systemPrompt,
                 Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: "Translation")),
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
             };
 
             ChatHistoryAgentThread thread = new();
@@ -204,7 +204,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 Instructions = systemPrompt,
                 Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: "Translation")),
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
             };
 
             ChatHistoryAgentThread verifyThread = new();
