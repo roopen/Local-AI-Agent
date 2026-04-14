@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using LocalAIAgent.SemanticKernel.Chat;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Serilog;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -16,6 +17,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
     internal class LoadLLMUseCase(
         IConfiguration configuration,
+        AIOptions options,
         HttpClient httpClient,
         Kernel kernel) : ILoadLLMUseCase
     {
@@ -76,17 +78,20 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         {
             try
             {
-                IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
-                ChatHistory probe = [new ChatMessageContent(AuthorRole.User, "ping")];
-                OpenAIPromptExecutionSettings settings = new()
+                ChatCompletionAgent agent = new()
                 {
-                    ModelId = modelId,
-                    MaxTokens = 1,
-                    FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+                    Kernel = kernel,
+                    Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false))
                 };
-                IReadOnlyList<ChatMessageContent> result = await chatCompletion
-                    .GetChatMessageContentsAsync(probe, settings, kernel);
-                return result.Count > 0;
+
+                ChatHistoryAgentThread thread = new();
+                ChatMessageContent userMessage = new(AuthorRole.User, "ping");
+
+                await foreach (AgentResponseItem<ChatMessageContent> _ in agent.InvokeAsync(userMessage, thread))
+                {
+                    return true;
+                }
+                return false;
             }
             catch (Exception ex)
             {
