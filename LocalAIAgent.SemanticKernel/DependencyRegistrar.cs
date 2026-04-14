@@ -39,7 +39,6 @@ namespace LocalAIAgent.SemanticKernel
 
         public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder, AIOptions aiOptions)
         {
-            kernelBuilder.Services.AddSingleton<ChatService>();
             kernelBuilder.Services.AddSingleton<ChatContext>();
             //kernelBuilder.Services.AddSingleton<RAGService>();
             kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();

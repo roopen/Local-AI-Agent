@@ -1,9 +1,10 @@
 ﻿using LocalAIAgent.SemanticKernel.Chat;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
+using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -15,7 +16,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     }
 
     internal class NewsChatUseCase(
-        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options) : INewsChatUseCase
     {
@@ -29,43 +29,57 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 $"Respond using the following json schema: " +
                 $"{{\r\n  \"articleWasTranslated\": true,\r\n  \"translation\": \"string\",\r\n  \"termsAndExplanations\": [\r\n    {{\r\n      \"key\": {{\r\n        \"term\": \"string\"\r\n      }},\r\n      \"value\": {{\r\n        \"explanation\": \"string\"\r\n      }}\r\n    }}\r\n  ]\r\n}}";
 
-            ChatHistory chatMessageContents = [];
-            chatMessageContents.AddUserMessage(article);
-
-            OpenAIPromptExecutionSettings settings = new()
+            ChatCompletionAgent agent = new()
             {
-                ChatSystemPrompt = prompt,
-                ResponseFormat = new ExpandedNewsResult(),
-                FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+                Instructions = prompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(new OpenAIPromptExecutionSettings
+                {
+                    ServiceId = "General",
+                    ModelId = options.ModelId,
+                    ResponseFormat = new ExpandedNewsResult(),
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                ReasoningEffort = ChatReasoningEffortLevel.High,
+                    ReasoningEffort = ChatReasoningEffortLevel.High,
 #pragma warning restore OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                }),
             };
 
-            var result = await chatCompletion.GetChatMessageContentAsync(
-                chatMessageContents,
-                settings,
-                kernel);
+            ChatHistoryAgentThread thread = new();
+            ChatMessageContent userMessage = new(AuthorRole.User, article);
 
-            return ExpandedNewsResult.FromJson(result.Content);
+            ChatMessageContent? response = null;
+            await foreach (ChatMessageContent msg in agent.InvokeAsync(userMessage, thread).ConfigureAwait(false))
+                response = msg;
+
+            return ExpandedNewsResult.FromJson(response?.Content);
         }
 
         public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(List<string> messages)
         {
-            ChatHistory chatHistory = GetChatMessageContents(messages);
-            string newsArticle = chatHistory.First().Content ?? string.Empty;
+            if (messages.Count == 0)
+                yield break;
+
+            string newsArticle = messages[0];
 
             string prompt = $"You are a chat assistant." +
                 $"Answer any questions the user has about the news article provided. News article: {newsArticle}" +
                 $"Keep your answers short and concise. Use tools only when required to.";
 
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                prompt, allowFunctionUse: true);
+            ChatCompletionAgent agent = new()
+            {
+                Instructions = prompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: true)),
+            };
 
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
+            ChatHistoryAgentThread thread = new();
+            foreach (string msg in messages.SkipLast(1))
+                thread.ChatHistory.AddUserMessage(msg);
+
+            ChatMessageContent latestMessage = new(AuthorRole.User, messages[^1]);
+
+            await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(latestMessage, thread)
                                 .ConfigureAwait(false))
             {
                 if (content is null)
@@ -73,16 +87,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                 yield return content;
             }
-        }
-
-        private static ChatHistory GetChatMessageContents(List<string> chatHistory)
-        {
-            ChatHistory chatMessages = [];
-            foreach (string message in chatHistory)
-            {
-                chatMessages.AddUserMessage(message);
-            }
-            return chatMessages;
         }
     }
 }

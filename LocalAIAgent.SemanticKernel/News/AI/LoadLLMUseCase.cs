@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Serilog;
 using System.Net.Http.Headers;
@@ -14,12 +15,10 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     }
 
     internal class LoadLLMUseCase(
-        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
+        IConfiguration configuration,
         HttpClient httpClient) : ILoadLLMUseCase
     {
-        private const string LMStudioLoadUrl = "http://localhost:1234/api/v1/models/load";
-
         private sealed record LoadModelRequest(
             string Model,
             int ContextLength,
@@ -28,6 +27,10 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         public async Task<bool> LoadLLMUseCaseAsync(string modelId)
         {
+            string endpointUrl = configuration["AIOptions:EndpointUrl"]
+                ?? throw new InvalidOperationException("AIOptions:EndpointUrl is not configured.");
+            Uri lmStudioLoadUrl = new(new Uri(endpointUrl), "/api/v1/models/load");
+
             try
             {
                 LoadModelRequest request = new(
@@ -36,7 +39,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                     FlashAttention: true,
                     EchoLoadConfig: true);
 
-                using HttpRequestMessage httpRequest = new(HttpMethod.Post, LMStudioLoadUrl)
+                using HttpRequestMessage httpRequest = new(HttpMethod.Post, lmStudioLoadUrl)
                 {
                     Content = JsonContent.Create(request, options: new JsonSerializerOptions
                     {
@@ -58,7 +61,23 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 try
                 {
-                    ChatMessageContent response = await chatCompletion.GetChatMessageContentAsync("Hello", kernel: kernel);
+                    ChatCompletionAgent agent = new()
+                    {
+                        Kernel = kernel,
+                        Arguments = new KernelArguments(new Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings
+                        {
+                            ServiceId = "General",
+                            ModelId = configuration["AIOptions:ModelId"],
+                            FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+                        }),
+                    };
+
+                    ChatHistoryAgentThread thread = new();
+                    ChatMessageContent message = new(AuthorRole.User, "Hello");
+                    ChatMessageContent? response = null;
+                    await foreach (ChatMessageContent msg in agent.InvokeAsync(message, thread).ConfigureAwait(false))
+                        response = msg;
+
                     Log.Debug($"LLM Load response: {response}");
                     Console.WriteLine($"LLM Load response: {response}");
                     return true;
