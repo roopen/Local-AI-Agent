@@ -142,6 +142,9 @@ namespace LocalAIAgent.API
 
                 app.UseHttpsRedirection();
 
+                app.UseDefaultFiles();
+                app.UseStaticFiles();
+
                 app.UseCors("AllowWebUI");
 
                 app.UseAuthentication();
@@ -151,14 +154,6 @@ namespace LocalAIAgent.API
                 app.MapControllers();
                 app.MapHub<ChatHub>("/chatHub");
                 app.MapHub<NewsHub>("/newsHub");
-
-                app.UseDefaultFiles();
-                app.UseStaticFiles();
-                app.UseFileServer(new FileServerOptions
-                {
-                    RequestPath = "",
-                    EnableDefaultFiles = true
-                });
 
                 // Run initial news fetch on startup
                 InitializeNewsCache(app);
