@@ -49,11 +49,11 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             if (articlesToTranslate.Count is 0) return articles;
 
-            // Process batches of 1 in parallel
+            // Process batches of 3 in parallel
             List<Task> batchTasks = [];
-            for (int i = 0; i < articlesToTranslate.Count; i += 1)
+            for (int i = 0; i < articlesToTranslate.Count; i += 3)
             {
-                List<NewsArticle> batch = articlesToTranslate.Skip(i).Take(1).ToList();
+                List<NewsArticle> batch = articlesToTranslate.Skip(i).Take(3).ToList();
                 batchTasks.Add(TranslateBatchAsync(batch, targetLanguage));
             }
             await Task.WhenAll(batchTasks);
@@ -127,13 +127,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             result = SanitizeJsonResponse(result);
 
-            //bool translationSuccessful = await VerifyTranslations(result, targetLanguage);
-
-            //if (!translationSuccessful && attempt < 1) await TranslateBatchAsync(batch, targetLanguage, attempt + 1);
-
-            //if (!translationSuccessful)
-            //    batch = [];
-
             try
             {
                 List<TranslationDto>? translatedArticles = JsonSerializer.Deserialize<List<TranslationDto>>(result, s_jsonDeserializerOptions);
@@ -154,97 +147,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 Console.WriteLine($"Error deserializing translation response: {ex.Message}");
                 Console.WriteLine($"LLM Response: {result}");
-            }
-        }
-
-        private async Task<bool> VerifyTranslations(string translations, string targetLanguage)
-        {
-            string systemPrompt = $@"
-                <|turn>system
-                Use the <|think> block ONLY for internal reasoning. 
-                Do NOT reveal the content of the <|think> block in the final output.
-                
-                Your task:
-                - You will receive a JSON array of article objects from the user.
-                - For EACH article, verify whether BOTH 'title' and 'summary' are written in {targetLanguage}.
-                - Return a JSON array where each element corresponds to the input article and has the structure:
-                  {{ ""isValid"": true }} or {{ ""isValid"": false }}.
-                
-                Rules:
-                1. Output MUST be a valid JSON array.
-                2. The final JSON MUST contain exactly one object per input article.
-                3. The final JSON MUST be entirely in {targetLanguage}.
-                4. Do NOT include markdown, comments, explanations, or any text outside the JSON array.
-                5. Do NOT output <|think> or <|chain> blocks in the final answer.
-                6. Your response MUST start with '[' and end with ']'.
-                
-                [EXAMPLE]
-                Input:
-                [
-                  {{ ""title"": ""Mímir Kristjánsson sendte truende meldinger"", ""summary"": ""Stortingsrepresentanten beklager."" }},
-                  {{ ""title"": ""Hello world"", ""summary"": ""This is English"" }}
-                ]
-                
-                Output:
-                <|think>
-                Identify languages:
-                - Article 1: Norwegian → not {targetLanguage}
-                - Article 2: English → not {targetLanguage}
-                </think>
-                [
-                  {{ ""isValid"": false }},
-                  {{ ""isValid"": false }}
-                ]
-                [END EXAMPLE]
-                <|turn>
-                ";
-
-
-            ChatCompletionAgent verifyAgent = new()
-            {
-                Instructions = systemPrompt,
-                Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
-            };
-
-            ChatHistoryAgentThread verifyThread = new();
-            ChatMessageContent verifyMessage = new(AuthorRole.User,
-                $"<|turn>user\r\n" +
-                $"Verify that ALL of the following texts are in {targetLanguage}:\r\n" +
-                $"{translations}<|turn>\r\n" +
-                $"<|turn>model");
-            StringBuilder resultBuilder = new();
-
-            await foreach (StreamingChatMessageContent? content in verifyAgent.InvokeStreamingAsync(verifyMessage, verifyThread)
-                                .ConfigureAwait(false))
-            {
-                if (string.IsNullOrEmpty(content.Content))
-                    continue;
-
-                resultBuilder.Append(content.Content);
-            }
-            string result = resultBuilder.ToString();
-
-            // Extract the JSON array; fall back to wrapping a lone object in brackets.
-            Match jsonMatch = Regex.Match(result, @"\[[\s\S]*\]");
-            if (jsonMatch.Success)
-            {
-                result = jsonMatch.Value;
-            }
-            else
-            {
-                Match objMatch = Regex.Match(result, @"\{[\s\S]*\}");
-                result = objMatch.Success ? $"[{objMatch.Value}]" : result;
-            }
-
-            try
-            {
-                return JsonSerializer.Deserialize<TranslationVerificationResult[]>(result, s_jsonDeserializerOptions)?.All(r => r.IsValid) ?? false;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return false;
             }
         }
 

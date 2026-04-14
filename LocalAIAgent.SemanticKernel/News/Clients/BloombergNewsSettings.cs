@@ -13,7 +13,6 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
                 $"{BaseUrl}/markets/news.rss",
                 $"{BaseUrl}/technology/news.rss",
                 $"{BaseUrl}/politics/news.rss",
-                $"{BaseUrl}/wealth/news.rss",
             ];
         }
 
