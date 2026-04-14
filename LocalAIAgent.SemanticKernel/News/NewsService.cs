@@ -34,7 +34,7 @@ namespace LocalAIAgent.SemanticKernel.News
         {
             if (newsCache.Count is 0) await LoadAllNews();
 
-            List<NewsItem> filteredNews = newsCache.Where(item => PassesDislikeFilter(item, dislikes)).ToList();
+            List<NewsItem> filteredNews = FilterNews(newsCache, dislikes);
 
             double filterPercentage = 100 - (filteredNews.Count / (double)newsCache.Count * 100);
             NewsLogging.LogNewsFiltered(logger, newsCache.Count, filteredNews.Count, filterPercentage, null);
@@ -99,6 +99,16 @@ namespace LocalAIAgent.SemanticKernel.News
                 Console.WriteLine($"NewsService: Error fetching news from {url}: {ex.Message}");
                 return new SyndicationFeed();
             }
+        }
+
+        internal static List<NewsItem> FilterNews(List<NewsItem> news, List<string> dislikes)
+        {
+            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-1);
+
+            return news
+                .Where(item => item.PublishDate >= cutoff)
+                .Where(item => PassesDislikeFilter(item, dislikes))
+                .ToList();
         }
 
         internal static bool PassesDislikeFilter(NewsItem item, List<string> dislikes)
