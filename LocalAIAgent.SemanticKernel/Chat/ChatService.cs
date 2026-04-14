@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
-    public class ChatService([FromKeyedServices("General")] IChatCompletionService chatCompletion, Kernel kernel, AIOptions options, ChatContext chatContext) : IChatService
+    public class ChatService(Kernel kernel, AIOptions options, ChatContext chatContext) : IChatService
     {
         private const string ChatSystemPrompt = "You are an AI assistant. " +
             "When asked about news, you curate the current news according to user's preferences (prioritize likes and filter away news based on" +
@@ -16,10 +15,19 @@ namespace LocalAIAgent.SemanticKernel.Chat
             "Keep your answers short, but display a large variety of news. Be willing to discuss any news with the user.\n" +
             "All news info comes as a json string containing Content (create Title, Category and Summary with this), Link and Source information.";
 
-        public ChatHistory chatHistory { get; } = [];
-        private readonly OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                ChatSystemPrompt + "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
-                "User's likes: \n" + chatContext.GetUserInterestsAsString());
+        private readonly ChatHistoryAgentThread _thread = new();
+
+        private readonly ChatCompletionAgent _agent = new()
+        {
+            Name = "ChatAssistant",
+            Instructions = ChatSystemPrompt +
+                "User's dislikes: \n" + chatContext.GetUserDislikesAsString() + "\n" +
+                "User's likes: \n" + chatContext.GetUserInterestsAsString(),
+            Kernel = kernel,
+            Arguments = new KernelArguments(options.GetAgentExecutionSettings()),
+        };
+
+        public ChatHistory chatHistory => _thread.ChatHistory;
 
         public async Task StartConsoleChat()
         {
@@ -28,10 +36,9 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 Console.Write("User: ");
                 string? input = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(input)) { break; }
-                chatHistory.AddUserMessage(input);
                 Console.WriteLine("Assistant: ");
 
-                await foreach (StreamingChatMessageContent? content in GetChatStreamAsync().ConfigureAwait(false))
+                await foreach (StreamingChatMessageContent content in GetChatStreamAsync(input).ConfigureAwait(false))
                 {
                     Console.Write(content.Content);
                 }
@@ -40,36 +47,37 @@ namespace LocalAIAgent.SemanticKernel.Chat
             }
         }
 
-        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync()
+        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(string userMessage)
         {
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
-                                .ConfigureAwait(false))
+            ChatMessageContent message = new(AuthorRole.User, userMessage);
+            await foreach (StreamingChatMessageContent content in _agent.InvokeStreamingAsync(message, _thread).ConfigureAwait(false))
             {
-                chatHistory.AddAssistantMessage(content.Content ?? string.Empty);
                 yield return content;
             }
         }
 
         public async Task<List<string>> GetDislikedTopicsList(string userPrompt)
         {
-            string unwantedTopicsPrompt = "Provide a list of unwanted topics as keywords (to be used in filtering news) in the following user prompt. " +
+            const string systemPrompt = "Provide a list of unwanted topics as keywords (to be used in filtering news) in the following user prompt. " +
                 "Skip if topic cannot be represented as a single keyword." +
                 "Keywords are to be separated with commas. <example>keyword1,keyword2,keyword3</example>" +
                 "The response should contain nothing other than a plain list of words.\n";
 
-            ChatHistory chatHistory = [];
-            chatHistory.AddUserMessage(userPrompt);
+            ChatCompletionAgent topicsAgent = new()
+            {
+                Instructions = systemPrompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
+            };
 
-            IReadOnlyList<ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
-                chatHistory,
-                options.GetOpenAIPromptExecutionSettings(unwantedTopicsPrompt, allowFunctionUse: false),
-                kernel
-            );
+            ChatHistoryAgentThread thread = new();
+            ChatMessageContent message = new(AuthorRole.User, userPrompt);
 
-            List<string> unwantedTopics = response[0].Content!.Split(',').ToList();
+            string content = string.Empty;
+            await foreach (StreamingChatMessageContent chunk in topicsAgent.InvokeStreamingAsync(message, thread).ConfigureAwait(false))
+                content += chunk.Content ?? string.Empty;
+
+            List<string> unwantedTopics = content.Split(',').ToList();
             unwantedTopics.RemoveAll(string.IsNullOrWhiteSpace);
             unwantedTopics = unwantedTopics.Select(topic => topic.Trim()).ToList();
 
@@ -78,21 +86,26 @@ namespace LocalAIAgent.SemanticKernel.Chat
 
         public async Task<List<string>> GetInterestingTopicsList(string userPrompt)
         {
-            string unwantedTopicsPrompt = "Provide a list of desired topics as keywords (to be used in filtering news) in the following user prompt. " +
+            const string systemPrompt = "Provide a list of desired topics as keywords (to be used in filtering news) in the following user prompt. " +
                 "Skip if topic cannot be represented as a single keyword." +
                 "Keywords are to be separated with commas. <example>keyword1,keyword2,keyword3</example>" +
                 "The response should contain nothing other than a plain list of words.\n";
 
-            ChatHistory chatHistory = [];
-            chatHistory.AddUserMessage(userPrompt);
+            ChatCompletionAgent topicsAgent = new()
+            {
+                Instructions = systemPrompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
+            };
 
-            IReadOnlyList<ChatMessageContent> response = await chatCompletion.GetChatMessageContentsAsync(
-                chatHistory,
-                options.GetOpenAIPromptExecutionSettings(unwantedTopicsPrompt, allowFunctionUse: false),
-                kernel
-            );
+            ChatHistoryAgentThread thread = new();
+            ChatMessageContent message = new(AuthorRole.User, userPrompt);
 
-            List<string> wantedTopics = response[0].Content!.Split(',').ToList();
+            string content = string.Empty;
+            await foreach (StreamingChatMessageContent chunk in topicsAgent.InvokeStreamingAsync(message, thread).ConfigureAwait(false))
+                content += chunk.Content ?? string.Empty;
+
+            List<string> wantedTopics = content.Split(',').ToList();
             wantedTopics.RemoveAll(string.IsNullOrWhiteSpace);
             wantedTopics = wantedTopics.Select(topic => topic.Trim()).ToList();
 

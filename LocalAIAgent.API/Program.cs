@@ -227,9 +227,10 @@ namespace LocalAIAgent.API
                 UserContext userContext = scope.ServiceProvider.GetRequiredService<UserContext>();
                 AiSettings? settings = await userContext.AiSettings.FirstOrDefaultAsync();
 
+                IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
                 if (settings is not null)
                 {
-                    IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
                     configuration["AIOptions:ModelId"] = settings.ModelId;
                     configuration["AIOptions:ApiKey"] = settings.ApiKey;
                     configuration["AIOptions:EndpointUrl"] = settings.EndpointUrl;
@@ -237,10 +238,10 @@ namespace LocalAIAgent.API
                     configuration["AIOptions:TopP"] = settings.TopP.ToString(CultureInfo.InvariantCulture);
                     configuration["AIOptions:FrequencyPenalty"] = settings.FrequencyPenalty.ToString(CultureInfo.InvariantCulture);
                     configuration["AIOptions:PresencePenalty"] = settings.PresencePenalty.ToString(CultureInfo.InvariantCulture);
-
-                    ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
-                    await loadLLMUseCase.LoadLLMUseCaseAsync(configuration["AIOptions:ModelId"]!);
                 }
+
+                ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
+                await loadLLMUseCase.LoadLLMUseCaseAsync(configuration["AIOptions:ModelId"]!);
             });
         }
     }

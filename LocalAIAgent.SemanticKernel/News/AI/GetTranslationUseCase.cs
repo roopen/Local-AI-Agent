@@ -1,9 +1,8 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -18,7 +17,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
-        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options) : IGetTranslationUseCase
     {
@@ -101,18 +99,19 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 [END EXAMPLE]
                 <|turn>";
 
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                systemPrompt, allowFunctionUse: false);
+            ChatCompletionAgent agent = new()
+            {
+                Instructions = systemPrompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: "Translation")),
+            };
 
-            ChatHistory chatHistory = [];
-            chatHistory.AddUserMessage($"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}");
+            ChatHistoryAgentThread thread = new();
+            ChatMessageContent userMessage = new(AuthorRole.User, $"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}");
 
             StringBuilder resultBuilder = new();
 
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
+            await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(userMessage, thread)
                                 .ConfigureAwait(false))
             {
                 if (string.IsNullOrEmpty(content.Content))
@@ -201,21 +200,22 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 ";
 
 
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                systemPrompt, allowFunctionUse: false);
+            ChatCompletionAgent verifyAgent = new()
+            {
+                Instructions = systemPrompt,
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: "Translation")),
+            };
 
-            ChatHistory chatHistory = [];
-            chatHistory.AddUserMessage(
+            ChatHistoryAgentThread verifyThread = new();
+            ChatMessageContent verifyMessage = new(AuthorRole.User,
                 $"<|turn>user\r\n" +
                 $"Verify that ALL of the following texts are in {targetLanguage}:\r\n" +
                 $"{translations}<|turn>\r\n" +
                 $"<|turn>model");
             StringBuilder resultBuilder = new();
 
-            await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                chatHistory,
-                                openAiSettings,
-                                kernel)
+            await foreach (StreamingChatMessageContent? content in verifyAgent.InvokeStreamingAsync(verifyMessage, verifyThread)
                                 .ConfigureAwait(false))
             {
                 if (string.IsNullOrEmpty(content.Content))

@@ -29,5 +29,20 @@ namespace LocalAIAgent.SemanticKernel.Chat
                 PresencePenalty = (double)PresencePenalty,
             };
         }
+
+        public OpenAIPromptExecutionSettings GetAgentExecutionSettings(bool allowFunctionUse = true, string serviceId = "General")
+        {
+            string modelId = serviceId == "Translation" ? LanguageModelId : ModelId;
+            return new OpenAIPromptExecutionSettings
+            {
+                ServiceId = serviceId,
+                ModelId = modelId,
+                FunctionChoiceBehavior = allowFunctionUse ? FunctionChoiceBehavior.Auto() : FunctionChoiceBehavior.None(),
+                Temperature = (double)Temperature,
+                TopP = (double)TopP,
+                FrequencyPenalty = (double)FrequencyPenalty,
+                PresencePenalty = (double)PresencePenalty,
+            };
+        }
     }
 }

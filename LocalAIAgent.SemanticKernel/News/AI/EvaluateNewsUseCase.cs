@@ -1,16 +1,16 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using Polly;
 using Polly.Retry;
 using System.Security.Cryptography;
 using System.Text;
+using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -20,21 +20,22 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     }
 
     internal class EvaluateNewsUseCase(
-        [FromKeyedServices("General")] IChatCompletionService chatCompletion,
         Kernel kernel,
         AIOptions options,
         IMemoryCache memoryCache,
         ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
     {
-        private readonly ChatHistory chatHistory = [];
 
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
         {
             const int BatchSize = 3;
 
-            OpenAIPromptExecutionSettings openAiSettings = options.GetOpenAIPromptExecutionSettings(
-                userPreferences.BuildSystemPrompt(),
-                allowFunctionUse: false);
+            ChatCompletionAgent agent = new()
+            {
+                Instructions = userPreferences.BuildSystemPrompt(),
+                Kernel = kernel,
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
+            };
 
             List<NewsArticle> result = [];
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
@@ -44,19 +45,17 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             foreach (NewsItem[] batch in articleBatches)
             {
-                chatHistory.Clear();
-
                 HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
                 string topicsEventsContext = FormatKnownTopicsAndEvents(knownTopics);
 
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     batch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
-                chatHistory.AddUserMessage(batchContent);
                 string jsonContent = string.Empty;
 
                 using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
-                List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(chatHistory, openAiSettings, kernel, cts.Token).ConfigureAwait(false);
+                ChatMessageContent userMessage = new(AuthorRole.User, batchContent);
+                List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(agent, userMessage, cts.Token).ConfigureAwait(false);
 
                 List<ChatTokenUsage> tokenUsageTotal = [];
                 if (stream.Select(c => c.Metadata?.GetValueOrDefault("Usage")).LastOrDefault(u => u is not null) is ChatTokenUsage tokenUsage)
@@ -202,10 +201,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             }
         }
 
-        private async Task<List<StreamingChatMessageContent>> GetStreamWithRetryAsync(
-            ChatHistory history,
-            OpenAIPromptExecutionSettings settings,
-            Kernel kernelInstance,
+        private static async Task<List<StreamingChatMessageContent>> GetStreamWithRetryAsync(
+            ChatCompletionAgent agent,
+            ChatMessageContent message,
             CancellationToken cancellationToken)
         {
             AsyncRetryPolicy retryPolicy = Policy
@@ -217,11 +215,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             return await retryPolicy.ExecuteAsync(async ct =>
             {
                 List<StreamingChatMessageContent> chunks = [];
-                await foreach (StreamingChatMessageContent? content in chatCompletion.GetStreamingChatMessageContentsAsync(
-                                    history,
-                                    settings,
-                                    kernelInstance,
-                                    ct)
+                ChatHistoryAgentThread thread = new();
+                await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(message, thread, cancellationToken: ct)
                                     .ConfigureAwait(false))
                 {
                     if (content is null)
