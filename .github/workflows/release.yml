@@ -92,7 +92,7 @@ jobs:
       - name: Zip the publish folder
         run: |
           cd "LocalAIAgent.API/bin/Release/${{ env.DOTNET_TFM }}/${{ matrix.target }}/publish"
-          zip -j "$GITHUB_WORKSPACE/${{ matrix.asset_name }}" *
+          zip -r "$GITHUB_WORKSPACE/${{ matrix.asset_name }}" *
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
