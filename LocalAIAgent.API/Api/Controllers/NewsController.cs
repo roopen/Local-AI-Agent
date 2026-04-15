@@ -98,7 +98,7 @@ namespace LocalAIAgent.API.Api.Controllers
                     int batchSize = Random.Shared.Next(1, 3);
                     NewsArticleFeedback[] batch = preferences.FeedbackExamples.Skip(offset).Take(batchSize).ToArray();
                     offset += batchSize;
-                    string topicsContext = FormatKnownTopics(knownTopics);
+                    string topicsContext = EvaluateNewsUseCase.FormatKnownTopics(knownTopics);
 
                     string userContent = topicsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                         batch.Select((f, i) =>
@@ -157,19 +157,6 @@ namespace LocalAIAgent.API.Api.Controllers
                 return string.Empty;
 
             return $"<|think|>\n{sb}<|end|>\n";
-        }
-
-        private static string FormatKnownTopics(HashSet<string> topics)
-        {
-            if (topics.Count == 0)
-                return string.Empty;
-
-            StringBuilder sb = new();
-            sb.AppendLine("Strict labeling constraints — you MUST follow these:");
-            sb.AppendLine($"- Topic MUST be one of these exact values: {string.Join(", ", topics)}");
-            sb.AppendLine("  Only introduce a new topic if none of the above fits. Never combine topics with slashes.");
-            sb.AppendLine();
-            return sb.ToString();
         }
     }
 }
