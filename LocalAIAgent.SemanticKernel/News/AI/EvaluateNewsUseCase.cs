@@ -20,7 +20,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences);
     }
 
-    internal class EvaluateNewsUseCase(
+    public class EvaluateNewsUseCase(
         Kernel kernel,
         AIOptions options,
         IMemoryCache memoryCache,
@@ -47,7 +47,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             foreach (NewsItem[] batch in articleBatches)
             {
                 HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
-                string topicsEventsContext = FormatKnownTopicsAndEvents(knownTopics);
+                string topicsEventsContext = FormatKnownTopics(knownTopics);
 
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     batch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
@@ -157,7 +157,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             return start > 0 ? label[start..] : label;
         }
 
-        private static string FormatKnownTopicsAndEvents(HashSet<string> topics)
+        public static string FormatKnownTopics(HashSet<string> topics)
         {
             if (topics.Count == 0)
                 return "Topic Rule: Assign a single, broad category (e.g., Finance, Tech, Politics). No slashes.\n";
