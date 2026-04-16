@@ -2,6 +2,7 @@
 {
     public class UserPreferences
     {
+        public int Id { get; set; }
         public required string Prompt { get; set; }
         public required List<string> Interests { get; set; }
         public required List<string> Dislikes { get; set; }

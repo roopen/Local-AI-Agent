@@ -17,6 +17,7 @@
         {
             return new Domain.UserPreferences
             {
+                Id = preferences.Id,
                 Prompt = preferences.Prompt,
                 Interests = preferences.Interests,
                 Dislikes = preferences.Dislikes,

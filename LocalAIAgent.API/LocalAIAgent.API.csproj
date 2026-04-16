@@ -67,11 +67,15 @@
 			<ReactFiles Include="../LocalAIAgent.WebUI/dist/**" />
 		</ItemGroup>
 		<Copy SourceFiles="@(ReactFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
-		<!-- Re-register all wwwroot files after copy so new hash-named assets are included in publish -->
+	</Target>
+
+	<Target Name="CopyWwwrootToPublish" AfterTargets="Publish">
 		<ItemGroup>
-			<Content Remove="wwwroot/**" />
-			<Content Include="wwwroot/**" CopyToPublishDirectory="PreserveNewest" />
+			<WwwrootFiles Include="wwwroot/**" />
 		</ItemGroup>
+		<Copy SourceFiles="@(WwwrootFiles)"
+			  DestinationFolder="$(PublishDir)wwwroot/%(RecursiveDir)"
+			  SkipUnchangedFiles="true" />
 	</Target>
 
 </Project>

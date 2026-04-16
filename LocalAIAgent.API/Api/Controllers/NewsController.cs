@@ -158,5 +158,88 @@ namespace LocalAIAgent.API.Api.Controllers
 
             return $"<|think|>\n{sb}<|end|>\n";
         }
+
+        [AllowAnonymous]
+        [HttpGet("EvaluationDataset")]
+        public async Task<IActionResult> GetEvaluationDataset()
+        {
+            List<UserPreferences> allPreferences = await userContext.UserPreferences
+                .Include(p => p.EvaluationEntries)
+                .Where(p => p.EvaluationEntries.Count > 0)
+                .ToListAsync();
+
+            StringBuilder sb = new();
+
+            foreach (UserPreferences preferences in allPreferences)
+            {
+                Domain.UserPreferences userPreferences = preferences.MapToDomainUserPreferences();
+                string systemPrompt = userPreferences.BuildSystemPrompt();
+
+                HashSet<string> knownTopics = new(StringComparer.OrdinalIgnoreCase);
+
+                int offset = 0;
+                while (offset < preferences.EvaluationEntries.Count)
+                {
+                    int batchSize = Random.Shared.Next(1, 4);
+                    NewsEvaluationEntry[] batch = preferences.EvaluationEntries.Skip(offset).Take(batchSize).ToArray();
+                    offset += batchSize;
+
+                    string topicsContext = EvaluateNewsUseCase.FormatKnownTopics(knownTopics);
+
+                    string userContent = topicsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
+                        batch.Select((e, i) =>
+                        {
+                            string source = Uri.TryCreate(e.ArticleLink, UriKind.Absolute, out Uri? uri)
+                                ? uri.DnsSafeHost
+                                : e.ArticleLink;
+                            return $"Article {i}:\n{e.ArticleTitle}\n\n{e.ArticleSummary}\nSource: {source}\n";
+                        }));
+
+                    foreach (NewsEvaluationEntry e in batch)
+                        if (!string.IsNullOrWhiteSpace(e.ArticleTopic))
+                            knownTopics.Add(e.ArticleTopic.Trim());
+
+                    string thinkBlock = BuildEvaluationThinkBlock(batch);
+                    string assistantContent = thinkBlock + JsonSerializer.Serialize(
+                        batch.Select((e, i) => new
+                        {
+                            ArticleIndex = i,
+                            e.Relevancy,
+                            Topic = e.ArticleTopic ?? string.Empty,
+                        }));
+
+                    var entry = new
+                    {
+                        messages = new object[]
+                        {
+                            new { role = "system", content = systemPrompt },
+                            new { role = "user", content = userContent },
+                            new { role = "assistant", content = assistantContent }
+                        }
+                    };
+
+                    sb.AppendLine(JsonSerializer.Serialize(entry, _indentedOptions));
+                    sb.AppendLine();
+                }
+            }
+
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return File(bytes, "application/x-ndjson", "evaluation_dataset.jsonl");
+        }
+
+        private static string BuildEvaluationThinkBlock(NewsEvaluationEntry[] batch)
+        {
+            StringBuilder sb = new();
+            for (int i = 0; i < batch.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(batch[i].Reasoning))
+                    sb.AppendLine($"Article {i}: {batch[i].Reasoning}");
+            }
+
+            if (sb.Length == 0)
+                return string.Empty;
+
+            return $"<|think|>\n{sb}<|end|>\n";
+        }
     }
 }
