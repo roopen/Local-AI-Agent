@@ -10,6 +10,7 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
     public required DbSet<Fido2Credential> Fido2Credentials { get; set; }
     public required DbSet<AiSettings> AiSettings { get; set; }
     public required DbSet<NewsArticleFeedback> NewsFeedback { get; set; }
+    public required DbSet<NewsEvaluationEntry> NewsEvaluationEntries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,15 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
 
         modelBuilder.Entity<NewsArticleFeedback>()
             .HasIndex(f => new { f.UserPreferencesId, f.ArticleLink })
+            .IsUnique();
+
+        modelBuilder.Entity<NewsEvaluationEntry>()
+            .HasOne(e => e.UserPreferences)
+            .WithMany(p => p.EvaluationEntries)
+            .HasForeignKey(e => e.UserPreferencesId);
+
+        modelBuilder.Entity<NewsEvaluationEntry>()
+            .HasIndex(e => e.ArticleLink)
             .IsUnique();
     }
 }

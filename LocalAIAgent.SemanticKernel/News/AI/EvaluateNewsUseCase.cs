@@ -1,5 +1,6 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -17,17 +18,32 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 {
     public interface IEvaluateNewsUseCase
     {
-        Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences);
+        Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences, bool includeReasoning = false);
     }
 
     public class EvaluateNewsUseCase(
         Kernel kernel,
         AIOptions options,
         IMemoryCache memoryCache,
+        INewsDatasetRepository newsDatasetRepository,
         ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
     {
 
-        public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences)
+        public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences, bool includeReasoning = false)
+        {
+            List<NewsArticle> result = await EvaluateCoreAsync(articles, userPreferences, "General", includeReasoning);
+
+            double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
+            NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
+
+            return new EvaluatedNewsArticles { NewsArticles = result, LowRelevancyPercentage = (decimal)filterPercentage };
+        }
+
+        private async Task<List<NewsArticle>> EvaluateCoreAsync(
+            List<NewsItem> articles,
+            UserPreferences userPreferences,
+            string serviceId,
+            bool includeReasoning = false)
         {
             const int BatchSize = 3;
 
@@ -35,22 +51,48 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             {
                 Instructions = userPreferences.BuildSystemPrompt(),
                 Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
+                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: serviceId)),
             };
 
             List<NewsArticle> result = [];
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
                                         .Chunk(BatchSize);
 
-            string preferencesKey = GetPreferencesKey(userPreferences);
+            string preferencesKey = GetPreferencesKey(userPreferences) + "_" + serviceId;
 
             foreach (NewsItem[] batch in articleBatches)
             {
+                IEnumerable<string> batchLinks = batch.Select(a => a.Link ?? string.Empty).Where(l => l.Length > 0);
+                Dictionary<string, CachedNewsEvaluation> cached = await newsDatasetRepository.GetCachedEvaluationsAsync(batchLinks, CancellationToken.None);
+
+                foreach (NewsItem item in batch.Where(a => a.Link != null && cached.ContainsKey(a.Link)))
+                {
+                    CachedNewsEvaluation entry = cached[item.Link!];
+                    result.Add(new NewsArticle
+                    {
+                        Title = item.Title,
+                        Summary = item.Summary,
+                        PublishedDate = item.PublishDate.DateTime,
+                        Link = item.Link!,
+                        Source = item.Source ?? string.Empty,
+                        Categories = [],
+                        Relevancy = entry.Relevancy,
+                        Topic = entry.Topic,
+                        Reasoning = includeReasoning ? entry.Reasoning : null,
+                        InputTokens = null,
+                        OutputTokens = null,
+                    });
+                }
+
+                NewsItem[] uncachedBatch = batch.Where(a => a.Link == null || !cached.ContainsKey(a.Link)).ToArray();
+                if (uncachedBatch.Length == 0)
+                    continue;
+
                 HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
                 string topicsEventsContext = FormatKnownTopics(knownTopics);
 
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
-                    batch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
+                    uncachedBatch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
                 string jsonContent = string.Empty;
 
@@ -97,7 +139,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                                 NewsLogging.LogTokenUsage(logger, totalInputTokens, totalOutputTokens, totalTokensUsed, null);
                             }
                             UpdateKnownTopicsAndEvents(knownTopics, evaluations);
-                            AddResults(result, batch, evaluations);
+                            AddResults(result, uncachedBatch, evaluations, includeReasoning);
                         }
                     }
                     catch
@@ -107,10 +149,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 }
             }
 
-            double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
-            NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
-
-            return new EvaluatedNewsArticles { NewsArticles = result, LowRelevancyPercentage = (decimal)filterPercentage };
+            return result;
         }
 
         private const string TopicsCacheKeyPrefix = "news_known_topics_";
@@ -182,32 +221,31 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             return sb.ToString();
         }
 
-        private static void AddResults(List<NewsArticle> result, NewsItem[] batch, List<EvaluationResult> evaluations)
+        private static void AddResults(List<NewsArticle> result, NewsItem[] batch, List<EvaluationResult> evaluations, bool includeReasoning = false)
         {
             for (int i = 0; i < evaluations.Count; i++)
             {
-                if (evaluations[i].Relevancy is Relevancy.High)
+                NewsArticle newsArticle = new()
                 {
-                    NewsArticle newsArticle = new()
-                    {
-                        Title = batch[i].Title,
-                        Summary = batch[i].Summary,
-                        PublishedDate = batch[i].PublishDate.DateTime,
-                        Link = batch[i].Link ?? string.Empty,
-                        Source = batch[i].Source ?? string.Empty,
-                        Categories = [],
-                        Relevancy = evaluations[i].Relevancy,
+                    Title = batch[i].Title,
+                    Summary = batch[i].Summary,
+                    PublishedDate = batch[i].PublishDate.DateTime,
+                    Link = batch[i].Link ?? string.Empty,
+                    Source = batch[i].Source ?? string.Empty,
+                    Categories = [],
+                    Relevancy = evaluations[i].Relevancy,
 #if DEBUG
                         Reasoning = evaluations[i].Reasoning,
+#else
+                    Reasoning = includeReasoning ? evaluations[i].Reasoning : null,
 #endif
-                        Topic = evaluations[i].Topic,
-                        InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
-                            ? evaluations[i].TokenUsage?.InputTokenCount : null,
-                        OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
-                            ? evaluations[i].TokenUsage?.OutputTokenCount : null
-                    };
-                    result.Add(newsArticle);
-                }
+                    Topic = evaluations[i].Topic,
+                    InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
+                        ? evaluations[i].TokenUsage?.InputTokenCount : null,
+                    OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
+                        ? evaluations[i].TokenUsage?.OutputTokenCount : null
+                };
+                result.Add(newsArticle);
             }
         }
 

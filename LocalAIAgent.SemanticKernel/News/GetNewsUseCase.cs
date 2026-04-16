@@ -12,7 +12,8 @@ namespace LocalAIAgent.SemanticKernel.News
     public class GetNewsUseCase(
         INewsService newsService,
         IEvaluateNewsUseCase evaluateNewsUseCase,
-        IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
+        IGetTranslationUseCase getTranslationUseCase,
+        INewsDatasetRepository newsDatasetRepository) : IGetNewsUseCase
     {
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
             UserPreferences preferences,
@@ -20,9 +21,22 @@ namespace LocalAIAgent.SemanticKernel.News
         {
             List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
 
+#if DEBUG
+            bool saveDataset = true;
+#else
+            bool saveDataset = false;
+#endif
             foreach (NewsItem[] newsBatch in newsItems.Chunk(5))
             {
-                EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(newsBatch.ToList(), preferences);
+                EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(
+                    newsBatch.ToList(),
+                    preferences,
+                    includeReasoning: saveDataset);
+
+                if (saveDataset)
+                    await newsDatasetRepository.SaveAsync(evaluatedArticles.NewsArticles, preferences.Id, cancellationToken);
+
+                evaluatedArticles.NewsArticles = evaluatedArticles.NewsArticles.Where(a => a.Relevancy is Relevancy.High).ToList();
                 List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
 
                 foreach (NewsArticle article in newsArticles)

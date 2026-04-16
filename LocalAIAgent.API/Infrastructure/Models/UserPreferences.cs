@@ -9,4 +9,5 @@ public class UserPreferences
     public int UserId { get; set; }
     public User? User { get; set; }
     public List<NewsArticleFeedback> FeedbackExamples { get; set; } = [];
+    public List<NewsEvaluationEntry> EvaluationEntries { get; set; } = [];
 }
