@@ -10,38 +10,13 @@ namespace LocalAIAgent.API.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_NewsEvaluationEntries_UserPreferencesId_ArticleLink",
-                table: "NewsEvaluationEntries");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsEvaluationEntries_ArticleLink",
-                table: "NewsEvaluationEntries",
-                column: "ArticleLink",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsEvaluationEntries_UserPreferencesId",
-                table: "NewsEvaluationEntries",
-                column: "UserPreferencesId");
+            // No-op: AddNewsEvaluationEntries now creates the correct schema directly.
+            // Production databases that previously ran the original Up() are unaffected
+            // because this migration is already recorded in __EFMigrationsHistory.
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_NewsEvaluationEntries_ArticleLink",
-                table: "NewsEvaluationEntries");
-
-            migrationBuilder.DropIndex(
-                name: "IX_NewsEvaluationEntries_UserPreferencesId",
-                table: "NewsEvaluationEntries");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsEvaluationEntries_UserPreferencesId_ArticleLink",
-                table: "NewsEvaluationEntries",
-                columns: new[] { "UserPreferencesId", "ArticleLink" },
-                unique: true);
         }
     }
 }
