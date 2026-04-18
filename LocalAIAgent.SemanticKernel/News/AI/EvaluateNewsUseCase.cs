@@ -235,7 +235,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                     Categories = [],
                     Relevancy = evaluations[i].Relevancy,
 #if DEBUG
-                        Reasoning = evaluations[i].Reasoning,
+                    Reasoning = evaluations[i].Reasoning,
 #else
                     Reasoning = includeReasoning ? evaluations[i].Reasoning : null,
 #endif
