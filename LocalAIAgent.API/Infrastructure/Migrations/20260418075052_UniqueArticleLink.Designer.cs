@@ -3,16 +3,19 @@ using System;
 using LocalAIAgent.API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace LocalAIAgent.API.Migrations
+namespace LocalAIAgent.API.Infrastructure.Migrations
 {
     [DbContext(typeof(UserContext))]
-    partial class UserContextModelSnapshot : ModelSnapshot
+    [Migration("20260418075052_UniqueArticleLink")]
+    partial class UniqueArticleLink
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -56,47 +59,6 @@ namespace LocalAIAgent.API.Migrations
                         .IsUnique();
 
                     b.ToTable("AiSettings");
-                });
-
-            modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.ArticleTranslation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ArticleLink")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OriginalSummary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OriginalTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TargetLanguage")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TranslatedSummary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TranslatedTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ArticleLink")
-                        .IsUnique();
-
-                    b.ToTable("ArticleTranslations");
                 });
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.Fido2Credential", b =>

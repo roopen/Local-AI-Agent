@@ -9,8 +9,8 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
     public required DbSet<UserPreferences> UserPreferences { get; set; }
     public required DbSet<Fido2Credential> Fido2Credentials { get; set; }
     public required DbSet<AiSettings> AiSettings { get; set; }
-    public required DbSet<NewsArticleFeedback> NewsFeedback { get; set; }
     public required DbSet<NewsEvaluationEntry> NewsEvaluationEntries { get; set; }
+    public required DbSet<ArticleTranslation> ArticleTranslations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,22 +33,17 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .WithOne()
             .HasForeignKey<AiSettings>(s => s.UserPreferencesId);
 
-        modelBuilder.Entity<NewsArticleFeedback>()
-            .HasOne(f => f.UserPreferences)
-            .WithMany(p => p.FeedbackExamples)
-            .HasForeignKey(f => f.UserPreferencesId);
-
-        modelBuilder.Entity<NewsArticleFeedback>()
-            .HasIndex(f => new { f.UserPreferencesId, f.ArticleLink })
-            .IsUnique();
-
         modelBuilder.Entity<NewsEvaluationEntry>()
             .HasOne(e => e.UserPreferences)
             .WithMany(p => p.EvaluationEntries)
             .HasForeignKey(e => e.UserPreferencesId);
 
         modelBuilder.Entity<NewsEvaluationEntry>()
-            .HasIndex(e => e.ArticleLink)
+            .HasIndex(e => new { e.ArticleLink })
+            .IsUnique();
+
+        modelBuilder.Entity<ArticleTranslation>()
+            .HasIndex(t => t.ArticleLink)
             .IsUnique();
     }
 }

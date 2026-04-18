@@ -240,9 +240,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                     Reasoning = includeReasoning ? evaluations[i].Reasoning : null,
 #endif
                     Topic = evaluations[i].Topic,
-                    InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
+                    InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).LastOrDefault()
                         ? evaluations[i].TokenUsage?.InputTokenCount : null,
-                    OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).Last()
+                    OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).LastOrDefault()
                         ? evaluations[i].TokenUsage?.OutputTokenCount : null
                 };
                 result.Add(newsArticle);

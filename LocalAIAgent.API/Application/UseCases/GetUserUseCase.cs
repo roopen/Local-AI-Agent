@@ -3,6 +3,7 @@ using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
+using Relevancy = LocalAIAgent.Domain.Relevancy;
 
 namespace LocalAIAgent.API.Application.UseCases
 {
@@ -43,10 +44,11 @@ namespace LocalAIAgent.API.Application.UseCases
 
             if (user?.Preferences != null)
             {
-                user.Preferences.FeedbackExamples = await context.NewsFeedback
+                user.Preferences.EvaluationEntries = await context.NewsEvaluationEntries
                     .AsNoTracking()
-                    .Where(f => f.UserPreferencesId == user.Preferences.Id)
-                    .OrderByDescending(f => f.CreatedAt)
+                    .Where(e => e.UserPreferencesId == user.Preferences.Id &&
+                                (e.Relevancy == nameof(Domain.Relevancy.High) || e.Relevancy == nameof(Domain.Relevancy.Low)))
+                    .OrderByDescending(e => e.CreatedAt)
                     .Take(30)
                     .ToListAsync();
             }

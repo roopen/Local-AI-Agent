@@ -70,6 +70,7 @@ namespace LocalAIAgent.API
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
                 builder.Services.AddScoped<INewsDatasetRepository, NewsDatasetRepository>();
+                builder.Services.AddScoped<IArticleTranslationRepository, ArticleTranslationRepository>();
                 builder.Services.AddScoped<NewsMetrics>();
                 builder.Services.AddMemoryCache();
                 builder.Services.AddDistributedMemoryCache();
