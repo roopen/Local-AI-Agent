@@ -13,10 +13,12 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     public interface IGetTranslationUseCase
     {
         Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage);
+        string GetSystemPrompt(string targetLanguage);
     }
 
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
+        IArticleTranslationRepository translationRepository,
         Kernel kernel,
         AIOptions options) : IGetTranslationUseCase
     {
@@ -49,44 +51,61 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
             if (articlesToTranslate.Count is 0) return articles;
 
+            // Check cache first — apply cached translations and filter out already-translated articles
+            Dictionary<string, CachedTranslation> cache = await translationRepository
+                .GetCachedTranslationsAsync(articlesToTranslate.Select(a => a.Link), targetLanguage);
+
+            List<NewsArticle> uncachedArticles = [];
+            foreach (NewsArticle article in articlesToTranslate)
+            {
+                if (cache.TryGetValue(article.Link, out CachedTranslation? cached))
+                {
+                    article.Title = cached.Title;
+                    article.Summary = cached.Summary;
+                }
+                else
+                {
+                    uncachedArticles.Add(article);
+                }
+            }
+
+            Console.WriteLine($"GetTranslationUseCase: {cache.Count} articles served from cache, {uncachedArticles.Count} require translation.");
+
+            if (uncachedArticles.Count is 0) return articles;
+
             // Process batches of 3 in parallel
             List<Task> batchTasks = [];
-            for (int i = 0; i < articlesToTranslate.Count; i += 3)
+            for (int i = 0; i < uncachedArticles.Count; i += 3)
             {
-                List<NewsArticle> batch = articlesToTranslate.Skip(i).Take(3).ToList();
+                List<NewsArticle> batch = uncachedArticles.Skip(i).Take(3).ToList();
                 batchTasks.Add(TranslateBatchAsync(batch, targetLanguage));
             }
             await Task.WhenAll(batchTasks);
             stopwatch.Stop();
-            Console.WriteLine($"GetTranslationUseCase: Translated {articlesToTranslate.Count} articles in {stopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"GetTranslationUseCase: Translated {uncachedArticles.Count} articles in {stopwatch.ElapsedMilliseconds} ms.");
 
             return articles;
         }
 
         private record TranslationDto(string Title, string Summary);
 
-        private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage, int attempt = 0)
-        {
-            var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
-            string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
-
-            string systemPrompt = $@"
+        public string GetSystemPrompt(string targetLanguage) => $@"
                 <|think|>
                 ## Role
                 Translate news JSON objects into {targetLanguage}. 
-                
+
                 ## Critical Logic (<|channel>thought)
                 For each article:
                 1. Identify Source Language (e.g., Traditional Chinese).
                 2. List 2-3 'Anchor Terms' (e.g., OPEC+, AFP, technical nouns) and their {targetLanguage} equivalents.
                 3. Explicitly set internal state to {targetLanguage} mode.
                 *Do NOT write full draft sentences here.*
-                
+
                 ## Output Rules
                 - Provide ONLY the JSON array after the <channel|> tag.
                 - Translate 'title' and 'summary' only.
                 - Strict JSON: No markdown, no trailing commas, start with '['.
-                
+
                 [EXAMPLE]
                 User: [{{""title"": ""OPEC+：能源設施修復費時"", ""summary"": ""法新社報導...""}}]
                 Model:
@@ -98,6 +117,18 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 [{{""title"": ""OPEC+: Energy Facility Repairs Are Time-Consuming"", ""summary"": ""AFP reports...""}}]
                 [END EXAMPLE]
                 <|turn>";
+
+        private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage, int attempt = 0)
+        {
+            // Capture originals before they are overwritten
+            List<(string OriginalTitle, string OriginalSummary)> originals = batch
+                .Select(a => (a.Title, a.Summary))
+                .ToList();
+
+            var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
+            string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
+
+            string systemPrompt = GetSystemPrompt(targetLanguage);
 
             ChatCompletionAgent agent = new()
             {
@@ -141,6 +172,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                             batch[i].Summary = translatedArticles[i].Summary;
                         }
                     }
+
+                    await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
                 }
             }
             catch (JsonException ex)

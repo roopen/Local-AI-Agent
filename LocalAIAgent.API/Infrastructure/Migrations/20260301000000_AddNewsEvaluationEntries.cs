@@ -39,9 +39,21 @@ namespace LocalAIAgent.API.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_NewsEvaluationEntries_ArticleLink",
+                name: "IX_NewsEvaluationEntries_UserPreferencesId_ArticleLink",
                 table: "NewsEvaluationEntries",
-                column: "ArticleLink",
+                columns: new[] { "UserPreferencesId", "ArticleLink" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NewsEvaluationEntries_UserPreferencesId_ArticleLink",
+                table: "NewsEvaluationEntries",
+                columns: new[] { "UserPreferencesId", "ArticleLink" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NewsEvaluationEntries_UserPreferencesId_ArticleLink",
+                table: "NewsEvaluationEntries",
+                columns: new[] { "UserPreferencesId", "ArticleLink" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

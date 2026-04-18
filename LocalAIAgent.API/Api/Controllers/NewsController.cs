@@ -1,9 +1,11 @@
 using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
+using Relevancy = LocalAIAgent.Domain.Relevancy;
 using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel.News.AI;
+using LocalAIAgent.SemanticKernel.News;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,7 @@ namespace LocalAIAgent.API.Api.Controllers
     [Route("api/[controller]")]
     public class NewsController(
         INewsChatUseCase newsChatUseCase,
+        IGetTranslationUseCase translationUseCase,
         NewsMetrics newsMetrics,
         UserContext userContext) : ControllerBase
     {
@@ -40,32 +43,27 @@ namespace LocalAIAgent.API.Api.Controllers
             if (preferences is null)
                 return NotFound("User preferences not found.");
 
-            NewsArticleFeedback? existing = await userContext.NewsFeedback
-                .FirstOrDefaultAsync(f => f.UserPreferencesId == preferences.Id && f.ArticleLink == dto.ArticleLink);
+            string newRelevancy = dto.IsLiked ? nameof(Relevancy.High) : nameof(Relevancy.Low);
+
+            NewsEvaluationEntry? existing = await userContext.NewsEvaluationEntries
+                .FirstOrDefaultAsync(e => e.UserPreferencesId == preferences.Id && e.ArticleLink == dto.ArticleLink);
 
             if (existing is not null)
             {
-                if (existing.IsLiked == dto.IsLiked)
-                {
-                    userContext.NewsFeedback.Remove(existing);
-                    await userContext.SaveChangesAsync();
-                    return Ok();
-                }
-
-                existing.IsLiked = dto.IsLiked;
-                existing.Reason = dto.Reason ?? string.Empty;
-                existing.CreatedAt = DateTime.UtcNow;
+                existing.Relevancy = newRelevancy;
+                existing.Reasoning = dto.Reason;
             }
             else
             {
-                userContext.NewsFeedback.Add(new NewsArticleFeedback
+                userContext.NewsEvaluationEntries.Add(new NewsEvaluationEntry
                 {
                     ArticleLink = dto.ArticleLink,
                     ArticleTitle = dto.ArticleTitle,
                     ArticleSummary = dto.ArticleSummary,
                     ArticleTopic = dto.ArticleTopic,
-                    IsLiked = dto.IsLiked,
-                    Reason = dto.Reason ?? string.Empty,
+                    ArticleSource = string.Empty,
+                    Relevancy = newRelevancy,
+                    Reasoning = dto.Reason,
                     UserPreferencesId = preferences.Id
                 });
             }
@@ -74,89 +72,12 @@ namespace LocalAIAgent.API.Api.Controllers
             return Ok();
         }
 
-        [AllowAnonymous]
-        [HttpGet("FineTuningDataset")]
-        public async Task<IActionResult> GetFineTuningDataset()
+        private static string BuildEntry(string systemPrompt, string userContent, string assistantContent)
         {
-            List<UserPreferences> allPreferences = await userContext.UserPreferences
-                .Include(p => p.FeedbackExamples)
-                .Where(p => p.FeedbackExamples.Count > 0)
-                .ToListAsync();
-
-            StringBuilder sb = new();
-
-            foreach (UserPreferences preferences in allPreferences)
-            {
-                Domain.UserPreferences userPreferences = preferences.MapToDomainUserPreferences();
-                string systemPrompt = userPreferences.BuildSystemPrompt();
-
-                HashSet<string> knownTopics = new(StringComparer.OrdinalIgnoreCase);
-
-                int offset = 0;
-                while (offset < preferences.FeedbackExamples.Count)
-                {
-                    int batchSize = Random.Shared.Next(1, 3);
-                    NewsArticleFeedback[] batch = preferences.FeedbackExamples.Skip(offset).Take(batchSize).ToArray();
-                    offset += batchSize;
-                    string topicsContext = EvaluateNewsUseCase.FormatKnownTopics(knownTopics);
-
-                    string userContent = topicsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
-                        batch.Select((f, i) =>
-                        {
-                            string source = Uri.TryCreate(f.ArticleLink, UriKind.Absolute, out Uri? uri)
-                                ? uri.DnsSafeHost
-                                : f.ArticleLink;
-                            return $"Article {i}:\n{f.ArticleTitle}\n\n{f.ArticleSummary}\nSource: {source}\n";
-                        }));
-
-                    foreach (NewsArticleFeedback f in batch)
-                        if (!string.IsNullOrWhiteSpace(f.ArticleTopic))
-                            knownTopics.Add(f.ArticleTopic.Trim());
-
-                    string thinkBlock = BuildThinkBlock(batch);
-                    string assistantContent = thinkBlock + JsonSerializer.Serialize(
-                        batch.Select((f, i) => new
-                        {
-                            ArticleIndex = i,
-                            Relevancy = f.IsLiked ? "High" : "Low",
-                            Topic = f.ArticleTopic ?? string.Empty,
-                        }));
-
-                    var entry = new
-                    {
-                        messages = new object[]
-                        {
-                            new { role = "system", content = systemPrompt },
-                            new { role = "user", content = userContent },
-                            new { role = "assistant", content = assistantContent }
-                        }
-                    };
-
-                    sb.AppendLine(JsonSerializer.Serialize(entry, _indentedOptions));
-                    sb.AppendLine();
-                }
-            }
-
-            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return File(bytes, "application/x-ndjson", "finetuning_dataset.jsonl");
-        }
-
-        private static readonly JsonSerializerOptions _indentedOptions = new() { WriteIndented = true };
-
-        private static string BuildThinkBlock(NewsArticleFeedback[] batch)
-        {
-            StringBuilder sb = new();
-            for (int i = 0; i < batch.Length; i++)
-            {
-                string reason = batch[i].Reason;
-                if (!string.IsNullOrWhiteSpace(reason))
-                    sb.AppendLine($"Article {i}: {reason}");
-            }
-
-            if (sb.Length == 0)
-                return string.Empty;
-
-            return $"<|think|>\n{sb}<|end|>\n";
+            string messagesJson = JsonSerializer.Serialize(new { role = "system", content = systemPrompt }) + "," +
+                                  JsonSerializer.Serialize(new { role = "user", content = userContent }) + "," +
+                                  JsonSerializer.Serialize(new { role = "assistant", content = assistantContent });
+            return "{\"messages\":[" + messagesJson + "]}";
         }
 
         [AllowAnonymous]
@@ -208,17 +129,34 @@ namespace LocalAIAgent.API.Api.Controllers
                             Topic = e.ArticleTopic ?? string.Empty,
                         }));
 
-                    var entry = new
-                    {
-                        messages = new object[]
-                        {
-                            new { role = "system", content = systemPrompt },
-                            new { role = "user", content = userContent },
-                            new { role = "assistant", content = assistantContent }
-                        }
-                    };
+                    sb.AppendLine(BuildEntry(systemPrompt, userContent, assistantContent));
+                    sb.AppendLine();
+                }
+            }
 
-                    sb.AppendLine(JsonSerializer.Serialize(entry, _indentedOptions));
+            // Translation dataset — group stored translations by target language and emit batches of 3
+            List<ArticleTranslation> allTranslations = await userContext.ArticleTranslations
+                .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
+                .OrderBy(t => t.TargetLanguage)
+                .ThenBy(t => t.CreatedAt)
+                .ToListAsync();
+
+            foreach (IGrouping<string, ArticleTranslation> group in allTranslations.GroupBy(t => t.TargetLanguage))
+            {
+                string translationSystemPrompt = translationUseCase.GetSystemPrompt(group.Key);
+                List<ArticleTranslation> translations = [.. group];
+
+                for (int i = 0; i < translations.Count; i += 3)
+                {
+                    ArticleTranslation[] batch = translations.Skip(i).Take(3).ToArray();
+
+                    string userContent = $"Translate this JSON array to {group.Key}. Maintain the JSON structure perfectly:\n" +
+                        JsonSerializer.Serialize(batch.Select(t => new { title = t.OriginalTitle, summary = t.OriginalSummary }));
+
+                    string assistantContent = JsonSerializer.Serialize(
+                        batch.Select(t => new { title = t.TranslatedTitle, summary = t.TranslatedSummary }));
+
+                    sb.AppendLine(BuildEntry(translationSystemPrompt, userContent, assistantContent));
                     sb.AppendLine();
                 }
             }
