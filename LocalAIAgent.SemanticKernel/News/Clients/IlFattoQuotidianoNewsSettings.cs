@@ -2,14 +2,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LocalAIAgent.SemanticKernel.News.Clients
 {
-    internal class InfoqNewsSettings : BaseNewsClientSettings
+    internal class IlFattoQuotidianoNewsSettings : BaseNewsClientSettings
     {
-        public override string ClientName => "InfoqClient";
-        public override string BaseUrl => "https://feed.infoq.com/";
+        public override string ClientName => "IlFattoQuotidianoClient";
+        public override string BaseUrl => "https://www.ilfattoquotidiano.it";
+
+        public override bool RequiresTranslation => true;
 
         public override List<string> GetNewsUrls()
         {
-            return [BaseUrl];
+            return
+            [
+                $"{BaseUrl}/feed/",
+            ];
         }
 
         public override void AddHttpClient(IServiceCollection services)
