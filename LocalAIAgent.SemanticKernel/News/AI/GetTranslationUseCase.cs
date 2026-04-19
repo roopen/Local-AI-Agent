@@ -46,7 +46,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 string sourceName = source.ClientName.Replace("Client", null).ToLowerInvariant();
 
                 // Filter articles that belong to the current source and require translation
-                articlesToTranslate.AddRange(articles.Where(a => MatchesHost(a.Source, source.Host) || a.Source.Contains(sourceName)));
+                articlesToTranslate.AddRange(articles.Where(a => MatchesHost(a.Source, source.Host)
+                    || source.AdditionalHosts.Any(h => MatchesHost(a.Source, h))
+                    || a.Source.Contains(sourceName)));
             }
 
             if (articlesToTranslate.Count is 0) return articles;
