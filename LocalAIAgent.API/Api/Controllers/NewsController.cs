@@ -1,16 +1,16 @@
 using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Infrastructure;
-using Relevancy = LocalAIAgent.Domain.Relevancy;
 using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.SemanticKernel.News.AI;
-using LocalAIAgent.SemanticKernel.News;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using Relevancy = LocalAIAgent.Domain.Relevancy;
 
 namespace LocalAIAgent.API.Api.Controllers
 {
@@ -81,8 +81,8 @@ namespace LocalAIAgent.API.Api.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("EvaluationDataset")]
-        public async Task<IActionResult> GetEvaluationDataset()
+        [HttpGet("Dataset")]
+        public async Task<IActionResult> GetDataset()
         {
             List<UserPreferences> allPreferences = await userContext.UserPreferences
                 .Include(p => p.EvaluationEntries)
@@ -95,7 +95,7 @@ namespace LocalAIAgent.API.Api.Controllers
                 .Select(g => g.OrderByDescending(t => t.CreatedAt).First())
                 .ToDictionaryAsync(t => t.ArticleLink);
 
-            StringBuilder sb = new();
+            List<string> allEntries = [];
 
             foreach (UserPreferences preferences in allPreferences)
             {
@@ -138,8 +138,7 @@ namespace LocalAIAgent.API.Api.Controllers
                             Topic = e.ArticleTopic ?? string.Empty,
                         }));
 
-                    sb.AppendLine(BuildEntry(systemPrompt, userContent, assistantContent));
-                    sb.AppendLine();
+                    allEntries.Add(BuildEntry(systemPrompt, userContent, assistantContent));
                 }
             }
 
@@ -150,6 +149,7 @@ namespace LocalAIAgent.API.Api.Controllers
                 .ThenBy(t => t.CreatedAt)
                 .ToListAsync();
 
+            int translationBatchCount = 0;
             foreach (IGrouping<string, ArticleTranslation> group in allTranslations.GroupBy(t => t.TargetLanguage))
             {
                 string translationSystemPrompt = translationUseCase.GetSystemPrompt(group.Key);
@@ -165,13 +165,39 @@ namespace LocalAIAgent.API.Api.Controllers
                     string assistantContent = JsonSerializer.Serialize(
                         batch.Select(t => new { title = t.TranslatedTitle, summary = t.TranslatedSummary }));
 
-                    sb.AppendLine(BuildEntry(translationSystemPrompt, userContent, assistantContent));
-                    sb.AppendLine();
+                    allEntries.Add(BuildEntry(translationSystemPrompt, userContent, assistantContent));
+                    translationBatchCount++;
                 }
             }
 
-            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return File(bytes, "application/x-ndjson", "evaluation_dataset.jsonl");
+            // Smart split: translations are fewer — use their proportion to size the evaluation set (clamped 10–30%)
+            allEntries = [.. allEntries.OrderBy(_ => Random.Shared.Next())];
+
+            int totalCount = allEntries.Count;
+            double evalFraction = totalCount > 0
+                ? Math.Clamp((double)translationBatchCount / totalCount, 0.15, 0.30)
+                : 0.20;
+            int evalCount = Math.Max(1, (int)Math.Round(totalCount * evalFraction));
+
+            List<string> evalEntries = allEntries.Take(evalCount).ToList();
+            List<string> trainEntries = allEntries.Skip(evalCount).ToList();
+
+            using MemoryStream zipStream = new();
+            using (ZipArchive archive = new(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                WriteZipEntry(archive, "training_dataset.jsonl", trainEntries);
+                WriteZipEntry(archive, "evaluation_dataset.jsonl", evalEntries);
+            }
+
+            return File(zipStream.ToArray(), "application/zip", "dataset.zip");
+        }
+
+        private static void WriteZipEntry(ZipArchive archive, string entryName, List<string> entries)
+        {
+            ZipArchiveEntry zipEntry = archive.CreateEntry(entryName, CompressionLevel.Optimal);
+            using StreamWriter writer = new(zipEntry.Open(), Encoding.UTF8);
+            foreach (string line in entries)
+                writer.WriteLine(line);
         }
 
         private static string BuildEvaluationThinkBlock(NewsEvaluationEntry[] batch)
