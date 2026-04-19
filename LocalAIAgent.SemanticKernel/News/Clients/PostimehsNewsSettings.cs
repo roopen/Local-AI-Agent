@@ -8,6 +8,7 @@ namespace LocalAIAgent.SemanticKernel.News.Clients
         public override string BaseUrl => "https://www.postimees.ee";
 
         public override bool RequiresTranslation => true;
+        public override List<string> AdditionalHosts => ["pmo.ee"];
 
         public override List<string> GetNewsUrls()
         {

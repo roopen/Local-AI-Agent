@@ -9,6 +9,7 @@ namespace LocalAIAgent.SemanticKernel.News
         public virtual string UserAgent => "Mozilla/5.0";
         public string Host => GetHostFromBaseUrl();
         public virtual bool RequiresTranslation => false;
+        public virtual List<string> AdditionalHosts => [];
 
         private string GetHostFromBaseUrl()
         {
