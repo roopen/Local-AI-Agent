@@ -89,6 +89,12 @@ namespace LocalAIAgent.API.Api.Controllers
                 .Where(p => p.EvaluationEntries.Count > 0)
                 .ToListAsync();
 
+            Dictionary<string, ArticleTranslation> translationsByLink = await userContext.ArticleTranslations
+                .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
+                .GroupBy(t => t.ArticleLink)
+                .Select(g => g.OrderByDescending(t => t.CreatedAt).First())
+                .ToDictionaryAsync(t => t.ArticleLink);
+
             StringBuilder sb = new();
 
             foreach (UserPreferences preferences in allPreferences)
@@ -113,7 +119,10 @@ namespace LocalAIAgent.API.Api.Controllers
                             string source = Uri.TryCreate(e.ArticleLink, UriKind.Absolute, out Uri? uri)
                                 ? uri.DnsSafeHost
                                 : e.ArticleLink;
-                            return $"Article {i}:\n{e.ArticleTitle}\n\n{e.ArticleSummary}\nSource: {source}\n";
+                            string title = translationsByLink.TryGetValue(e.ArticleLink, out ArticleTranslation? t)
+                                ? t.OriginalTitle : e.ArticleTitle;
+                            string summary = t is not null ? t.OriginalSummary : e.ArticleSummary;
+                            return $"Article {i}:\n{title}\n\n{summary}\nSource: {source}\n";
                         }));
 
                     foreach (NewsEvaluationEntry e in batch)

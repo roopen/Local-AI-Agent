@@ -11,8 +11,6 @@ export interface NewsFeedbackDto {
     articleTopic: string;
     isLiked: boolean;
     reason?: string;
-    selectedLikes?: string[];
-    selectedDislikes?: string[];
 }
 
 export class NewsClient {

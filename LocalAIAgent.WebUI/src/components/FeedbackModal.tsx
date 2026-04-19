@@ -1,95 +1,26 @@
 import { useState } from 'react';
 import NewsArticle from '../domain/NewsArticle';
-import UserSettings from '../domain/UserSettings';
-import { Button, Chip } from '@progress/kendo-react-buttons';
+import { Button } from '@progress/kendo-react-buttons';
 import { TextArea, TextBox } from '@progress/kendo-react-inputs';
 
 export interface FeedbackModalProps {
     pendingFeedback: { article: NewsArticle; isLiked: boolean };
     correctedTopic: string;
-    userSettings: UserSettings | null;
     isDark: boolean;
     onTopicChange: (value: string) => void;
     onCancel: () => void;
-    onSubmit: (reason: string, selectedLikes: string[], selectedDislikes: string[]) => void;
+    onSubmit: (reason: string) => void;
 }
 
-interface ChipsSectionProps {
-    likes: string[];
-    dislikes: string[];
-    selectedLikes: string[];
-    selectedDislikes: string[];
-    prefColor: string;
-    onToggleLike: (like: string) => void;
-    onToggleDislike: (dislike: string) => void;
-}
-
-function ChipsSection({ likes, dislikes, selectedLikes, selectedDislikes, prefColor, onToggleLike, onToggleDislike }: ChipsSectionProps) {
-    return (
-        <div style={{ marginBottom: 12 }}>
-            {likes.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: prefColor }}>Likes:</span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {likes.map(like => (
-                            <Chip key={like} selected={selectedLikes.includes(like)} onClick={() => onToggleLike(like)}
-                                fillMode={selectedLikes.includes(like) ? 'solid' : 'outline'} themeColor={'success'}>
-                                {like}
-                            </Chip>
-                        ))}
-                    </div>
-                </div>
-            )}
-            {dislikes.length > 0 && (
-                <div>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: prefColor }}>Dislikes:</span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {dislikes.map(dislike => (
-                            <Chip key={dislike} selected={selectedDislikes.includes(dislike)} onClick={() => onToggleDislike(dislike)}
-                                fillMode={selectedDislikes.includes(dislike) ? 'solid' : 'outline'} themeColor={'error'}>
-                                {dislike}
-                            </Chip>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function buildReason(topic: string, selectedLikes: string[], selectedDislikes: string[], article: NewsArticle, isLiked: boolean): string {
-    const likes = selectedLikes.length > 0 ? selectedLikes.join(', ') : 'None';
-    const dislikes = selectedDislikes.length > 0 ? selectedDislikes.join(', ') : 'None';
-    const result = article.Reasoning ?? (isLiked ? 'High' : 'Low');
-    return `<|think|\nTopic: ${topic}\nLikes: ${likes}\nDislikes: ${dislikes}\nResult: *reason* → ${result}\n|end|>`;
-}
-
-function FeedbackModal({ pendingFeedback, correctedTopic, userSettings, isDark, onTopicChange, onCancel, onSubmit }: FeedbackModalProps) {
-    const [reason, setReason] = useState(() =>
-        buildReason(correctedTopic, [], [], pendingFeedback.article, pendingFeedback.isLiked)
-    );
-    const [selectedLikes, setSelectedLikes] = useState<string[]>([]);
-    const [selectedDislikes, setSelectedDislikes] = useState<string[]>([]);
+function FeedbackModal({ pendingFeedback, correctedTopic, isDark, onTopicChange, onCancel, onSubmit }: FeedbackModalProps) {
+    const [reason, setReason] = useState(() => pendingFeedback.article.Reasoning ?? '');
 
     const colors = isDark
-        ? { background: '#282c34', text: 'rgba(255,255,255,0.87)', subtitle: '#aaa', prefs: '#aaa', border: '1px solid #444' }
-        : { background: 'white', text: '#213547', subtitle: '#555', prefs: '#666', border: '1px solid #ccc' };
+        ? { background: '#282c34', text: 'rgba(255,255,255,0.87)', subtitle: '#aaa', border: '1px solid #444' }
+        : { background: 'white', text: '#213547', subtitle: '#555', border: '1px solid #ccc' };
 
     const handleTopicChange = (newTopic: string) => {
         onTopicChange(newTopic);
-        setReason(buildReason(newTopic, selectedLikes, selectedDislikes, pendingFeedback.article, pendingFeedback.isLiked));
-    };
-
-    const toggleLike = (like: string) => {
-        const next = selectedLikes.includes(like) ? selectedLikes.filter(l => l !== like) : [...selectedLikes, like];
-        setSelectedLikes(next);
-        setReason(buildReason(correctedTopic, next, selectedDislikes, pendingFeedback.article, pendingFeedback.isLiked));
-    };
-
-    const toggleDislike = (dislike: string) => {
-        const next = selectedDislikes.includes(dislike) ? selectedDislikes.filter(d => d !== dislike) : [...selectedDislikes, dislike];
-        setSelectedDislikes(next);
-        setReason(buildReason(correctedTopic, selectedLikes, next, pendingFeedback.article, pendingFeedback.isLiked));
     };
 
     return (
@@ -111,17 +42,6 @@ function FeedbackModal({ pendingFeedback, correctedTopic, userSettings, isDark, 
                         style={{ width: '100%' }}
                     />
                 </div>
-                {userSettings && (
-                    <ChipsSection
-                        likes={userSettings.likes}
-                        dislikes={userSettings.dislikes}
-                        selectedLikes={selectedLikes}
-                        selectedDislikes={selectedDislikes}
-                        prefColor={colors.prefs}
-                        onToggleLike={toggleLike}
-                        onToggleDislike={toggleDislike}
-                    />
-                )}
                 <TextArea
                     value={reason}
                     onChange={e => setReason(e.value)}
@@ -131,7 +51,7 @@ function FeedbackModal({ pendingFeedback, correctedTopic, userSettings, isDark, 
                 />
                 <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <Button fillMode={'outline'} onClick={onCancel}>Cancel</Button>
-                    <Button themeColor={'primary'} disabled={!reason.trim()} onClick={() => onSubmit(reason.trim(), selectedLikes, selectedDislikes)}>
+                    <Button themeColor={'primary'} disabled={!reason.trim()} onClick={() => onSubmit(reason.trim())}>
                         Submit
                     </Button>
                 </div>

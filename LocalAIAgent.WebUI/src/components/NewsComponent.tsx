@@ -6,7 +6,6 @@ import FeedbackModal from './FeedbackModal';
 import { Button, Chip } from '@progress/kendo-react-buttons';
 import { NewsClient } from '../clients/NewsClient';
 import UserService from '../users/UserService';
-import UserSettings from '../domain/UserSettings';
 
 const newsClient = NewsClient.getInstance();
 const userService = UserService.getInstance();
@@ -140,16 +139,6 @@ const NewsComponent: React.FC = () => {
     const [pendingFeedback, setPendingFeedback] = useState<{ article: NewsArticle; isLiked: boolean } | null>(null);
     const [isDark, setIsDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
     const [correctedTopic, setCorrectedTopic] = useState('');
-    const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
-
-    useEffect(() => {
-        const user = userService.getCurrentUser();
-        if (user) {
-            userService.getUserPreferences(user.id)
-                .then(prefs => setUserSettings(prefs))
-                .catch(err => console.error('Failed to load user preferences:', err));
-        }
-    }, []);
 
     useEffect(() => {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -162,7 +151,7 @@ const NewsComponent: React.FC = () => {
         setSelectedArticleLink(prev => prev === link ? null : link);
     };
 
-    const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string, correctedTopic?: string, selectedLikes?: string[], selectedDislikes?: string[]) => {
+    const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string, correctedTopic?: string) => {
         const user = userService.getCurrentUser();
         if (!user) return;
 
@@ -177,9 +166,7 @@ const NewsComponent: React.FC = () => {
                 articleSummary: article.Summary,
                 articleTopic: correctedTopic ?? article.Topic ?? '',
                 isLiked,
-                reason,
-                selectedLikes,
-                selectedDislikes
+                reason
             });
             if (isToggleOff) {
                 setFeedback(prev => {
@@ -427,12 +414,11 @@ const NewsComponent: React.FC = () => {
                 <FeedbackModal
                             pendingFeedback={pendingFeedback}
                             correctedTopic={correctedTopic}
-                            userSettings={userSettings}
                             isDark={isDark}
                             onTopicChange={setCorrectedTopic}
                             onCancel={() => setPendingFeedback(null)}
-                            onSubmit={async (reason, selectedLikes, selectedDislikes) => {
-                                await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, reason, correctedTopic, selectedLikes, selectedDislikes);
+                            onSubmit={async (reason) => {
+                                await handleFeedback(pendingFeedback.article, pendingFeedback.isLiked, reason, correctedTopic);
                                 setPendingFeedback(null);
                                 setCorrectedTopic('');
                             }}
