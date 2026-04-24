@@ -10,6 +10,8 @@ namespace LocalAIAgent.SemanticKernel.Chat
         public required string EndpointUrl { get; set; }
         public string ApiKey { get; set; } = string.Empty;
 
+        public bool UseResultsForDataset { get; set; }
+
         public decimal Temperature { get; set; }
         public decimal TopP { get; set; }
         public decimal FrequencyPenalty { get; set; }

@@ -175,7 +175,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                         }
                     }
 
-                    await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
+                    if (options.UseResultsForDataset)
+                        await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
                 }
             }
             catch (JsonException ex)
