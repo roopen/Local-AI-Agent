@@ -1,4 +1,5 @@
 ﻿using LocalAIAgent.Domain;
+using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.News.AI;
 using System.Runtime.CompilerServices;
 
@@ -13,7 +14,8 @@ namespace LocalAIAgent.SemanticKernel.News
         INewsService newsService,
         IEvaluateNewsUseCase evaluateNewsUseCase,
         IGetTranslationUseCase getTranslationUseCase,
-        INewsDatasetRepository newsDatasetRepository) : IGetNewsUseCase
+        INewsDatasetRepository newsDatasetRepository,
+        AIOptions options) : IGetNewsUseCase
     {
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
             UserPreferences preferences,
@@ -33,7 +35,7 @@ namespace LocalAIAgent.SemanticKernel.News
                     preferences,
                     includeReasoning: saveDataset);
 
-                if (saveDataset)
+                if (options.UseResultsForDataset)
                     await newsDatasetRepository.SaveAsync(evaluatedArticles.NewsArticles, preferences.Id, cancellationToken);
 
                 evaluatedArticles.NewsArticles = evaluatedArticles.NewsArticles.Where(a => a.Relevancy is Relevancy.High).ToList();
