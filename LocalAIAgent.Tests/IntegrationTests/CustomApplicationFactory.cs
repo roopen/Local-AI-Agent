@@ -48,12 +48,7 @@ namespace LocalAIAgent.Tests.IntegrationTests
                 using IServiceScope scope = sp.CreateScope();
                 UserContext ctx = scope.ServiceProvider.GetRequiredService<UserContext>();
 
-                // OPTION A: Skip migrations, just create schema
-                // ctx.Database.EnsureCreated();
-
-                // OPTION B: If you want to actually test migrations, use:
-                ctx.Database.EnsureDeleted();
-                ctx.Database.Migrate();
+                ctx.Database.EnsureCreated();
             });
         }
 
