@@ -19,11 +19,12 @@ public class NewsDatasetRepository(UserContext context) : INewsDatasetRepository
                 e => new CachedNewsEvaluation(
                     Enum.TryParse<Relevancy>(e.Relevancy, out Relevancy r) ? r : Relevancy.Low,
                     e.ArticleTopic,
-                    e.Reasoning),
+                    e.Reasoning,
+                    e.ModelUsed),
                 cancellationToken);
     }
 
-    public async Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, bool useInDataset, CancellationToken cancellationToken)
+    public async Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, bool useInDataset, string? modelUsed, CancellationToken cancellationToken)
     {
         HashSet<string> existingLinks = await context.NewsEvaluationEntries
             .Where(e => articles.Select(a => a.Link).Contains(e.ArticleLink))
@@ -45,15 +46,11 @@ public class NewsDatasetRepository(UserContext context) : INewsDatasetRepository
                 Relevancy = article.Relevancy.ToString(),
                 Reasoning = article.Reasoning,
                 UseInDataset = useInDataset,
+                ModelUsed = modelUsed ?? "Unknown",
                 UserPreferencesId = userPreferencesId,
             });
         }
 
         await context.SaveChangesAsync(cancellationToken);
-    }
-
-    public Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
     }
 }

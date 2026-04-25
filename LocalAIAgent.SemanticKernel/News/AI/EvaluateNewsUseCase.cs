@@ -148,7 +148,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 }
             }
 
-            await newsDatasetRepository.SaveAsync(result, userPreferences.Id, options.UseResultsForDataset, CancellationToken.None);
+            await newsDatasetRepository.SaveAsync(result, userPreferences.Id, options.UseResultsForDataset, options.ModelId, CancellationToken.None);
 
             return result;
         }
