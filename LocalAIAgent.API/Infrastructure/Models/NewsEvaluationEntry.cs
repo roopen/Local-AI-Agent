@@ -10,7 +10,8 @@ public class NewsEvaluationEntry
     public string? ArticleTopic { get; set; }
     public required string Relevancy { get; set; }
     public string? Reasoning { get; set; }
-    public bool UseInDataset { get; set; } = false;
+    public bool UseInDataset { get; set; }
+    public string ModelUsed { get; set; } = "Unknown";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int UserPreferencesId { get; set; }
     public UserPreferences? UserPreferences { get; set; }
