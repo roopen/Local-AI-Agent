@@ -127,7 +127,8 @@ namespace LocalAIAgent.API
                 using (IServiceScope scope = app.Services.CreateScope())
                 {
                     UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
-                    dbContext.Database.Migrate();
+                    if (!app.Environment.IsEnvironment("IntegrationTests"))
+                        dbContext.Database.Migrate();
                 }
 
                 // Configure the HTTP request pipeline.
