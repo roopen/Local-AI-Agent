@@ -6,7 +6,7 @@ namespace LocalAIAgent.SemanticKernel.News
 
     public interface INewsDatasetRepository
     {
-        Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, CancellationToken cancellationToken);
+        Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, bool useInDataset, CancellationToken cancellationToken);
         Task<Dictionary<string, CachedNewsEvaluation>> GetCachedEvaluationsAsync(IEnumerable<string> links, CancellationToken cancellationToken);
     }
 }

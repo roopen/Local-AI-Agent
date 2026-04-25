@@ -69,6 +69,7 @@ namespace LocalAIAgent.API
                 builder.Services.AddSemanticKernel(builder.Configuration);
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
+                builder.Services.AddScoped<IGetDatasetUseCase, GetDatasetUseCase>();
                 builder.Services.AddScoped<INewsDatasetRepository, NewsDatasetRepository>();
                 builder.Services.AddScoped<IArticleTranslationRepository, ArticleTranslationRepository>();
                 builder.Services.AddScoped<NewsMetrics>();
