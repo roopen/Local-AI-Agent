@@ -14,7 +14,6 @@ namespace LocalAIAgent.SemanticKernel.News
         INewsService newsService,
         IEvaluateNewsUseCase evaluateNewsUseCase,
         IGetTranslationUseCase getTranslationUseCase,
-        INewsDatasetRepository newsDatasetRepository,
         AIOptions options) : IGetNewsUseCase
     {
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
@@ -34,9 +33,6 @@ namespace LocalAIAgent.SemanticKernel.News
                     newsBatch.ToList(),
                     preferences,
                     includeReasoning: saveDataset);
-
-                if (options.UseResultsForDataset)
-                    await newsDatasetRepository.SaveAsync(evaluatedArticles.NewsArticles, preferences.Id, cancellationToken);
 
                 evaluatedArticles.NewsArticles = evaluatedArticles.NewsArticles.Where(a => a.Relevancy is Relevancy.High).ToList();
                 List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");

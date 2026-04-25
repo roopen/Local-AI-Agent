@@ -1,6 +1,5 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
-using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -148,6 +147,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                     }
                 }
             }
+
+            await newsDatasetRepository.SaveAsync(result, userPreferences.Id, options.UseResultsForDataset, CancellationToken.None);
 
             return result;
         }
