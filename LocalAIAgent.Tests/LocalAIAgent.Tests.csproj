@@ -45,7 +45,7 @@
       <OpenApiOutputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/Generated/UserApi.cs'))</OpenApiOutputPath>
     </PropertyGroup>
 	  <Exec Command="dotnet tool restore" />
-    <Exec Command="dotnet nswag openapi2csclient /input:$(OpenApiInputPath) /output:$(OpenApiOutputPath) /namespace:LocalAIAgent.Tests.Generated /className:UserClient" />
+    <Exec Command="dotnet nswag openapi2csclient /input:$(OpenApiInputPath) /output:$(OpenApiOutputPath) /namespace:LocalAIAgent.Tests.Generated /className:UserClient /wrapResponses:true" />
   </Target>
 
 	<Target Name="RestoreDotNetTools">

@@ -48,6 +48,12 @@
 		<IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
 	</PropertyGroup>
 
+	<Target Name="GenerateOpenApiSpec" AfterTargets="Build" Condition="'$(SkipClientBuild)' != 'true'">
+		<Exec Command="swagger tofile --output openapi/LocalAIAgent.API.json $(OutputPath)LocalAIAgent.API.dll v1"
+			  WorkingDirectory="$(MSBuildProjectDirectory)"
+			  EnvironmentVariables="ASPNETCORE_ENVIRONMENT=Development;ASPNETCORE_URLS=http://localhost:5000" />
+	</Target>
+
 	<Target Name="BuildReactApp" BeforeTargets="Build">
 		<!-- Linux/Unix CI: Chain clean and install to prevent ENOTEMPTY race conditions -->
 		<Exec Command="rm -rf node_modules &amp;&amp; npm ci" Condition="'$(CI)' == 'true' AND '$(OS)' != 'Windows_NT' AND '$(SkipClientBuild)' != 'true'" WorkingDirectory="../LocalAIAgent.WebUI" />
