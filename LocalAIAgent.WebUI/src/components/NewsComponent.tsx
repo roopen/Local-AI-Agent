@@ -3,6 +3,7 @@ import { NewsStreamClient } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import FeedbackModal from './FeedbackModal';
 import { Chip } from '@progress/kendo-react-buttons';
+import { Card, CardBody } from '@progress/kendo-react-layout';
 import { NewsClient } from '../clients/NewsClient';
 import UserService from '../users/UserService';
 import ArticleCard from './ArticleCard';
@@ -19,13 +20,15 @@ interface TokenStatsBarProps {
 
 function TokenStatsBar({ avgInput, avgOutput, avgTotal }: TokenStatsBarProps) {
     return (
-        <p style={{ textAlign: 'center', fontSize: '0.8em', color: '#888', marginBottom: '1vh', marginTop: '1vh' }}>
-            Avg token usage per article:
-            {avgInput != null && <> &nbsp;In: {Math.round(avgInput).toLocaleString()}</>}
-            {avgInput != null && avgOutput != null && <> &nbsp;·&nbsp; </>}
-            {avgOutput != null && <>Out: {Math.round(avgOutput).toLocaleString()}</>}
-            {avgTotal != null && <> &nbsp;·&nbsp; Total: {Math.round(avgTotal).toLocaleString()}</>}
-        </p>
+        <Card style={{ maxWidth: '40%', margin: 'auto', marginBottom: '1vh', marginTop: '1vh' }}>
+            <CardBody style={{ background: '#121214', textAlign: 'center', fontSize: '0.8em', padding: '0.75em 1em', color: '#fff' }}>
+                <span style={{ color: '#A1A1AA' }}>Avg token usage per article:</span>
+                {avgInput != null && <> &nbsp;<span style={{  }}>In:</span> <span style={{ fontWeight: 'bold' }}>{Math.round(avgInput).toLocaleString()}</span></>}
+                {avgInput != null && avgOutput != null && <span style={{  }}> &nbsp;·&nbsp; </span>}
+                {avgOutput != null && <><span style={{  }}>Out:</span> <span style={{ fontWeight: 'bold' }}>{Math.round(avgOutput).toLocaleString()}</span></>}
+                {avgTotal != null && <><span style={{  }}> &nbsp;·&nbsp; Total:</span> <span style={{ fontWeight: 'bold' }}>{Math.round(avgTotal).toLocaleString()}</span></>}
+            </CardBody>
+        </Card>
     );
 }
 
@@ -37,7 +40,6 @@ function ArticleStatusMessage({ isLoading, filteredCount, error, dots }: { isLoa
 
 const NewsComponent: React.FC = () => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
-    const [selectedArticleLink, setSelectedArticleLink] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
@@ -54,10 +56,6 @@ const NewsComponent: React.FC = () => {
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
     }, []);
-
-    const toggleChat = (link: string) => {
-        setSelectedArticleLink(prev => prev === link ? null : link);
-    };
 
     const handleFeedback = useCallback(async (article: NewsArticle, isLiked: boolean, reason?: string, correctedTopic?: string) => {
         const user = userService.getCurrentUser();
@@ -194,7 +192,7 @@ const NewsComponent: React.FC = () => {
             <div style={{margin: 'auto'}}>
                 {tokenStats && <TokenStatsBar avgInput={tokenStats.avgInput} avgOutput={tokenStats.avgOutput} avgTotal={tokenStats.avgTotal} />}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', marginTop: '3vh', width: '80%' }}>
-                    <span style={{ fontWeight: 600, color: '#27272A' }}>Source:</span>
+                    <span style={{ fontWeight: 600, color: '#A1A1AA' }}>Source:</span>
                     <Chip
                         selected={!selectedSource}
                         onClick={() => { setSelectedSource(null); setSelectedTopic(null); }}
@@ -219,7 +217,7 @@ const NewsComponent: React.FC = () => {
                 </div>
                 {topics.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', width: '80%' }}>
-                        <span style={{ fontWeight: 600, color: '#27272A' }}>Topic:</span>
+                        <span style={{ fontWeight: 600, color: '#A1A1AA' }}>Topic:</span>
                         <Chip
                             selected={!selectedTopic}
                             onClick={() => setSelectedTopic(null)}
@@ -263,8 +261,6 @@ const NewsComponent: React.FC = () => {
                                 key={article.Link}
                                 article={article}
                                 feedback={feedback}
-                                isSelected={selectedArticleLink === article.Link}
-                                onToggleChat={() => toggleChat(article.Link)}
                                 onFeedbackClick={(isLiked) => {
                                     if (feedback[article.Link] === isLiked) {
                                         handleFeedback(article, isLiked);
