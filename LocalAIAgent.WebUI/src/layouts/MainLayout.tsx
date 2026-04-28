@@ -12,27 +12,24 @@ const Header = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; h
     };
 
     return (
-        <div ref={headerRef} style={{ marginBottom: 5 }}>
-            <div style={{  }}>
-                <h1 style={{ marginBottom: 1 }}>AI Curated News</h1>
-            </div>
-            <div style={{
-                display: 'flex', flexDirection: 'row', gap: '2vh', margin: 'auto', marginTop: '3vh', marginBottom: '3vh', width: '80%', position: 'sticky', top: '0'}}>
-                <Button
-                    themeColor={'info'}
-                    size={'large'}
-                    onClick={onSettingsClick}
-                    style={{ width: "50%" }}>
-                    Settings
-                </Button>
-                <Button
-                    fillMode={'outline'}
-                    themeColor={'secondary'}
-                    size={'large'}
-                    style={{ width: "50%" }}
-                    onClick={handleLogout}>
-                    Logout
-                </Button>
+        <div ref={headerRef} style={{ maxWidth: '80%', margin: 'auto', marginBottom: 5 }}>
+            <div style={{  display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <h1 style={{ margin: 0 }}>AI Curated News</h1>
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                    <Button
+                        themeColor={'info'}
+                        size={'small'}
+                        onClick={onSettingsClick}>
+                        Settings
+                    </Button>
+                    <Button
+                        fillMode={'outline'}
+                        themeColor={'secondary'}
+                        size={'small'}
+                        onClick={handleLogout}>
+                        Logout
+                    </Button>
+                </div>
             </div>
         </div>
     );

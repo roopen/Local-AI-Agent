@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import NewsArticle from '../domain/NewsArticle';
-import ChatComponent from './ChatComponent';
 import { Card, CardTitle, CardBody, CardActions } from '@progress/kendo-react-layout';
 import { Button } from '@progress/kendo-react-buttons';
 
@@ -25,12 +24,10 @@ function ArticleTokenUsage({ inputTokens, outputTokens }: { inputTokens: number 
 export interface ArticleCardProps {
     article: NewsArticle;
     feedback: Record<string, boolean>;
-    isSelected: boolean;
-    onToggleChat: () => void;
     onFeedbackClick: (isLiked: boolean) => void;
 }
 
-export default function ArticleCard({ article, feedback, isSelected, onToggleChat, onFeedbackClick }: ArticleCardProps) {
+export default function ArticleCard({ article, feedback, onFeedbackClick }: ArticleCardProps) {
     const liked = feedback[article.Link] === true;
     const disliked = feedback[article.Link] === false;
     const [likeHovered, setLikeHovered] = useState(false);
@@ -50,9 +47,6 @@ export default function ArticleCard({ article, feedback, isSelected, onToggleCha
                             style={{ marginRight: 5 }}
                             onClick={() => window.open(article.Link, '_blank', 'noopener,noreferrer')}>
                             Read the article at {article.Source} <span>&#x1F5D7;</span>
-                        </Button>
-                        <Button fillMode={'outline'} onClick={onToggleChat} style={{ cursor: 'pointer' }}>
-                            AIChat<span style={{ marginRight: '5px' }}>&#x1F4AC;</span>
                         </Button>
                         <span style={{ marginLeft: 5 }}>
                             <Button
@@ -100,11 +94,6 @@ export default function ArticleCard({ article, feedback, isSelected, onToggleCha
                         )}
                         <ArticleTokenUsage inputTokens={article.InputTokens} outputTokens={article.OutputTokens} />
                     </div>
-                    {isSelected && (
-                        <div style={{ height: '500px', margin: '10px auto', border: '1px solid #ccc' }}>
-                            <ChatComponent article={article} />
-                        </div>
-                    )}
                 </CardActions>
             </CardBody>
         </Card>
