@@ -1,28 +1,40 @@
 using LocalAIAgent.API.Infrastructure;
-using LocalAIAgent.API.Infrastructure.Models;
+using LocalAIAgent.Tests.Generated;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
+using InfraModels = LocalAIAgent.API.Infrastructure.Models;
 
 namespace LocalAIAgent.Tests.IntegrationTests;
 
 public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
     : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _httpClient = factory.CreateClient();
+
+    private UserClient CreateClient() => new(string.Empty, _httpClient);
+
+    private async Task<(int StatusCode, byte[] Bytes, string? ContentType, string? FileName)> GetDatasetAsync()
+    {
+        UserClient client = CreateClient();
+        SwaggerResponse response = await client.DatasetAsync();
+        byte[] bytes = await _httpClient.GetByteArrayAsync("/api/News/Dataset");
+        response.Headers.TryGetValue("Content-Disposition", out IEnumerable<string>? cd);
+        string? fileName = cd?.FirstOrDefault()?.Split("filename=").ElementAtOrDefault(1)?.Trim('"');
+        response.Headers.TryGetValue("Content-Type", out IEnumerable<string>? ct);
+        return (response.StatusCode, bytes, ct?.FirstOrDefault(), fileName);
+    }
 
     [Fact]
     public async Task GetDataset_WithNoData_ReturnsOkWithEmptyZip()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/News/Dataset");
+        (int statusCode, byte[] bytes, string? contentType, _) = await GetDatasetAsync();
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
+        Assert.Equal("application/zip", contentType);
 
-        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
         using ZipArchive archive = new(new MemoryStream(bytes), ZipArchiveMode.Read);
-
         Assert.Contains(archive.Entries, e => e.Name == "training_dataset.jsonl");
         Assert.Contains(archive.Entries, e => e.Name == "evaluation_dataset.jsonl");
     }
@@ -35,18 +47,18 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         {
             UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
 
-            User user = new()
+            InfraModels.User user = new()
             {
                 Fido2Id = [1, 2, 3],
                 Username = "dataset-test-user",
-                Preferences = new UserPreferences
+                Preferences = new InfraModels.UserPreferences
                 {
                     Prompt = "You are a helpful news evaluator.",
                     Interests = ["Technology"],
                     Dislikes = [],
                     EvaluationEntries =
                     [
-                        new NewsEvaluationEntry
+                        new InfraModels.NewsEvaluationEntry
                         {
                             ArticleTitle = "AI Breakthrough",
                             ArticleSummary = "Scientists develop new AI model.",
@@ -57,7 +69,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                             Reasoning = "Relevant to tech interests.",
                             ModelUsed = "test-model",
                         },
-                        new NewsEvaluationEntry
+                        new InfraModels.NewsEvaluationEntry
                         {
                             ArticleTitle = "Stock Market Update",
                             ArticleSummary = "Markets close higher today.",
@@ -67,7 +79,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                             Relevancy = "Low",
                             ModelUsed = "test-model",
                         },
-                        new NewsEvaluationEntry
+                        new InfraModels.NewsEvaluationEntry
                         {
                             ArticleTitle = ".NET 10 Released",
                             ArticleSummary = "Microsoft releases .NET 10.",
@@ -86,14 +98,13 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
 
         // Act
-        HttpResponseMessage response = await _client.GetAsync("/api/News/Dataset");
+        (int statusCode, byte[] bytes, string? contentType, string? fileName) = await GetDatasetAsync();
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
-        Assert.Equal("dataset.zip", response.Content.Headers.ContentDisposition?.FileName);
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
+        Assert.Equal("application/zip", contentType);
+        Assert.Contains("dataset.zip", fileName ?? string.Empty);
 
-        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
         using ZipArchive archive = new(new MemoryStream(bytes), ZipArchiveMode.Read);
 
         ZipArchiveEntry? trainEntry = archive.GetEntry("training_dataset.jsonl");
@@ -108,13 +119,11 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         using StreamReader evalReader = new(evalEntry.Open());
         string evalContent = await evalReader.ReadToEndAsync();
 
-        // Both files together must have at least one entry total
         int totalLines = trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
         Assert.True(totalLines > 0, "Expected at least one JSONL entry across train and eval files.");
 
-        // Each non-empty line must be valid JSON with a "messages" array
         foreach (string line in trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Concat(evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries)))
         {
@@ -135,7 +144,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
 
             for (int i = 1; i <= 4; i++)
             {
-                db.ArticleTranslations.Add(new ArticleTranslation
+                db.ArticleTranslations.Add(new InfraModels.ArticleTranslation
                 {
                     ArticleLink = $"https://example.com/article-{i}-translation",
                     OriginalTitle = $"Original Title {i}",
@@ -149,11 +158,10 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
 
         // Act
-        HttpResponseMessage response = await _client.GetAsync("/api/News/Dataset");
+        (int statusCode, byte[] bytes, _, _) = await GetDatasetAsync();
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
 
-        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
         using ZipArchive archive = new(new MemoryStream(bytes), ZipArchiveMode.Read);
 
         ZipArchiveEntry? trainEntry = archive.GetEntry("training_dataset.jsonl");

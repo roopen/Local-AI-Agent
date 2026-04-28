@@ -7,7 +7,10 @@ export type NewsFeedbackDto = {
     articleLink: string | null;
     articleTitle: string | null;
     articleSummary: string | null;
+    articleTopic: string | null;
     isLiked: boolean;
     reason?: string | null;
+    selectedLikes?: Array<string> | null;
+    selectedDislikes?: Array<string> | null;
 };
 

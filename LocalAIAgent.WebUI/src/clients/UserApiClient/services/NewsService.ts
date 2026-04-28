@@ -42,10 +42,10 @@ export class NewsService {
      * @returns any OK
      * @throws ApiError
      */
-    public static getApiNewsFineTuningDataset(): CancelablePromise<any> {
+    public static getApiNewsDataset(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/News/FineTuningDataset',
+            url: '/api/News/Dataset',
         });
     }
 }

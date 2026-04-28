@@ -74,7 +74,161 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<AssertionOptions> AssertionOptionsAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<System.Collections.Generic.ICollection<LMStudioModel>>> ModelsAsync()
+        {
+            return ModelsAsync(System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<System.Collections.Generic.ICollection<LMStudioModel>>> ModelsAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/AI/models"
+                    urlBuilder_.Append("api/AI/models");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<LMStudioModel>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return new SwaggerResponse<System.Collections.Generic.ICollection<LMStudioModel>>(status_, headers_, objectResponse_.Object);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> DownloadAsync(string body)
+        {
+            return DownloadAsync(body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> DownloadAsync(string body, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = Newtonsoft.Json.JsonConvert.SerializeObject(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.StringContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/AI/models/download"
+                    urlBuilder_.Append("api/AI/models/download");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            return new SwaggerResponse(status_, headers_);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<AssertionOptions>> AssertionOptionsAsync()
         {
             return AssertionOptionsAsync(System.Threading.CancellationToken.None);
         }
@@ -82,7 +236,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AssertionOptions> AssertionOptionsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<AssertionOptions>> AssertionOptionsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -129,7 +283,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<AssertionOptions>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -153,7 +307,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<AttestationResult> MakeAssertionAsync(AuthenticatorAssertionRawResponse body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<AttestationResult>> MakeAssertionAsync(AuthenticatorAssertionRawResponse body)
         {
             return MakeAssertionAsync(body, System.Threading.CancellationToken.None);
         }
@@ -161,7 +315,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AttestationResult> MakeAssertionAsync(AuthenticatorAssertionRawResponse body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<AttestationResult>> MakeAssertionAsync(AuthenticatorAssertionRawResponse body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -211,7 +365,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<AttestationResult>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -235,7 +389,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsExistingUserAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<CredentialCreateOptions>> MakeCredentialOptionsExistingUserAsync()
         {
             return MakeCredentialOptionsExistingUserAsync(System.Threading.CancellationToken.None);
         }
@@ -243,7 +397,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsExistingUserAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<CredentialCreateOptions>> MakeCredentialOptionsExistingUserAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -290,7 +444,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<CredentialCreateOptions>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -314,7 +468,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<RegisteredPublicKeyCredential> AddCredentialExistingUserAsync(CredentialRegistrationRequest body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<RegisteredPublicKeyCredential>> AddCredentialExistingUserAsync(CredentialRegistrationRequest body)
         {
             return AddCredentialExistingUserAsync(body, System.Threading.CancellationToken.None);
         }
@@ -322,7 +476,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<RegisteredPublicKeyCredential> AddCredentialExistingUserAsync(CredentialRegistrationRequest body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<RegisteredPublicKeyCredential>> AddCredentialExistingUserAsync(CredentialRegistrationRequest body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -372,7 +526,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<RegisteredPublicKeyCredential>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -396,7 +550,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task RemoveCredentialAsync(byte[] body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> RemoveCredentialAsync(byte[] body)
         {
             return RemoveCredentialAsync(body, System.Threading.CancellationToken.None);
         }
@@ -404,7 +558,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task RemoveCredentialAsync(byte[] body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> RemoveCredentialAsync(byte[] body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -448,7 +602,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -472,7 +626,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<CredentialInfo>> ListCredentialsAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<System.Collections.Generic.ICollection<CredentialInfo>>> ListCredentialsAsync()
         {
             return ListCredentialsAsync(System.Threading.CancellationToken.None);
         }
@@ -480,7 +634,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<CredentialInfo>> ListCredentialsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<System.Collections.Generic.ICollection<CredentialInfo>>> ListCredentialsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -526,7 +680,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<System.Collections.Generic.ICollection<CredentialInfo>>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -550,7 +704,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<CredentialCreateOptions>> MakeCredentialOptionsAsync(string username)
         {
             return MakeCredentialOptionsAsync(username, System.Threading.CancellationToken.None);
         }
@@ -558,7 +712,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<CredentialCreateOptions>> MakeCredentialOptionsAsync(string username, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -611,7 +765,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<CredentialCreateOptions>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -635,7 +789,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<RegisteredPublicKeyCredential> MakeCredentialAsync(CredentialRegistrationRequest body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<RegisteredPublicKeyCredential>> MakeCredentialAsync(CredentialRegistrationRequest body)
         {
             return MakeCredentialAsync(body, System.Threading.CancellationToken.None);
         }
@@ -643,7 +797,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<RegisteredPublicKeyCredential> MakeCredentialAsync(CredentialRegistrationRequest body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<RegisteredPublicKeyCredential>> MakeCredentialAsync(CredentialRegistrationRequest body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -693,7 +847,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<RegisteredPublicKeyCredential>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -717,7 +871,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task LogoutAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> LogoutAsync()
         {
             return LogoutAsync(System.Threading.CancellationToken.None);
         }
@@ -725,7 +879,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task LogoutAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> LogoutAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -766,7 +920,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -790,7 +944,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<UserDto> CurrentAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<UserDto>> CurrentAsync()
         {
             return CurrentAsync(System.Threading.CancellationToken.None);
         }
@@ -798,7 +952,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<UserDto> CurrentAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<UserDto>> CurrentAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -844,7 +998,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<UserDto>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -868,7 +1022,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ExpandedNewsResult> GetExpandedNewsAsync(string body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<ExpandedNewsResult>> GetExpandedNewsAsync(string body)
         {
             return GetExpandedNewsAsync(body, System.Threading.CancellationToken.None);
         }
@@ -876,7 +1030,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ExpandedNewsResult> GetExpandedNewsAsync(string body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<ExpandedNewsResult>> GetExpandedNewsAsync(string body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -926,7 +1080,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<ExpandedNewsResult>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -950,7 +1104,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task FeedbackAsync(NewsFeedbackDto body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> FeedbackAsync(NewsFeedbackDto body)
         {
             return FeedbackAsync(body, System.Threading.CancellationToken.None);
         }
@@ -958,7 +1112,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task FeedbackAsync(NewsFeedbackDto body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> FeedbackAsync(NewsFeedbackDto body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1002,7 +1156,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -1026,15 +1180,15 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task FineTuningDatasetAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync()
         {
-            return FineTuningDatasetAsync(System.Threading.CancellationToken.None);
+            return DatasetAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task FineTuningDatasetAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1046,8 +1200,8 @@ namespace LocalAIAgent.Tests.Generated
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
-                    // Operation Path: "api/News/FineTuningDataset"
-                    urlBuilder_.Append("api/News/FineTuningDataset");
+                    // Operation Path: "api/News/Dataset"
+                    urlBuilder_.Append("api/News/Dataset");
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -1074,7 +1228,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -1098,7 +1252,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<UserPreferenceDto> UserPreferencesAsync(int userId)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<UserPreferenceDto>> UserPreferencesAsync(int userId)
         {
             return UserPreferencesAsync(userId, System.Threading.CancellationToken.None);
         }
@@ -1106,7 +1260,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<UserPreferenceDto> UserPreferencesAsync(int userId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<UserPreferenceDto>> UserPreferencesAsync(int userId, System.Threading.CancellationToken cancellationToken)
         {
             if (userId == null)
                 throw new System.ArgumentNullException("userId");
@@ -1156,7 +1310,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<UserPreferenceDto>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -1180,7 +1334,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task SavePreferencesAsync(UserPreferenceDto body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> SavePreferencesAsync(UserPreferenceDto body)
         {
             return SavePreferencesAsync(body, System.Threading.CancellationToken.None);
         }
@@ -1188,7 +1342,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task SavePreferencesAsync(UserPreferenceDto body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> SavePreferencesAsync(UserPreferenceDto body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1232,7 +1386,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -1256,7 +1410,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<AiSettingsDto> GetAiSettingsAsync(int? body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<AiSettingsDto>> GetAiSettingsAsync(int? body)
         {
             return GetAiSettingsAsync(body, System.Threading.CancellationToken.None);
         }
@@ -1264,7 +1418,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AiSettingsDto> GetAiSettingsAsync(int? body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<AiSettingsDto>> GetAiSettingsAsync(int? body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1314,7 +1468,7 @@ namespace LocalAIAgent.Tests.Generated
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            return objectResponse_.Object;
+                            return new SwaggerResponse<AiSettingsDto>(status_, headers_, objectResponse_.Object);
                         }
                         else
                         {
@@ -1338,7 +1492,7 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task SaveAiSettingsAsync(AiSettingsDto body)
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> SaveAiSettingsAsync(AiSettingsDto body)
         {
             return SaveAiSettingsAsync(body, System.Threading.CancellationToken.None);
         }
@@ -1346,7 +1500,7 @@ namespace LocalAIAgent.Tests.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task SaveAiSettingsAsync(AiSettingsDto body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> SaveAiSettingsAsync(AiSettingsDto body, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1390,7 +1544,7 @@ namespace LocalAIAgent.Tests.Generated
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            return new SwaggerResponse(status_, headers_);
                         }
                         else
                         {
@@ -2077,6 +2231,69 @@ namespace LocalAIAgent.Tests.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LMStudioCapabilities
+    {
+        [Newtonsoft.Json.JsonProperty("vision", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Vision { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("trained_for_tool_use", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Trained_for_tool_use { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LMStudioModel
+    {
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("publisher", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Publisher { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("key", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Key { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("display_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Display_name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("architecture", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Architecture { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("quantization", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public LMStudioQuantization Quantization { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("size_bytes", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long Size_bytes { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("params_string", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Params_string { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("max_context_length", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int Max_context_length { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("format", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Format { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("capabilities", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public LMStudioCapabilities Capabilities { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Description { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LMStudioQuantization
+    {
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("bits_per_weight", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double Bits_per_weight { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum LargeBlobSupport
     {
 
@@ -2103,28 +2320,20 @@ namespace LocalAIAgent.Tests.Generated
         [Newtonsoft.Json.JsonProperty("articleSummary", Required = Newtonsoft.Json.Required.AllowNull)]
         public string ArticleSummary { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("articleTopic", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string ArticleTopic { get; set; }
+
         [Newtonsoft.Json.JsonProperty("isLiked", Required = Newtonsoft.Json.Required.Always)]
         public bool IsLiked { get; set; }
 
         [Newtonsoft.Json.JsonProperty("reason", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Reason { get; set; }
 
-    }
+        [Newtonsoft.Json.JsonProperty("selectedLikes", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> SelectedLikes { get; set; }
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class NewsFeedbackExample
-    {
-        [Newtonsoft.Json.JsonProperty("articleLink", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string ArticleLink { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string Title { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("summary", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string Summary { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("isLiked", Required = Newtonsoft.Json.Required.Always)]
-        public bool IsLiked { get; set; }
+        [Newtonsoft.Json.JsonProperty("selectedDislikes", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> SelectedDislikes { get; set; }
 
     }
 
@@ -2344,6 +2553,9 @@ namespace LocalAIAgent.Tests.Generated
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UserPreferences
     {
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int Id { get; set; }
+
         [Newtonsoft.Json.JsonProperty("prompt", Required = Newtonsoft.Json.Required.AllowNull)]
         public string Prompt { get; set; }
 
@@ -2352,9 +2564,6 @@ namespace LocalAIAgent.Tests.Generated
 
         [Newtonsoft.Json.JsonProperty("dislikes", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.Collections.Generic.ICollection<string> Dislikes { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("feedbackExamples", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Collections.Generic.ICollection<NewsFeedbackExample> FeedbackExamples { get; set; }
 
     }
 
@@ -2387,6 +2596,32 @@ namespace LocalAIAgent.Tests.Generated
 
     }
 
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SwaggerResponse
+    {
+        public int StatusCode { get; private set; }
+
+        public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> Headers { get; private set; }
+
+        public SwaggerResponse(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers)
+        {
+            StatusCode = statusCode;
+            Headers = headers;
+        }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SwaggerResponse<TResult> : SwaggerResponse
+    {
+        public TResult Result { get; private set; }
+
+        public SwaggerResponse(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, TResult result)
+            : base(statusCode, headers)
+        {
+            Result = result;
+        }
+    }
 
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
