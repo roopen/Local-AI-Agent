@@ -20,20 +20,7 @@ internal sealed class GetDatasetUseCase(
 {
     public async Task<byte[]> GetDatasetZipAsync(CancellationToken cancellationToken = default)
     {
-        List<UserPreferences> allPreferences = await userContext.UserPreferences
-            .Include(p => p.EvaluationEntries)
-            .Where(p => p.EvaluationEntries.Count > 0)
-            .ToListAsync(cancellationToken);
-
-        Dictionary<string, ArticleTranslation> translationsByLink = await userContext.ArticleTranslations
-            .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
-            .GroupBy(t => t.ArticleLink)
-            .Select(g => g.OrderByDescending(t => t.CreatedAt).First())
-            .ToDictionaryAsync(t => t.ArticleLink, cancellationToken);
-
-        List<string> allEntries = GetNewsEntries(allPreferences, translationsByLink);
-
-        // Translation dataset — group stored translations by target language and emit batches of 3
+        // Translation dataset — count batches first to balance with news entries
         List<ArticleTranslation> allTranslations = await userContext.ArticleTranslations
             .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
             .OrderBy(t => t.TargetLanguage)
@@ -41,6 +28,8 @@ internal sealed class GetDatasetUseCase(
             .ToListAsync(cancellationToken);
 
         int translationBatchCount = 0;
+        List<string> translationEntries = [];
+
         foreach (IGrouping<string, ArticleTranslation> group in allTranslations.GroupBy(t => t.TargetLanguage))
         {
             string translationSystemPrompt = translationUseCase.GetSystemPrompt(group.Key);
@@ -56,14 +45,35 @@ internal sealed class GetDatasetUseCase(
                 string assistantContent = JsonSerializer.Serialize(
                     batch.Select(t => new { title = t.TranslatedTitle, summary = t.TranslatedSummary }));
 
-                allEntries.Add(BuildEntry(translationSystemPrompt, userContent, assistantContent));
+                translationEntries.Add(BuildEntry(translationSystemPrompt, userContent, assistantContent));
                 translationBatchCount++;
             }
         }
 
-        // Smart split: translations are fewer — use their proportion to size the evaluation set (clamped 10–30%)
+        // Load all preferences and translation mapping
+        List<UserPreferences> allPreferences = await userContext.UserPreferences
+            .Include(p => p.EvaluationEntries)
+            .Where(p => p.EvaluationEntries.Count > 0)
+            .ToListAsync(cancellationToken);
+
+        Dictionary<string, ArticleTranslation> translationsByLink = await userContext.ArticleTranslations
+            .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
+            .GroupBy(t => t.ArticleLink)
+            .Select(g => g.OrderByDescending(t => t.CreatedAt).First())
+            .ToDictionaryAsync(t => t.ArticleLink, cancellationToken);
+
+        // Generate news entries balanced to match translation count; use all entries if there are no translations
+        int newsTarget = translationBatchCount > 0 ? translationBatchCount : int.MaxValue;
+        List<string> newsEntries = GetBalancedNewsEntries(
+            allPreferences,
+            translationsByLink,
+            newsTarget);
+
+        // Combine and shuffle both datasets
+        List<string> allEntries = [.. newsEntries, .. translationEntries];
         allEntries = allEntries.OrderBy(_ => Random.Shared.Next()).ToList();
 
+        // Smart split: use translation proportion to size the evaluation set (clamped 15–30%)
         int totalCount = allEntries.Count;
         double evalFraction = totalCount > 0
             ? Math.Clamp((double)translationBatchCount / totalCount, 0.15, 0.30)
@@ -83,23 +93,65 @@ internal sealed class GetDatasetUseCase(
         return zipStream.ToArray();
     }
 
-    private static List<string> GetNewsEntries(List<UserPreferences> allPreferences, Dictionary<string, ArticleTranslation> translationsByLink)
+    private static List<string> GetBalancedNewsEntries(
+        List<UserPreferences> allPreferences,
+        Dictionary<string, ArticleTranslation> translationsByLink,
+        int targetCount)
     {
-        List<string> allEntries = new();
+        // Collect all evaluation entries from all users, deduplicated by entry Id
+        Dictionary<int, (UserPreferences preferences, NewsEvaluationEntry entry)> seenIds = [];
 
         foreach (UserPreferences preferences in allPreferences)
         {
+            foreach (NewsEvaluationEntry entry in preferences.EvaluationEntries)
+            {
+                seenIds.TryAdd(entry.Id, (preferences, entry));
+            }
+        }
+
+        // Shuffle using a local Random instance to avoid tie collisions from Random.Shared
+        Random rng = new();
+        IEnumerable<(UserPreferences preferences, NewsEvaluationEntry entry)> query = seenIds.Values
+            .OrderBy(_ => rng.Next());
+
+        // When targetCount is bounded, take 3× to ensure enough entries to fill requested batches
+        if (targetCount < int.MaxValue / 3)
+            query = query.Take(targetCount * 3);
+
+        List<(UserPreferences preferences, NewsEvaluationEntry entry)> shuffled = query.ToList();
+
+        // Group selected entries back by user to preserve per-user system prompt context
+        Dictionary<int, List<NewsEvaluationEntry>> entriesByUser = shuffled
+            .GroupBy(pair => pair.preferences.Id)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(pair => pair.entry).ToList());
+
+        List<string> newsEntries = [];
+        int entriesGenerated = 0;
+
+        foreach (UserPreferences preferences in allPreferences)
+        {
+            if (entriesGenerated >= targetCount)
+                break;
+
+            if (!entriesByUser.TryGetValue(preferences.Id, out List<NewsEvaluationEntry>? selectedEntries))
+                continue;
+
             Domain.UserPreferences userPreferences = preferences.MapToDomainUserPreferences();
             string systemPrompt = userPreferences.BuildSystemPrompt();
 
             HashSet<string> knownTopics = new(StringComparer.OrdinalIgnoreCase);
 
             int offset = 0;
-            while (offset < preferences.EvaluationEntries.Count)
+            while (offset < selectedEntries.Count && entriesGenerated < targetCount)
             {
-                int batchSize = Random.Shared.Next(1, 4);
-                NewsEvaluationEntry[] batch = preferences.EvaluationEntries.Skip(offset).Take(batchSize).ToArray();
+                int batchSize = rng.Next(1, 4);
+                NewsEvaluationEntry[] batch = selectedEntries.Skip(offset).Take(batchSize).ToArray();
                 offset += batchSize;
+
+                if (batch.Length == 0)
+                    break;
 
                 string topicsContext = EvaluateNewsUseCase.FormatKnownTopics(knownTopics);
 
@@ -128,11 +180,12 @@ internal sealed class GetDatasetUseCase(
                         Topic = e.ArticleTopic ?? string.Empty,
                     }));
 
-                allEntries.Add(BuildEntry(systemPrompt, userContent, assistantContent));
+                newsEntries.Add(BuildEntry(systemPrompt, userContent, assistantContent));
+                entriesGenerated++;
             }
         }
 
-        return allEntries;
+        return newsEntries;
     }
 
     private static string BuildEntry(string systemPrompt, string userContent, string assistantContent)
