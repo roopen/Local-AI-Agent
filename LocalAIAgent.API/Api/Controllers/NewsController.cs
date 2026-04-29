@@ -16,7 +16,6 @@ namespace LocalAIAgent.API.Api.Controllers
     [Route("api/[controller]")]
     public class NewsController(
         INewsChatUseCase newsChatUseCase,
-        IGetTranslationUseCase translationUseCase,
         IGetDatasetUseCase getDatasetUseCase,
         NewsMetrics newsMetrics,
         UserContext userContext) : ControllerBase

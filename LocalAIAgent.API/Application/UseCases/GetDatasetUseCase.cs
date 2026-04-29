@@ -210,7 +210,7 @@ internal sealed class GetDatasetUseCase(
         for (int i = 0; i < batch.Length; i++)
         {
             if (!string.IsNullOrWhiteSpace(batch[i].Reasoning))
-                sb.AppendLine($"Article {i}: {batch[i].Reasoning}");
+                sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Article {i}: {batch[i].Reasoning}");
         }
 
         if (sb.Length == 0)

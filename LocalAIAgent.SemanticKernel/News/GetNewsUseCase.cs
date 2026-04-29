@@ -13,8 +13,7 @@ namespace LocalAIAgent.SemanticKernel.News
     public class GetNewsUseCase(
         INewsService newsService,
         IEvaluateNewsUseCase evaluateNewsUseCase,
-        IGetTranslationUseCase getTranslationUseCase,
-        AIOptions options) : IGetNewsUseCase
+        IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
     {
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
             UserPreferences preferences,
