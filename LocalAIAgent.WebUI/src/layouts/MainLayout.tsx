@@ -224,11 +224,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         bottom: 'auto',
                         marginRight: '-50%',
                         transform: 'translate(-50%, -50%)',
-                        backgroundColor: '#282c34',
+                        backgroundColor: '#121214',
                         color: 'white',
-                        border: '1px solid #ccc',
+                        border: '1px solid #27272a',
                         maxHeight: '80vh',
-                        overflowY: 'auto'
+                        overflowY: 'auto',
+                        padding: 0,
+                        borderRadius: 8,
                     },
                     overlay: {
                         backgroundColor: 'rgba(0, 0, 0, 0.75)'

@@ -123,6 +123,27 @@ button:focus-visible {
   border-radius: 0 6px 6px 0;
 }
 
+.settings-tab {
+  cursor: pointer;
+  padding: 0.4em 1em;
+  font-size: 0.95em;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted-foreground);
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.settings-tab:hover {
+  color: var(--foreground);
+  border-color: transparent;
+}
+
+.settings-tab.active {
+  color: var(--foreground);
+}
+
 .read-article-btn {
   display: inline-flex;
   align-items: center;

@@ -188,9 +188,9 @@ const NewsComponent: React.FC = () => {
 
     return (
         <div>
-            {error && <p>{error}</p>}
+            {error && <Chip themeColor={'error'}>{error}</Chip>}
+
             <div style={{margin: 'auto'}}>
-                {tokenStats && <TokenStatsBar avgInput={tokenStats.avgInput} avgOutput={tokenStats.avgOutput} avgTotal={tokenStats.avgTotal} />}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', marginTop: '3vh', width: '80%' }}>
                     <span style={{ fontWeight: 600, color: '#A1A1AA' }}>Source:</span>
                     <Chip
@@ -275,6 +275,9 @@ const NewsComponent: React.FC = () => {
                 ))}
                 <ArticleStatusMessage isLoading={isLoading} filteredCount={filteredArticles.length} error={error} dots={dots} />
             </div>
+
+            {tokenStats && <TokenStatsBar avgInput={tokenStats.avgInput} avgOutput={tokenStats.avgOutput} avgTotal={tokenStats.avgTotal} />}
+
             {pendingFeedback && (
                 <FeedbackModal
                             pendingFeedback={pendingFeedback}
