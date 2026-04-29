@@ -127,7 +127,9 @@ namespace LocalAIAgent.API
                 using (IServiceScope scope = app.Services.CreateScope())
                 {
                     UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
-                    if (!app.Environment.IsEnvironment("IntegrationTests"))
+                    bool isIntegrationTests = app.Environment.IsEnvironment("IntegrationTests");
+                    bool isSwaggerGen = app.Environment.IsEnvironment("SwaggerGeneration");
+                    if (!isIntegrationTests && !isSwaggerGen)
                         dbContext.Database.Migrate();
                 }
 
