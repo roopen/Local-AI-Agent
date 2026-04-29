@@ -95,3 +95,100 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.read-article-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4em 0.75em;
+  border-radius: 4px;
+  background: rgba(64, 130, 239, 0.1);
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 1em;
+  line-height: 1.5;
+  transition: background 0.15s;
+  vertical-align: middle;
+}
+
+.read-article-btn:hover {
+  background: rgba(64, 130, 239, 0.22) !important;
+}
+
+.article-card {
+  max-width: 80%;
+  margin: auto;
+  margin-bottom: 1vh;
+}
+
+.article-card-body {
+  background: #121214;
+}
+
+.article-card-title {
+  margin-bottom: 1vh;
+  margin-top: 1vh;
+}
+
+.article-card-summary {
+  margin-bottom: 1.5vh;
+  margin-top: 0;
+  color: rgb(136, 136, 136);
+}
+
+.article-card-actions {
+  margin: 0 auto;
+}
+
+.article-card-feedback {
+  margin-left: 10px;
+  height: 32px;
+}
+
+.feedback-btn {
+  cursor: pointer !important;
+  padding: calc(0.4em - 1px) 0.75em !important;
+  font-size: 1em !important;
+  line-height: 1.5 !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  transition: background 0.15s !important;
+  background: transparent !important;
+  vertical-align: middle !important;
+}
+
+.feedback-btn:hover {
+  background: var(--secondary) !important;
+}
+
+.feedback-btn--like {
+  border-right: none !important;
+  border-radius: 6px 0 0 6px !important;
+}
+
+.feedback-btn--like.active {
+  background: var(--chart-2) !important;
+}
+
+.feedback-btn--dislike {
+  border-radius: 0 6px 6px 0 !important;
+}
+
+.feedback-btn--dislike.active {
+  background: var(--destructive) !important;
+}
+
+.article-card-reasoning {
+  text-align: center;
+  font-size: 0.72em;
+  color: #888;
+  margin-top: 0.5vh;
+  margin-bottom: 0.5vh;
+}
+
+.article-token-usage {
+  text-align: center;
+  font-size: 0.72em;
+  color: #888;
+  margin-top: 0;
+  margin-bottom: 0.5vh;
+}
