@@ -54,7 +54,7 @@
 			  IgnoreExitCode="true" />
 		<Exec Command="swagger tofile --output openapi/LocalAIAgent.API.json $(OutputPath)LocalAIAgent.API.dll v1"
 			  WorkingDirectory="$(MSBuildProjectDirectory)"
-			  EnvironmentVariables="ASPNETCORE_ENVIRONMENT=Development;ASPNETCORE_URLS=http://localhost:5000" />
+			  EnvironmentVariables="ASPNETCORE_ENVIRONMENT=SwaggerGeneration;ASPNETCORE_URLS=http://localhost:5000" />
 	</Target>
 
 	<Target Name="BuildReactApp" BeforeTargets="Build">
