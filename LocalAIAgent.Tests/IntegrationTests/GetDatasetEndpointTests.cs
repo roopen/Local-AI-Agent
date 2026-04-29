@@ -94,7 +94,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
             };
 
             db.Users.Add(user);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Act
@@ -114,10 +114,10 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         Assert.NotNull(evalEntry);
 
         using StreamReader trainReader = new(trainEntry.Open());
-        string trainContent = await trainReader.ReadToEndAsync();
+        string trainContent = await trainReader.ReadToEndAsync(TestContext.Current.CancellationToken);
 
         using StreamReader evalReader = new(evalEntry.Open());
-        string evalContent = await evalReader.ReadToEndAsync();
+        string evalContent = await evalReader.ReadToEndAsync(TestContext.Current.CancellationToken);
 
         int totalLines = trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -154,7 +154,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                     TargetLanguage = "Spanish",
                 });
             }
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Act
@@ -171,10 +171,10 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         Assert.NotNull(evalEntry);
 
         using StreamReader trainReader = new(trainEntry.Open());
-        string trainContent = await trainReader.ReadToEndAsync();
+        string trainContent = await trainReader.ReadToEndAsync(TestContext.Current.CancellationToken);
 
         using StreamReader evalReader = new(evalEntry.Open());
-        string evalContent = await evalReader.ReadToEndAsync();
+        string evalContent = await evalReader.ReadToEndAsync(TestContext.Current.CancellationToken);
 
         int totalLines = trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
