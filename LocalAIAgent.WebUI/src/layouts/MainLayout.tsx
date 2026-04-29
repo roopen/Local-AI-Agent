@@ -15,20 +15,9 @@ const Header = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; h
         <div ref={headerRef} style={{ maxWidth: '80%', margin: 'auto', marginBottom: 5 }}>
             <div style={{  display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <h1 style={{ margin: 0 }}>AI Curated News</h1>
-                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
-                    <Button
-                        themeColor={'info'}
-                        size={'small'}
-                        onClick={onSettingsClick}>
-                        Settings
-                    </Button>
-                    <Button
-                        fillMode={'outline'}
-                        themeColor={'secondary'}
-                        size={'small'}
-                        onClick={handleLogout}>
-                        Logout
-                    </Button>
+                <div style={{ display: 'flex', marginLeft: 'auto' }}>
+                    <button className="header-btn header-btn--left" title="Settings" onClick={onSettingsClick}>⚙</button>
+                    <button className="header-btn header-btn--right" title="Logout" onClick={handleLogout}>⏻</button>
                 </div>
             </div>
         </div>

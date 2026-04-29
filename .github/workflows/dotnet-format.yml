@@ -22,7 +22,7 @@ jobs:
         run: dotnet tool restore
 
       - name: Run Tests
-        run: dotnet test
+        run: dotnet test -p:SkipClientBuild=true
 
       - name: Check Code Quality
         run: dotnet format --verify-no-changes

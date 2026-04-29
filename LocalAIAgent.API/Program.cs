@@ -162,8 +162,11 @@ namespace LocalAIAgent.API
                 app.MapHub<NewsHub>("/newsHub");
 
                 // Run initial news fetch on startup
-                InitializeNewsCache(app);
-                LoadLLMOnStartup(app).Wait();
+                if (!isIntegrationTests && !isSwaggerGen)
+                {
+                    InitializeNewsCache(app);
+                    LoadLLMOnStartup(app).Wait();
+                }
 
                 app.Run();
             }

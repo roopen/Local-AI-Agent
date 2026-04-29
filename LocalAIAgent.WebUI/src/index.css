@@ -96,6 +96,33 @@ button:focus-visible {
   }
 }
 
+.header-btn {
+  cursor: pointer;
+  padding: 0.3em 0.65em;
+  font-size: 1em;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  transition: background 0.15s;
+  position: relative;
+  z-index: 0;
+}
+
+.header-btn:hover {
+  background: var(--secondary);
+  z-index: 1;
+}
+
+.header-btn--left {
+  border-radius: 6px 0 0 6px;
+  margin-right: -1px;
+}
+
+.header-btn--right {
+  border-radius: 0 6px 6px 0;
+}
+
 .read-article-btn {
   display: inline-flex;
   align-items: center;
