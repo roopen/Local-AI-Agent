@@ -5,16 +5,28 @@ import Modal from 'react-modal';
 import { Button } from '@progress/kendo-react-buttons';
 import { NewsStreamClient } from '../clients/NewsStreamingClient';
 
+const newsStreamClient = NewsStreamClient.getInstance();
+
 const Header = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; headerRef: React.RefObject<HTMLDivElement | null> }) => {
     const handleLogout = async () => {
         await UserService.getInstance().logout();
         window.location.reload();
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const loading = newsStreamClient.isLoading;
+            setIsLoading(loading);
+        }, 100);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div ref={headerRef} style={{ width: '80%', margin: 'auto', marginBottom: 5 }}>
             <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <h1 style={{ margin: 0 }}>AI Curated News</h1>
+                <h1 className={isLoading ? 'heading-loading' : ''} style={{ margin: 0 }}>AI Curated News</h1>
                 <div style={{ display: 'flex', marginLeft: 'auto' }}>
                     <button className="header-btn header-btn--left" title="Settings" onClick={onSettingsClick}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ display: 'block' }}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -87,7 +99,6 @@ const ScrollToBottomButton = () => {
 };
 
 const LoadingSpinner = () => {
-    const [isLoading, setIsLoading] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [articleCount, setArticleCount] = useState(0);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -96,7 +107,6 @@ const LoadingSpinner = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             const loading = newsStreamClient.isLoading;
-            setIsLoading(loading);
             if (loading) setHasLoadedOnce(true);
             setArticleCount(newsStreamClient.articleCount);
 
@@ -131,28 +141,23 @@ const LoadingSpinner = () => {
                 <div>{articleCount} articles</div>
                 <div>{elapsedSeconds > 60 ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s` : `${elapsedSeconds}s`}</div>
             </div>
-            {isLoading && (
-                <>
-                    <div
-                        style={{
-                            width: '2rem',
-                            height: '2rem',
-                            border: '3px solid rgba(255,255,255,0.3)',
-                            borderTop: '3px solid #007bff',
-                            borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite',
-                        }}
-                    />
-                    <style>{`
-                        @keyframes spin {
-                            0% { transform: rotate(0deg); }
-                            100% { transform: rotate(360deg); }
-                        }
-                    `}</style>
-                </>
-            )}
         </div>
     );
+};
+
+const FloatingLoadingBar = () => {
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIsLoading(newsStreamClient.isLoading);
+        }, 100);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (!isLoading) return null;
+
+    return <div className="loading-bar" />;
 };
 
 const FloatingSettingsButton = ({ onSettingsClick, headerRef }: { onSettingsClick: () => void; headerRef: React.RefObject<HTMLDivElement | null> }) => {
@@ -198,6 +203,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <Header onSettingsClick={openModal} headerRef={headerRef} />
             <main>{children}</main>
             <LoadingSpinner />
+            <FloatingLoadingBar />
             <div
                 style={{
                     position: 'fixed',

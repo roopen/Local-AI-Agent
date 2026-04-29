@@ -120,6 +120,42 @@ button:focus-visible {
   }
 }
 
+@keyframes heading-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.heading-loading {
+  background: linear-gradient(
+    90deg,
+    var(--foreground) 25%,
+    var(--primary) 50%,
+    var(--foreground) 75%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: heading-shimmer 2s linear infinite;
+}
+
+.loading-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--primary) 50%,
+    transparent 100%
+  );
+  background-size: 200% auto;
+  animation: heading-shimmer 2s linear infinite;
+  z-index: 9999;
+}
+
 .header-btn {
   cursor: pointer;
   padding: 0.3em 0.65em;
