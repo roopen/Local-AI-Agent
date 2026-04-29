@@ -42,6 +42,32 @@
   --font-mono: "JetBrains Mono";
 }
 
+/* Override Kendo's primary color to match our design tokens */
+:root {
+  --kendo-color-primary: #2563eb;
+  --kendo-color-primary-hover: #1d4ed8;
+  --kendo-color-primary-active: #1e40af;
+  --kendo-color-primary-emphasis: rgba(37, 99, 235, 0.16);
+  --kendo-color-on-primary: #ffffff;
+}
+
+.k-button-solid-primary {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.k-button-solid-primary:hover {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+.k-button-solid-primary:active,
+.k-button-solid-primary:focus {
+  background-color: #1e40af !important;
+  border-color: #1e40af !important;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -53,8 +79,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
