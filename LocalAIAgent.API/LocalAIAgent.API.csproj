@@ -49,6 +49,9 @@
 	</PropertyGroup>
 
 	<Target Name="GenerateOpenApiSpec" AfterTargets="Build" Condition="'$(SkipClientBuild)' != 'true'">
+		<Exec Command="dotnet tool install --global Swashbuckle.AspNetCore.Cli --version 10.1.7"
+			  WorkingDirectory="$(MSBuildProjectDirectory)"
+			  IgnoreExitCode="true" />
 		<Exec Command="swagger tofile --output openapi/LocalAIAgent.API.json $(OutputPath)LocalAIAgent.API.dll v1"
 			  WorkingDirectory="$(MSBuildProjectDirectory)"
 			  EnvironmentVariables="ASPNETCORE_ENVIRONMENT=Development;ASPNETCORE_URLS=http://localhost:5000" />
