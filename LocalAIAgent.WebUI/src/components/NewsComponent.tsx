@@ -188,7 +188,7 @@ const NewsComponent: React.FC = () => {
 
     return (
         <div>
-            {error && <Chip themeColor={'error'}>{error}</Chip>}
+            {error && <Chip style={{ marginTop: '2vh' }} themeColor={ 'error'} > { error }</Chip>}
 
             <div style={{margin: 'auto'}}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', margin: 'auto', marginBottom: '1.5vh', marginTop: '3vh', width: '80%' }}>

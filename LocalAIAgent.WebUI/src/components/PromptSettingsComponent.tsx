@@ -215,10 +215,10 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                 </div>
             </div>
             <Button
-                themeColor={'secondary'}
+                themeColor={'primary'}
                 onClick={handleSave}
                 disabled={isSaving}
-                style={{ minWidth: '160px', textAlign: 'center', marginTop: '20px', backgroundColor: '#555', color: 'white', border: 'none', padding: '10px', cursor: 'pointer' }}>
+                style={{ minWidth: '160px', textAlign: 'center', marginTop: '20px', padding: '10px', cursor: 'pointer' }}>
                 <span style={{ ...textStyle, display: 'inline-block' }}>{buttonText}</span>
             </Button>
         </div>
