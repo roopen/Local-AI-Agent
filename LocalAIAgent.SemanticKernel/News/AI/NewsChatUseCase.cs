@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.Chat;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -10,8 +10,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 {
     public interface INewsChatUseCase
     {
-        IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(List<string> chatHistory);
-
         Task<ExpandedNewsResult> GetExpandedNewsAsync(string article);
     }
 
@@ -53,40 +51,6 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 response = msg;
 
             return ExpandedNewsResult.FromJson(response?.Content);
-        }
-
-        public async IAsyncEnumerable<StreamingChatMessageContent> GetChatStreamAsync(List<string> messages)
-        {
-            if (messages.Count == 0)
-                yield break;
-
-            string newsArticle = messages[0];
-
-            string prompt = $"You are a chat assistant." +
-                $"Answer any questions the user has about the news article provided. News article: {newsArticle}" +
-                $"Keep your answers short and concise. Use tools only when required to.";
-
-            ChatCompletionAgent agent = new()
-            {
-                Instructions = prompt,
-                Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: true)),
-            };
-
-            ChatHistoryAgentThread thread = new();
-            foreach (string msg in messages.SkipLast(1))
-                thread.ChatHistory.AddUserMessage(msg);
-
-            ChatMessageContent latestMessage = new(AuthorRole.User, messages[^1]);
-
-            await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(latestMessage, thread)
-                                .ConfigureAwait(false))
-            {
-                if (content is null)
-                    continue;
-
-                yield return content;
-            }
         }
     }
 }

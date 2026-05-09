@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Repos\\\\Local-AI-Agent\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(ls \"C:\\\\Repos\\\\Local-AI-Agent\" | Where-Object { $_.PSIsContainer })",
+      "Bash(Find \"C:\\\\Repos\\\\Local-AI-Agent\\\\LocalAIAgent.SemanticKernel\" -type f -name \"*.cs\")",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(git *)",
+      "Bash(dotnet ef *)",
+      "Bash(dotnet tool *)"
+    ]
+  }
+}

@@ -1,34 +1,23 @@
-﻿using LocalAIAgent.SemanticKernel.RAG;
-using Microsoft.Extensions.VectorData;
-using Microsoft.SemanticKernel.Data;
 using System.Net;
 using System.ServiceModel.Syndication;
 using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.SemanticKernel.News
 {
-    public partial class NewsItem : BaseVectorData
+    public partial class NewsItem
     {
-        [VectorStoreKey]
-        [JsonIgnore]
-        public string Id { get; }
         public DateTimeOffset PublishDate { get; }
         public string Title { get; }
         public string Summary { get; }
         public List<string> Categories { get; } = [];
 
-        [TextSearchResultValue]
-        [VectorStoreData]
         [JsonIgnore]
         public string? Content => $"{Title}\n\n{Summary}";
         public string? Link { get; }
-        [TextSearchResultValue]
-        [VectorStoreData]
         public string? Source { get; }
 
         public NewsItem(SyndicationItem syndicationItem)
         {
-            Id = Guid.CreateVersion7().ToString();
             Title = GetDecodedHtmlString(syndicationItem.Title?.Text);
             Summary = GetDecodedHtmlString(syndicationItem.Summary?.Text);
             PublishDate = syndicationItem.PublishDate;
@@ -52,10 +41,6 @@ namespace LocalAIAgent.SemanticKernel.News
 
             return decodedText;
         }
-
-#pragma warning disable CS8618 // Vector Database requires a parameterless constructor
-        public NewsItem() { }
-#pragma warning restore CS8618
 
         public override string ToString()
         {
