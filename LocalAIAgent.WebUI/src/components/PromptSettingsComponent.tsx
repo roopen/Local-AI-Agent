@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import UserService from "../users/UserService";
 import UserSettings from '../domain/UserSettings';
-import { Button, Chip } from '@progress/kendo-react-buttons';
-import { InputSeparator, InputSuffix, TextArea, TextBox } from '@progress/kendo-react-inputs';
+import { Button } from '@progress/kendo-react-buttons';
+import { InputSeparator, InputSuffix, TextBox } from '@progress/kendo-react-inputs';
 
 interface PromptSettingsProps {
     onSave?: () => Promise<void>;
@@ -111,25 +111,32 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
         setSettings(newSettings);
     };
 
+    const promptValue = settings.prompt || '';
+
     return (
         <div>
             <div>
-                <h2>Prompt</h2>
-                <TextArea
-                    autoSize={true}
-                    rows={2}
-                    value={settings.prompt || ''}
-                    onChange={(e) => {
-                        const newSettings = new UserSettings(settings.likes, settings.dislikes, e.target.value);
-                        setSettings(newSettings);
-                    }}
-                    placeholder="System prompt for the AI"
-                    style={{ width: 'calc(100% - 16px)', padding: '8px', boxSizing: 'border-box', backgroundColor: '#333', color: 'white', border: '1px solid #555' }}
-                />
+                <h2 className="settings-section-title">Prompt</h2>
+                <p className="prompt-hint">
+                    Describe what you want to see. The AI uses this to filter every article.
+                </p>
+                <div className="prompt-textarea-wrapper">
+                    <textarea
+                        className="prompt-textarea"
+                        rows={4}
+                        value={promptValue}
+                        onChange={(e) => {
+                            const newSettings = new UserSettings(settings.likes, settings.dislikes, e.target.value);
+                            setSettings(newSettings);
+                        }}
+                        placeholder="e.g. AI research papers, Rust language news, no crypto"
+                    />
+                    <span className="prompt-textarea-counter">{promptValue.length}</span>
+                </div>
             </div>
-            <div style={{ display: 'flex' }}>
-                <div style={{ flex: '1' }}>
-                    <h2>Likes</h2>
+            <div style={{ display: 'flex', gap: '24px', marginTop: '24px' }}>
+                <div style={{ flex: '1', minWidth: 0 }}>
+                    <h2 className="settings-section-title">Likes ({settings.likes.length})</h2>
                     <TextBox
                         value={newLike}
                         onChange={(e) => setNewLike(e.target.value as string)}
@@ -139,7 +146,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                 addLike();
                             }
                         }}
-                        placeholder="Add a new like"
+                        placeholder="Add a like and press Enter"
                         suffix={() => (
                             <>
                                 <InputSeparator />
@@ -155,24 +162,29 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                 </InputSuffix>
                             </>
                         )}
-                        style={{ width: '90%' }}
+                        style={{ width: '100%' }}
                     />
-                    <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    <ul className="taste-chip-list">
                         {settings.likes.map(like => (
-                            <Chip
-                                key={like}
-                                removable
-                                size={'large'}
-                                onClick={() => removeLike(like)}
-                                style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}
-                            >
-                                {like}
-                            </Chip>
+                            <li key={like} className="taste-chip">
+                                <svg className="taste-chip-icon taste-chip-icon--like" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                <span className="taste-chip-label">{like}</span>
+                                <button
+                                    type="button"
+                                    className="taste-chip-x"
+                                    onClick={() => removeLike(like)}
+                                    aria-label={`Remove ${like}`}
+                                    title="Remove">
+                                    ✕
+                                </button>
+                            </li>
                         ))}
                     </ul>
                 </div>
-                <div style={{ flex: '1' }}>
-                    <h2>Dislikes</h2>
+                <div style={{ flex: '1', minWidth: 0 }}>
+                    <h2 className="settings-section-title">Dislikes ({settings.dislikes.length})</h2>
                     <TextBox
                         value={newDislike}
                         onChange={(e) => setNewDislike(e.target.value as string)}
@@ -182,7 +194,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                 addDislike();
                             }
                         }}
-                        placeholder="Add a new dislike"
+                        placeholder="Add a dislike and press Enter"
                         suffix={() => (
                             <>
                                 <InputSeparator />
@@ -198,19 +210,25 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                 </InputSuffix>
                             </>
                         )}
-                        style={{ width: '90%' }}
+                        style={{ width: '100%' }}
                     />
-                    <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    <ul className="taste-chip-list">
                         {settings.dislikes.map(dislike => (
-                            <Chip
-                                key={dislike}
-                                removable
-                                size={'large'}
-                                onClick={() => removeDislike(dislike)}
-                                style={{ marginLeft: '10px', backgroundColor: '#555', color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer' }}
-                            >
-                                {dislike}
-                            </Chip>
+                            <li key={dislike} className="taste-chip">
+                                <svg className="taste-chip-icon taste-chip-icon--dislike" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                <span className="taste-chip-label">{dislike}</span>
+                                <button
+                                    type="button"
+                                    className="taste-chip-x"
+                                    onClick={() => removeDislike(dislike)}
+                                    aria-label={`Remove ${dislike}`}
+                                    title="Remove">
+                                    ✕
+                                </button>
+                            </li>
                         ))}
                     </ul>
                 </div>
