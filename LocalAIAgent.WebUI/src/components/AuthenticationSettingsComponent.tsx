@@ -56,8 +56,8 @@ const AuthenticationSettingsComponent: React.FC = () => {
                 <span className='k-icon k-i-plus-circle'></span>
             </Button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>Registered authenticators</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', marginTop: '20px' }}>
+                <h2 className="settings-section-title" style={{ margin: 0 }}>Registered authenticators</h2>
             </div>
             
             {isLoading && credentials.length === 0 ? (

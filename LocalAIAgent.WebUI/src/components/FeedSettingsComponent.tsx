@@ -18,6 +18,11 @@ const FeedSettingsComponent: React.FC = () => {
     const [urlErrors, setUrlErrors] = useState<Record<string, string> | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+    // Built-in feed list state.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+    const [bulkBusy, setBulkBusy] = useState(false);
+
     // New-feed form state.
     const [newUrls, setNewUrls] = useState<string[]>(['']);
     const [newName, setNewName] = useState('');
@@ -78,6 +83,49 @@ const FeedSettingsComponent: React.FC = () => {
             setError(e instanceof Error ? e.message : 'Failed to update feed');
         }
     }, [userService]);
+
+    const persistDisabledList = useCallback(async (disabledFeedSources: string[]) => {
+        if (!settings) return;
+        const updated = new UserSettings(
+            settings.likes,
+            settings.dislikes,
+            settings.prompt,
+            settings.targetLanguage,
+            disabledFeedSources,
+        );
+        setSettings(updated);
+        await userService.saveUserPreferences(updated);
+    }, [settings, userService]);
+
+    const onEnableAllBuiltIn = useCallback(async () => {
+        setBulkBusy(true);
+        const previous = feeds;
+        // Optimistic flip on built-ins only.
+        setFeeds(prev => prev.map(f => f.isCustom ? f : { ...f, enabled: true }));
+        try {
+            await persistDisabledList([]);
+        } catch (e) {
+            setFeeds(previous);
+            setError(e instanceof Error ? e.message : 'Failed to enable feeds');
+        } finally {
+            setBulkBusy(false);
+        }
+    }, [feeds, persistDisabledList]);
+
+    const onDisableAllBuiltIn = useCallback(async () => {
+        setBulkBusy(true);
+        const previous = feeds;
+        const builtInClientNames = feeds.filter(f => !f.isCustom && f.clientName).map(f => f.clientName as string);
+        setFeeds(prev => prev.map(f => f.isCustom ? f : { ...f, enabled: false }));
+        try {
+            await persistDisabledList(builtInClientNames);
+        } catch (e) {
+            setFeeds(previous);
+            setError(e instanceof Error ? e.message : 'Failed to disable feeds');
+        } finally {
+            setBulkBusy(false);
+        }
+    }, [feeds, persistDisabledList]);
 
     const onLanguageChange = useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
         if (!settings) return;
@@ -161,8 +209,15 @@ const FeedSettingsComponent: React.FC = () => {
         setNewUrls(prev => prev.length === 1 ? prev : prev.filter((_, i) => i !== index));
     };
 
+    const toggleGroupCollapsed = (groupKey: string) => {
+        setCollapsedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(groupKey)) next.delete(groupKey); else next.add(groupKey);
+            return next;
+        });
+    };
+
     // The dropdown lists every ISO 639-1 / BCP-47 language the server recognises.
-    // Falls back to a minimal {en} list during the initial load before the API responds.
     const languageOptions = React.useMemo<[string, string][]>(() => {
         if (allLanguages.length === 0) return [['en', 'English']];
         return allLanguages
@@ -177,27 +232,32 @@ const FeedSettingsComponent: React.FC = () => {
     const customFeeds = feeds.filter(f => f.isCustom);
     const canSubmit = newName.trim().length > 0 && newUrls.some(u => u.trim().length > 0);
 
+    // Filter built-ins by search query, then group by language name.
+    const query = searchQuery.trim().toLowerCase();
+    const filteredBuiltIns = query
+        ? builtInFeeds.filter(f => (f.displayName ?? '').toLowerCase().includes(query))
+        : builtInFeeds;
+
+    const groupedByLanguage = new Map<string, FeedDto[]>();
+    for (const feed of filteredBuiltIns) {
+        const groupKey = feed.languageName ?? feed.language ?? 'Unknown';
+        const list = groupedByLanguage.get(groupKey) ?? [];
+        list.push(feed);
+        groupedByLanguage.set(groupKey, list);
+    }
+    // Sort groups: English first, then alphabetical.
+    const sortedGroups = [...groupedByLanguage.entries()]
+        .map(([name, list]) => [name, [...list].sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''))] as const)
+        .sort(([a], [b]) => {
+            if (a === 'English') return -1;
+            if (b === 'English') return 1;
+            return a.localeCompare(b);
+        });
+
+    const enabledBuiltIns = builtInFeeds.filter(f => f.enabled).length;
+
     return (
         <div>
-            <div style={{ marginBottom: '24px' }}>
-                <h2>Translate articles into</h2>
-                <select
-                    value={settings?.targetLanguage || 'en'}
-                    onChange={onLanguageChange}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: '#333',
-                        color: 'white',
-                        border: '1px solid #555',
-                        borderRadius: '4px',
-                        minWidth: '200px',
-                    }}>
-                    {languageOptions.map(([code, name]) => (
-                        <option key={code} value={code}>{name}</option>
-                    ))}
-                </select>
-            </div>
-
             {successMessage && (
                 <div style={{ color: '#10b981', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'rgba(16, 185, 129, 0.12)', borderRadius: '4px' }}>
                     {successMessage}
@@ -218,14 +278,82 @@ const FeedSettingsComponent: React.FC = () => {
                 </div>
             )}
 
-            <h2>News sources</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {builtInFeeds.map(feed => (
-                    <FeedRow key={feed.clientName} feed={feed} onToggle={onToggle} />
+            {/* ---- Translation ---- */}
+            <h2 className="settings-section-title">Translation</h2>
+            <label style={{ display: 'block', marginBottom: '6px', color: 'var(--muted-foreground)' }}>
+                Translate articles into
+            </label>
+            <select
+                value={settings?.targetLanguage || 'en'}
+                onChange={onLanguageChange}
+                style={{
+                    padding: '8px',
+                    backgroundColor: '#18181b',
+                    color: 'var(--foreground)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    minWidth: '220px',
+                }}>
+                {languageOptions.map(([code, name]) => (
+                    <option key={code} value={code}>{name}</option>
                 ))}
+            </select>
+
+            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '24px 0' }} />
+
+            {/* ---- News sources ---- */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                <h2 className="settings-section-title" style={{ margin: 0 }}>News sources</h2>
+                <input
+                    type="search"
+                    className="feed-search"
+                    placeholder="Search…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', color: 'var(--muted-foreground)', fontSize: '0.9em' }}>
+                <span>{enabledBuiltIns} of {builtInFeeds.length} enabled</span>
+                <span>·</span>
+                <button className="feed-bulk-link" onClick={onEnableAllBuiltIn} disabled={bulkBusy || enabledBuiltIns === builtInFeeds.length}>
+                    Enable all
+                </button>
+                <button className="feed-bulk-link" onClick={onDisableAllBuiltIn} disabled={bulkBusy || enabledBuiltIns === 0}>
+                    Disable all
+                </button>
             </div>
 
-            <h2 style={{ marginTop: '24px' }}>Your custom feeds</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {sortedGroups.length === 0 && (
+                    <div style={{ color: '#888', fontSize: '0.9em' }}>No feeds match your search.</div>
+                )}
+                {sortedGroups.map(([groupName, groupFeeds]) => {
+                    const collapsed = collapsedGroups.has(groupName);
+                    return (
+                        <div key={groupName}>
+                            <div className="feed-group-header" onClick={() => toggleGroupCollapsed(groupName)}>
+                                <span style={{ width: '12px', display: 'inline-block' }}>{collapsed ? '▸' : '▾'}</span>
+                                <span style={{ flex: 1 }}>{groupName}</span>
+                                <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+                                    {groupFeeds.filter(f => f.enabled).length}/{groupFeeds.length}
+                                </span>
+                            </div>
+                            {!collapsed && (
+                                <div className="feed-group-body">
+                                    {groupFeeds.map(feed => (
+                                        <FeedRow key={feed.clientName} feed={feed} onToggle={onToggle} variant="grouped" />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '24px 0' }} />
+
+            {/* ---- Custom feeds ---- */}
+            <h2 className="settings-section-title">Your custom feeds</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {customFeeds.length === 0 && (
                     <div style={{ color: '#888', fontSize: '0.9em' }}>No custom feeds yet — add one below.</div>
@@ -241,7 +369,7 @@ const FeedSettingsComponent: React.FC = () => {
             </div>
 
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: '#1e1e22', borderRadius: '4px' }}>
-                <h3 style={{ margin: 0 }}>Add a custom feed</h3>
+                <h3 className="settings-section-title" style={{ margin: 0 }}>Add a custom feed</h3>
                 <TextBox
                     placeholder="Display name"
                     value={newName}
@@ -252,17 +380,17 @@ const FeedSettingsComponent: React.FC = () => {
                     onChange={(e) => setNewLanguage(e.target.value)}
                     style={{
                         padding: '8px',
-                        backgroundColor: '#333',
-                        color: 'white',
-                        border: '1px solid #555',
-                        borderRadius: '4px',
+                        backgroundColor: '#18181b',
+                        color: 'var(--foreground)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '6px',
                     }}>
                     {languageOptions.map(([code, name]) => (
                         <option key={code} value={code}>{name}</option>
                     ))}
                 </select>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <span style={{ fontSize: '0.85em', color: '#aaa' }}>RSS URLs (one per line — useful for sources with multiple sub-feeds):</span>
+                    <span style={{ fontSize: '0.85em', color: 'var(--muted-foreground)' }}>RSS URLs (one per line — useful for sources with multiple sub-feeds):</span>
                     {newUrls.map((url, index) => (
                         <div key={index} style={{ display: 'flex', gap: '6px' }}>
                             <div style={{ flex: 1 }}>
@@ -294,58 +422,57 @@ interface FeedRowProps {
     feed: FeedDto;
     onToggle: (feed: FeedDto, enabled: boolean) => void;
     onDelete?: () => void;
+    /** "card" (default) renders a standalone rounded row; "grouped" renders inside a group panel. */
+    variant?: 'card' | 'grouped';
 }
 
-const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete }) => (
-    <div
-        style={{
+const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete, variant = 'card' }) => {
+    const className = variant === 'grouped' ? 'feed-group-row' : undefined;
+    const inlineStyle: React.CSSProperties | undefined = variant === 'card'
+        ? {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '8px 12px',
             backgroundColor: '#1e1e22',
             borderRadius: '4px',
-        }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 500 }}>{feed.displayName}</span>
-            <span style={{
-                fontSize: '0.8em',
-                color: '#aaa',
-                backgroundColor: '#2a2a30',
-                padding: '2px 6px',
-                borderRadius: '3px',
-            }}>
-                {feed.languageName}
-            </span>
-            {feed.urls && feed.urls.length > 1 && (
-                <span style={{
-                    fontSize: '0.8em',
-                    color: '#aaa',
-                    backgroundColor: '#2a2a30',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                }}>
-                    {feed.urls.length} URLs
-                </span>
-            )}
-            {feed.lastFetchErrorMessage && (
-                <span style={{ fontSize: '0.8em', color: '#ff6b6b' }} title={feed.lastFetchErrorMessage}>
-                    ⚠ fetch failed
-                </span>
-            )}
+        }
+        : undefined;
+
+    return (
+        <div className={className} style={inlineStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                <span style={{ fontWeight: 500 }}>{feed.displayName}</span>
+                {feed.urls && feed.urls.length > 1 && (
+                    <span style={{
+                        fontSize: '0.8em',
+                        color: 'var(--muted-foreground)',
+                        backgroundColor: '#2a2a30',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                    }}>
+                        {feed.urls.length} URLs
+                    </span>
+                )}
+                {feed.lastFetchErrorMessage && (
+                    <span style={{ fontSize: '0.8em', color: '#ff6b6b' }} title={feed.lastFetchErrorMessage}>
+                        ⚠ fetch failed
+                    </span>
+                )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Switch
+                    checked={feed.enabled}
+                    onChange={(e) => onToggle(feed, e.value)}
+                    onLabel=""
+                    offLabel=""
+                />
+                {onDelete && (
+                    <Button fillMode="flat" onClick={onDelete} title="Remove feed">✕</Button>
+                )}
+            </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Switch
-                checked={feed.enabled}
-                onChange={(e) => onToggle(feed, e.value)}
-                onLabel=""
-                offLabel=""
-            />
-            {onDelete && (
-                <Button fillMode="flat" onClick={onDelete} title="Remove feed">✕</Button>
-            )}
-        </div>
-    </div>
-);
+    );
+};
 
 export default FeedSettingsComponent;

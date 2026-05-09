@@ -14,13 +14,13 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
 
     return (
         <div style={{ backgroundColor: '#121214', color: 'var(--foreground)', padding: '20px', borderRadius: 8 }}>
-            <h1 style={{ marginTop: '0px', marginBottom: '16px', fontSize: '1.4em' }}>Settings</h1>
+            <h1 className="settings-page-title">Settings</h1>
 
             <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 0 }}>
                 <button
                     className={`settings-tab${activeTab === 'prompt' ? ' active' : ''}`}
                     onClick={() => setActiveTab('prompt')}>
-                    Prompt Settings
+                    Prompts
                 </button>
                 <button
                     className={`settings-tab${activeTab === 'feeds' ? ' active' : ''}`}
