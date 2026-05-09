@@ -376,3 +376,4 @@ FodyWeavers.xsd
 *.db-wal
 *.db-shm
 /LocalAIAgent.API/wwwroot
+LocalAIAgent.SemanticKernel/UserPrompt.txt
