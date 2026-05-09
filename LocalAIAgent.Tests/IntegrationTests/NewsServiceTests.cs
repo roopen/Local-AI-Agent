@@ -1,6 +1,5 @@
 using LocalAIAgent.SemanticKernel.News;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.SemanticKernel;
 
 namespace LocalAIAgent.Tests.IntegrationTests
 {
@@ -11,8 +10,7 @@ namespace LocalAIAgent.Tests.IntegrationTests
         {
             // Arrange
             using IServiceScope scope = factory.Services.CreateScope();
-            Kernel semanticKernel = scope.ServiceProvider.GetRequiredService<Kernel>();
-            INewsService newsService = semanticKernel.Services.GetRequiredService<INewsService>();
+            INewsService newsService = scope.ServiceProvider.GetRequiredService<INewsService>();
 
             // Act
             List<NewsItem> newsItems = await newsService.GetNewsAsync();

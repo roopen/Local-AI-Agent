@@ -1,5 +1,4 @@
-﻿using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.Extensions.AI;
 
 namespace LocalAIAgent.SemanticKernel.Chat
 {
@@ -17,33 +16,15 @@ namespace LocalAIAgent.SemanticKernel.Chat
         public decimal FrequencyPenalty { get; set; }
         public decimal PresencePenalty { get; set; }
 
-        public OpenAIPromptExecutionSettings GetOpenAIPromptExecutionSettings(
-            string systemPrompt,
-            bool allowFunctionUse = true)
+        public ChatOptions BuildChatOptions(ChatResponseFormat? responseFormat = null)
         {
-            return new OpenAIPromptExecutionSettings
+            return new ChatOptions
             {
-                ChatSystemPrompt = systemPrompt,
-                FunctionChoiceBehavior = allowFunctionUse ? FunctionChoiceBehavior.Auto() : FunctionChoiceBehavior.None(),
-                Temperature = (double)Temperature,
-                TopP = (double)TopP,
-                FrequencyPenalty = (double)FrequencyPenalty,
-                PresencePenalty = (double)PresencePenalty,
-            };
-        }
-
-        public OpenAIPromptExecutionSettings GetAgentExecutionSettings(bool allowFunctionUse = true, string serviceId = "General")
-        {
-            string modelId = serviceId == "Translation" ? LanguageModelId : ModelId;
-            return new OpenAIPromptExecutionSettings
-            {
-                ServiceId = serviceId,
-                ModelId = modelId,
-                FunctionChoiceBehavior = allowFunctionUse ? FunctionChoiceBehavior.Auto() : FunctionChoiceBehavior.None(),
-                Temperature = (double)Temperature,
-                TopP = (double)TopP,
-                FrequencyPenalty = (double)FrequencyPenalty,
-                PresencePenalty = (double)PresencePenalty,
+                Temperature = (float)Temperature,
+                TopP = (float)TopP,
+                FrequencyPenalty = (float)FrequencyPenalty,
+                PresencePenalty = (float)PresencePenalty,
+                ResponseFormat = responseFormat,
             };
         }
     }

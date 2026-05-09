@@ -1,5 +1,5 @@
 ﻿using LocalAIAgent.Domain;
-using OpenAI.Chat;
+using Microsoft.Extensions.AI;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -10,7 +10,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public string? Category { get; set; }
         public string? Reasoning { get; set; }
         public string? Topic { get; set; }
-        public ChatTokenUsage? TokenUsage { get; set; }
+        public UsageDetails? TokenUsage { get; set; }
 
         public static List<EvaluationResult> Deserialize(string json)
         {

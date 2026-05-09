@@ -1,8 +1,7 @@
-﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.Chat;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -19,7 +18,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         IConfiguration configuration,
         AIOptions options,
         HttpClient httpClient,
-        Kernel kernel) : ILoadLLMUseCase
+        [FromKeyedServices(DependencyRegistrar.GeneralChatClient)] IChatClient chatClient) : ILoadLLMUseCase
     {
         private sealed record LoadModelRequest(
             string Model,
@@ -78,20 +77,9 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         {
             try
             {
-                ChatCompletionAgent agent = new()
-                {
-                    Kernel = kernel,
-                    Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false))
-                };
-
-                ChatHistoryAgentThread thread = new();
-                ChatMessageContent userMessage = new(AuthorRole.User, "ping");
-
-                await foreach (AgentResponseItem<ChatMessageContent> _ in agent.InvokeAsync(userMessage, thread))
-                {
-                    return true;
-                }
-                return false;
+                List<ChatMessage> messages = [new ChatMessage(ChatRole.User, "ping")];
+                ChatResponse response = await chatClient.GetResponseAsync(messages, options.BuildChatOptions());
+                return response.Messages.Count > 0;
             }
             catch (Exception ex)
             {
