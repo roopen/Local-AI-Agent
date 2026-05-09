@@ -1,10 +1,8 @@
-﻿using LocalAIAgent.SemanticKernel.Chat;
+using LocalAIAgent.SemanticKernel.Chat;
 using LocalAIAgent.SemanticKernel.Extensions;
 using LocalAIAgent.SemanticKernel.News;
 using LocalAIAgent.SemanticKernel.News.AI;
-using LocalAIAgent.SemanticKernel.RAG.Embedding;
 using LocalAIAgent.SemanticKernel.Time;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -19,7 +17,6 @@ namespace LocalAIAgent.SemanticKernel
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddMemoryCache();
-            services.AddSingleton<ChatContextStore>();
             services.AddSingleton<IClock>(SystemClock.Instance);
             AIOptions aiOptions = configuration.GetSection("AIOptions").Get<AIOptions>()!;
             if (aiOptions is not null)
@@ -30,7 +27,6 @@ namespace LocalAIAgent.SemanticKernel
 
             services.AddKernel().GetSemanticKernelBuilder(aiOptions);
             services.AddSingleton(aiOptions);
-            services.AddMemoryCache();
 
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
@@ -46,14 +42,9 @@ namespace LocalAIAgent.SemanticKernel
 
         public static IKernelBuilder GetSemanticKernelBuilder(this IKernelBuilder kernelBuilder, AIOptions aiOptions)
         {
-            kernelBuilder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, EmbeddingService>();
-
             kernelBuilder.Services.AddSingleton(aiOptions);
 
             kernelBuilder.Plugins.AddFromType<TimeService>();
-
-            kernelBuilder.AddVectorStoreTextSearch<NewsItem>();
-            kernelBuilder.Services.AddInMemoryVectorStore();
 
             kernelBuilder
                 .AddOpenAIChatCompletion(
