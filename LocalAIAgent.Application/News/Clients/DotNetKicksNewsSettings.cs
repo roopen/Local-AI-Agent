@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class DotNetKicksNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "DotNetKicksClient";
+        public override string DisplayName => "DotNetKicks";
         public override string BaseUrl => "https://dotnetkicks.com/feeds/rss";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return new List<string> { BaseUrl };

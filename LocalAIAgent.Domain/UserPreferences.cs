@@ -6,6 +6,8 @@
         public required string Prompt { get; set; }
         public required List<string> Interests { get; set; }
         public required List<string> Dislikes { get; set; }
+        public string TargetLanguage { get; set; } = "en";
+        public List<string> DisabledFeedSources { get; set; } = [];
 
         public string GetUserDislikesAsString()
         {

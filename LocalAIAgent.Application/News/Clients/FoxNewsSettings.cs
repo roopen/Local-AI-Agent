@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class FoxNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "FoxNewsClient";
+        public override string DisplayName => "Fox News";
         public override string BaseUrl => "https://moxie.foxnews.com/google-publisher";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

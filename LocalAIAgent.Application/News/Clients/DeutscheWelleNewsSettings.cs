@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class DeutscheWelleNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "DeutscheWelleClient";
+        public override string DisplayName => "Deutsche Welle";
         public override string BaseUrl => "https://rss.dw.com/atom/";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return [

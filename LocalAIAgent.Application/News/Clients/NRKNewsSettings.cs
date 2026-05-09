@@ -6,9 +6,7 @@ namespace LocalAIAgent.Application.News.Clients
     {
         public override string ClientName => "NorwegianBroadcastingCorporationClient";
         public override string BaseUrl => "https://www.nrk.no";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "no";
         public override List<string> GetNewsUrls()
         {
             return

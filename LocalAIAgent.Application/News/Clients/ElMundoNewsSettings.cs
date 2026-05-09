@@ -5,10 +5,9 @@ namespace LocalAIAgent.Application.News.Clients
     internal class ElMundoNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "ElMundoClient";
+        public override string DisplayName => "El Mundo";
         public override string BaseUrl => "https://e00-elmundo.uecdn.es/elmundo/rss";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "es";
         public override List<string> GetNewsUrls()
         {
             return

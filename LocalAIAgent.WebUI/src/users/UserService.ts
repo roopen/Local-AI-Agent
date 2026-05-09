@@ -192,7 +192,13 @@ export default class UserService implements IUserService {
             return null;
         }
 
-        const response = new UserSettings(preferences.interests!, preferences.dislikes!, preferences.prompt!);
+        const response = new UserSettings(
+            preferences.interests!,
+            preferences.dislikes!,
+            preferences.prompt!,
+            preferences.targetLanguage || 'en',
+            preferences.disabledFeedSources || []
+        );
 
         return response;
     }
@@ -205,7 +211,9 @@ export default class UserService implements IUserService {
             userId: parseInt(this._currentUser.id, 10),
             prompt: preferences.prompt,
             interests: preferences.likes,
-            dislikes: preferences.dislikes
+            dislikes: preferences.dislikes,
+            targetLanguage: preferences.targetLanguage,
+            disabledFeedSources: preferences.disabledFeedSources,
         });
     }
 

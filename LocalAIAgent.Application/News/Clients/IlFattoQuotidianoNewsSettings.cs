@@ -5,10 +5,9 @@ namespace LocalAIAgent.Application.News.Clients
     internal class IlFattoQuotidianoNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "IlFattoQuotidianoClient";
+        public override string DisplayName => "Il Fatto Quotidiano";
         public override string BaseUrl => "https://www.ilfattoquotidiano.it";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "it";
         public override List<string> GetNewsUrls()
         {
             return

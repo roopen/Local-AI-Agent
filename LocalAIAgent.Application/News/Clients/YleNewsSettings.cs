@@ -6,9 +6,7 @@ namespace LocalAIAgent.Application.News.Clients
     {
         public override string ClientName => "YleClient";
         public override string BaseUrl => "https://yle.fi/rss";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "fi";
         public override List<string> GetNewsUrls()
         {
             return

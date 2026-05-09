@@ -6,9 +6,7 @@ namespace LocalAIAgent.Application.News.Clients
     {
         public override string ClientName => "KathimeriniClient";
         public override string BaseUrl => "https://www.kathimerini.gr";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "el";
         public override List<string> GetNewsUrls()
         {
             return

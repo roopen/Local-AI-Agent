@@ -1,3 +1,4 @@
+using LocalAIAgent.Application;
 using LocalAIAgent.Application.News;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,40 @@ namespace LocalAIAgent.Tests.ArchitecturalTests
 {
     public class ArchitectureTests
     {
+        [Fact]
+        public void Every_NewsSource_Declares_A_Supported_Language_Code()
+        {
+            Type interfaceType = typeof(BaseNewsClientSettings);
+            List<BaseNewsClientSettings> sources = [.. interfaceType.Assembly.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && interfaceType.IsAssignableFrom(t))
+                .Select(t => (BaseNewsClientSettings)Activator.CreateInstance(t)!)];
+
+            Assert.NotEmpty(sources);
+
+            List<string> bad = [.. sources
+                .Where(s => string.IsNullOrEmpty(s.Language) || !Languages.IsSupported(s.Language))
+                .Select(s => $"{s.GetType().Name} ({s.Language ?? "<null>"})")];
+
+            Assert.True(bad.Count == 0,
+                $"News sources with missing or unsupported language codes: {string.Join(", ", bad)}");
+        }
+
+        [Fact]
+        public void Every_NewsSource_Has_A_NonEmpty_DisplayName()
+        {
+            Type interfaceType = typeof(BaseNewsClientSettings);
+            List<BaseNewsClientSettings> sources = [.. interfaceType.Assembly.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && interfaceType.IsAssignableFrom(t))
+                .Select(t => (BaseNewsClientSettings)Activator.CreateInstance(t)!)];
+
+            List<string> empty = [.. sources
+                .Where(s => string.IsNullOrWhiteSpace(s.DisplayName))
+                .Select(s => s.GetType().Name)];
+
+            Assert.True(empty.Count == 0,
+                $"News sources with empty DisplayName: {string.Join(", ", empty)}");
+        }
+
         [Fact]
         public void All_BaseNewsClientSettings_Implementations_Should_End_With_NewsSettings()
         {

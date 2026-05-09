@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class NYTimesNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "NYTimesClient";
+        public override string DisplayName => "NY Times";
         public override string BaseUrl => "https://rss.nytimes.com";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

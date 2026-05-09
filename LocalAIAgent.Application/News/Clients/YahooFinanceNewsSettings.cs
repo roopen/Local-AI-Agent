@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class YahooFinanceNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "YahooFinanceClient";
+        public override string DisplayName => "Yahoo Finance";
         public override string BaseUrl => "https://finance.yahoo.com/news";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return [

@@ -28,6 +28,7 @@ namespace LocalAIAgent.Application
 
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
+            services.AddSingleton<IFeedCatalog, FeedCatalog>();
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
             services.AddScoped<INewsChatUseCase, NewsChatUseCase>();

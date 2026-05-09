@@ -5,10 +5,9 @@ namespace LocalAIAgent.Application.News.Clients
     internal class ScienceDailyNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "ScienceDailyClient";
+        public override string DisplayName => "Science Daily";
         public override string BaseUrl => "https://www.sciencedaily.com/rss";
-
-        public override bool RequiresTranslation => false;
-
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

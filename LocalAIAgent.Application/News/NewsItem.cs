@@ -16,13 +16,24 @@ namespace LocalAIAgent.Application.News
         public string? Link { get; }
         public string? Source { get; }
 
-        public NewsItem(SyndicationItem syndicationItem)
+        /// <summary>
+        /// The <see cref="BaseNewsClientSettings.ClientName"/> of the source that produced this item.
+        /// Used by <c>NewsService.FilterNews</c> to honor the user's disabled-feeds list.
+        /// Null for items constructed before source attribution was added.
+        /// </summary>
+        [JsonIgnore]
+        public string? SourceClientName { get; }
+
+        public NewsItem(SyndicationItem syndicationItem) : this(syndicationItem, null) { }
+
+        public NewsItem(SyndicationItem syndicationItem, string? sourceClientName)
         {
             Title = GetDecodedHtmlString(syndicationItem.Title?.Text);
             Summary = GetDecodedHtmlString(syndicationItem.Summary?.Text);
             PublishDate = syndicationItem.PublishDate;
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
+            SourceClientName = sourceClientName;
             if (syndicationItem.Categories is not null)
             {
                 Categories = syndicationItem.Categories.Select(c => c.Name ?? c.Label).ToList();
