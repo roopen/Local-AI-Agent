@@ -38,6 +38,7 @@ export type { ExplanationString } from './models/ExplanationString';
 export type { FeedDto } from './models/FeedDto';
 export type { Fido2Id } from './models/Fido2Id';
 export type { Fido2User } from './models/Fido2User';
+export type { LanguageOptionDto } from './models/LanguageOptionDto';
 export { LargeBlobSupport } from './models/LargeBlobSupport';
 export type { LMStudioCapabilities } from './models/LMStudioCapabilities';
 export type { LMStudioModel } from './models/LMStudioModel';

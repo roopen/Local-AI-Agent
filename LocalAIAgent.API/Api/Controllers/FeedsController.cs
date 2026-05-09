@@ -20,6 +20,15 @@ public class FeedsController(
 {
     private const string CustomClientNamePrefix = "custom:";
 
+    [HttpGet("Languages")]
+    [AllowAnonymous]
+    public ActionResult<List<LanguageOptionDto>> GetSupportedLanguages()
+    {
+        return Ok(Languages.GetAllSupported()
+            .Select(l => new LanguageOptionDto { Code = l.Code, Name = l.Name })
+            .ToList());
+    }
+
     [HttpGet("{userId}")]
     public async Task<ActionResult<List<FeedDto>>> GetFeeds(int userId)
     {
