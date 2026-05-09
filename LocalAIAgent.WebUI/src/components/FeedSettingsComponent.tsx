@@ -7,6 +7,19 @@ import UserService from '../users/UserService';
 import UserSettings from '../domain/UserSettings';
 import axios from 'axios';
 
+interface AddFeedFailure {
+    message: string;
+    urlErrors?: Record<string, string>;
+}
+
+function extractAddFeedError(e: unknown): AddFeedFailure {
+    if (axios.isAxiosError(e) && e.response?.status === 400 && e.response.data) {
+        const body = e.response.data as { message?: string; urlErrors?: Record<string, string> };
+        return { message: body.message ?? 'Failed to add feed', urlErrors: body.urlErrors };
+    }
+    return { message: e instanceof Error ? e.message : 'Failed to add feed' };
+}
+
 // eslint-disable-next-line complexity
 const FeedSettingsComponent: React.FC = () => {
     const userService = UserService.getInstance();
@@ -147,9 +160,9 @@ const FeedSettingsComponent: React.FC = () => {
 
     const onAddCustom = useCallback(async () => {
         const user = userService.getCurrentUser();
-        if (!user || !newName.trim()) return;
+        const trimmedName = newName.trim();
         const trimmedUrls = newUrls.map(u => u.trim()).filter(u => u.length > 0);
-        if (trimmedUrls.length === 0) return;
+        if (!user || !trimmedName || trimmedUrls.length === 0) return;
 
         setAdding(true);
         setError(null);
@@ -160,23 +173,19 @@ const FeedSettingsComponent: React.FC = () => {
             const created = await FeedsService.postApiFeedsCustom({
                 userId: parseInt(user.id, 10),
                 urls: trimmedUrls,
-                displayName: newName.trim(),
+                displayName: trimmedName,
                 language: newLanguage,
             });
             setFeeds(prev => [...prev, created]);
             setNewUrls(['']);
             setNewName('');
             setNewLanguage('en');
-            setSuccessMessage(`✓ Added "${created.displayName}" — ${trimmedUrls.length} URL${trimmedUrls.length === 1 ? '' : 's'} verified.`);
+            const plural = trimmedUrls.length === 1 ? '' : 's';
+            setSuccessMessage(`✓ Added "${created.displayName}" — ${trimmedUrls.length} URL${plural} verified.`);
         } catch (e) {
-            // The API returns AddCustomFeedErrorDto on validation failure.
-            if (axios.isAxiosError(e) && e.response?.status === 400 && e.response.data) {
-                const body = e.response.data as { message?: string; urlErrors?: Record<string, string> };
-                setError(body.message ?? 'Failed to add feed');
-                if (body.urlErrors) setUrlErrors(body.urlErrors);
-            } else {
-                setError(e instanceof Error ? e.message : 'Failed to add feed');
-            }
+            const failure = extractAddFeedError(e);
+            setError(failure.message);
+            if (failure.urlErrors) setUrlErrors(failure.urlErrors);
         } finally {
             setAdding(false);
         }
@@ -427,23 +436,13 @@ interface FeedRowProps {
 }
 
 const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete, variant = 'card' }) => {
-    const className = variant === 'grouped' ? 'feed-group-row' : undefined;
-    const inlineStyle: React.CSSProperties | undefined = variant === 'card'
-        ? {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            backgroundColor: '#1e1e22',
-            borderRadius: '4px',
-        }
-        : undefined;
-
+    const className = variant === 'grouped' ? 'feed-group-row' : 'feed-card-row';
+    const urls = feed.urls ?? [];
     return (
-        <div className={className} style={inlineStyle}>
+        <div className={className}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                 <span style={{ fontWeight: 500 }}>{feed.displayName}</span>
-                {feed.urls && feed.urls.length > 1 && (
+                {urls.length > 1 && (
                     <span style={{
                         fontSize: '0.8em',
                         color: 'var(--muted-foreground)',
@@ -451,7 +450,7 @@ const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete, variant = '
                         padding: '2px 6px',
                         borderRadius: '3px',
                     }}>
-                        {feed.urls.length} URLs
+                        {urls.length} URLs
                     </span>
                 )}
                 {feed.lastFetchErrorMessage && (
