@@ -56,7 +56,7 @@ public class CustomFeedFetcherTests
         (CustomFeedFetcher sut, Mock<ICustomFeedRepository> repo, StubHandler handler) = BuildSut(_ =>
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(SampleRss, System.Text.Encoding.UTF8, "application/xml") });
 
-        CustomFeedDescriptor feed = new(Id: 42, Url: "https://example.com/feed.xml", DisplayName: "Example", Language: "ja", Enabled: true, LastFetchErrorMessage: null);
+        CustomFeedDescriptor feed = new(Id: 42, Urls: ["https://example.com/feed.xml"], DisplayName: "Example", Language: "ja", Enabled: true, LastFetchErrorMessage: null);
 
         List<NewsItem> items = await sut.FetchAsync([feed], TestContext.Current.CancellationToken);
 
@@ -76,7 +76,7 @@ public class CustomFeedFetcherTests
         (CustomFeedFetcher sut, Mock<ICustomFeedRepository> repo, _) = BuildSut(_ =>
             new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
-        CustomFeedDescriptor feed = new(Id: 1, Url: "https://example.com/feed.xml", DisplayName: "Example", Language: "en", Enabled: true, LastFetchErrorMessage: null);
+        CustomFeedDescriptor feed = new(Id: 1, Urls: ["https://example.com/feed.xml"], DisplayName: "Example", Language: "en", Enabled: true, LastFetchErrorMessage: null);
 
         List<NewsItem> items = await sut.FetchAsync([feed], TestContext.Current.CancellationToken);
 
@@ -98,8 +98,8 @@ public class CustomFeedFetcherTests
 
         CustomFeedFetcher sut = new(factory.Object, repo.Object, NullLogger<CustomFeedFetcher>.Instance);
 
-        CustomFeedDescriptor good = new(Id: 1, Url: "https://example.com/good.xml", DisplayName: "Good", Language: "en", Enabled: true, LastFetchErrorMessage: null);
-        CustomFeedDescriptor bad = new(Id: 2, Url: "https://example.com/bad.xml", DisplayName: "Bad", Language: "en", Enabled: true, LastFetchErrorMessage: null);
+        CustomFeedDescriptor good = new(Id: 1, Urls: ["https://example.com/good.xml"], DisplayName: "Good", Language: "en", Enabled: true, LastFetchErrorMessage: null);
+        CustomFeedDescriptor bad = new(Id: 2, Urls: ["https://example.com/bad.xml"], DisplayName: "Bad", Language: "en", Enabled: true, LastFetchErrorMessage: null);
 
         List<NewsItem> items = await sut.FetchAsync([good, bad], TestContext.Current.CancellationToken);
 
@@ -117,5 +117,55 @@ public class CustomFeedFetcherTests
 
         Assert.Empty(items);
         Assert.Empty(handler.RequestedUrls);
+    }
+
+    [Fact]
+    public async Task FetchAsync_FeedWithMultipleUrls_AggregatesAllItemsAndCallsEachUrl()
+    {
+        (CustomFeedFetcher sut, Mock<ICustomFeedRepository> repo, StubHandler handler) = BuildSut(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(SampleRss, System.Text.Encoding.UTF8, "application/xml") });
+
+        CustomFeedDescriptor feed = new(
+            Id: 7,
+            Urls: ["https://example.com/feed-a.xml", "https://example.com/feed-b.xml", "https://example.com/feed-c.xml"],
+            DisplayName: "Multi", Language: "en", Enabled: true, LastFetchErrorMessage: null);
+
+        List<NewsItem> items = await sut.FetchAsync([feed], TestContext.Current.CancellationToken);
+
+        // Each URL contributes 2 items from the SampleRss fixture → 6 total.
+        Assert.Equal(6, items.Count);
+        Assert.Equal(3, handler.RequestedUrls.Count);
+        Assert.All(items, item => Assert.Equal("custom:7", item.SourceClientName));
+        repo.Verify(r => r.RecordFetchResultAsync(7, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task FetchAsync_OneUrlInFeedFailing_RecordsErrorButYieldsItemsFromOthers()
+    {
+        StubHandler handler = new(req =>
+            req.RequestUri!.ToString().Contains("good", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(SampleRss, System.Text.Encoding.UTF8, "application/xml") }
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        Mock<IHttpClientFactory> factory = new();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(() => new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) });
+        Mock<ICustomFeedRepository> repo = new();
+        CustomFeedFetcher sut = new(factory.Object, repo.Object, NullLogger<CustomFeedFetcher>.Instance);
+
+        CustomFeedDescriptor feed = new(
+            Id: 9,
+            Urls: ["https://example.com/good.xml", "https://example.com/bad.xml"],
+            DisplayName: "Mixed", Language: "en", Enabled: true, LastFetchErrorMessage: null);
+
+        List<NewsItem> items = await sut.FetchAsync([feed], TestContext.Current.CancellationToken);
+
+        // Good URL yields 2 items; bad URL fails silently for this feed entry.
+        Assert.Equal(2, items.Count);
+        // The error message stored on the feed mentions the failing URL so the user can fix it.
+        repo.Verify(r => r.RecordFetchResultAsync(
+            9,
+            It.Is<string>(s => s != null && s.Contains("bad.xml", StringComparison.Ordinal)),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

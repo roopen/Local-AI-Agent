@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import LoginComponent from './components/LoginComponent';
@@ -25,12 +25,7 @@ function App() {
     const [isUserPreferencesSet, setIsUserPreferencesSet] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        checkLoginStatus();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isUserPreferencesSet]);
-
-    const checkLoginStatus = async () => {
+    const checkLoginStatus = useCallback(async () => {
         try {
             const loginStatus = await userService.isLoggedIn();
             setIsLoggedIn(loginStatus);
@@ -48,7 +43,11 @@ function App() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        checkLoginStatus();
+    }, [isUserPreferencesSet, checkLoginStatus]);
 
     const handleLogin = async () => {
         await checkLoginStatus();

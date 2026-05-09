@@ -15,7 +15,8 @@ namespace LocalAIAgent.API.Api.Controllers;
 public class FeedsController(
     UserContext context,
     IFeedCatalog feedCatalog,
-    ICustomFeedRepository customFeedRepository) : ControllerBase
+    ICustomFeedRepository customFeedRepository,
+    IFeedValidator feedValidator) : ControllerBase
 {
     private const string CustomClientNamePrefix = "custom:";
 
@@ -50,7 +51,7 @@ public class FeedsController(
             Enabled = c.Enabled,
             IsCustom = true,
             CustomFeedId = c.Id,
-            Url = c.Url,
+            Urls = c.Urls,
             LastFetchErrorMessage = c.LastFetchErrorMessage,
         }));
 
@@ -93,46 +94,58 @@ public class FeedsController(
     }
 
     [HttpPost("Custom")]
-    public async Task<ActionResult<FeedDto>> AddCustom([FromBody] AddCustomFeedDto dto)
+    public async Task<ActionResult<FeedDto>> AddCustom([FromBody] AddCustomFeedDto dto, CancellationToken cancellationToken)
     {
         UserPreferences? preferences = await context.UserPreferences
-            .FirstOrDefaultAsync(p => p.UserId == dto.UserId);
+            .FirstOrDefaultAsync(p => p.UserId == dto.UserId, cancellationToken);
         if (preferences is null)
             return NotFound("User preferences not found.");
 
-        if (!Uri.TryCreate(dto.Url, UriKind.Absolute, out Uri? uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            return BadRequest("Url must be an absolute http(s) URL.");
-
         if (string.IsNullOrWhiteSpace(dto.DisplayName))
-            return BadRequest("DisplayName is required.");
+            return BadRequest(new AddCustomFeedErrorDto { Message = "Display name is required." });
 
         if (!Languages.IsSupported(dto.Language))
-            return BadRequest($"Unsupported language code: {dto.Language}");
+            return BadRequest(new AddCustomFeedErrorDto { Message = $"Unsupported language code: {dto.Language}" });
 
-        try
+        // Trim and dedupe before validation so the user gets feedback on the URLs they actually submitted.
+        List<string> normalizedUrls = [.. dto.Urls
+            .Select(u => u?.Trim() ?? string.Empty)
+            .Where(u => u.Length > 0)
+            .Distinct(StringComparer.Ordinal)];
+
+        if (normalizedUrls.Count == 0)
+            return BadRequest(new AddCustomFeedErrorDto { Message = "At least one URL is required." });
+
+        // Test that every URL is reachable and parseable BEFORE persisting.
+        List<FeedUrlValidationResult> validation = await feedValidator.ValidateAsync(normalizedUrls, cancellationToken);
+        Dictionary<string, string> urlErrors = validation
+            .Where(r => !r.IsValid)
+            .ToDictionary(r => r.Url, r => r.ErrorMessage ?? "Unknown error");
+
+        if (urlErrors.Count > 0)
         {
-            CustomFeedDescriptor created = await customFeedRepository.AddAsync(
-                preferences.Id, dto.Url, dto.DisplayName.Trim(), dto.Language);
-
-            return Ok(new FeedDto
+            return BadRequest(new AddCustomFeedErrorDto
             {
-                ClientName = CustomClientNamePrefix + created.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                DisplayName = created.DisplayName,
-                Language = created.Language,
-                LanguageName = Languages.GetDisplayName(created.Language),
-                Enabled = created.Enabled,
-                IsCustom = true,
-                CustomFeedId = created.Id,
-                Url = created.Url,
-                LastFetchErrorMessage = created.LastFetchErrorMessage,
+                Message = $"{urlErrors.Count} of {normalizedUrls.Count} URL(s) could not be loaded.",
+                UrlErrors = urlErrors,
             });
         }
-        catch (DbUpdateException)
+
+        CustomFeedDescriptor created = await customFeedRepository.AddAsync(
+            preferences.Id, normalizedUrls, dto.DisplayName.Trim(), dto.Language, cancellationToken);
+
+        return Ok(new FeedDto
         {
-            // Composite unique on (UserPreferencesId, Url) — the user already has this feed.
-            return Conflict("This URL is already in your feed list.");
-        }
+            ClientName = CustomClientNamePrefix + created.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            DisplayName = created.DisplayName,
+            Language = created.Language,
+            LanguageName = Languages.GetDisplayName(created.Language),
+            Enabled = created.Enabled,
+            IsCustom = true,
+            CustomFeedId = created.Id,
+            Urls = created.Urls,
+            LastFetchErrorMessage = created.LastFetchErrorMessage,
+        });
     }
 
     [HttpDelete("Custom/{customFeedId}")]

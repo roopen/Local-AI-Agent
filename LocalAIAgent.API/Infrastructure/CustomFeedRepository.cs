@@ -11,23 +11,29 @@ public class CustomFeedRepository(UserContext context) : ICustomFeedRepository
         return await context.CustomFeeds
             .Where(f => f.UserPreferencesId == userPreferencesId)
             .OrderBy(f => f.DisplayName)
-            .Select(f => new CustomFeedDescriptor(f.Id, f.Url, f.DisplayName, f.Language, f.Enabled, f.LastFetchErrorMessage))
+            .Select(f => new CustomFeedDescriptor(f.Id, f.Urls, f.DisplayName, f.Language, f.Enabled, f.LastFetchErrorMessage))
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<CustomFeedDescriptor> AddAsync(int userPreferencesId, string url, string displayName, string language, CancellationToken cancellationToken = default)
+    public async Task<CustomFeedDescriptor> AddAsync(int userPreferencesId, IEnumerable<string> urls, string displayName, string language, CancellationToken cancellationToken = default)
     {
+        // Trim and dedupe; case-sensitive because RSS URLs typically have meaningful path casing.
+        List<string> normalizedUrls = [.. urls
+            .Select(u => u.Trim())
+            .Where(u => u.Length > 0)
+            .Distinct(StringComparer.Ordinal)];
+
         CustomFeed entity = new()
         {
             UserPreferencesId = userPreferencesId,
-            Url = url,
+            Urls = normalizedUrls,
             DisplayName = displayName,
             Language = language,
             Enabled = true,
         };
         context.CustomFeeds.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
-        return new CustomFeedDescriptor(entity.Id, entity.Url, entity.DisplayName, entity.Language, entity.Enabled, entity.LastFetchErrorMessage);
+        return new CustomFeedDescriptor(entity.Id, entity.Urls, entity.DisplayName, entity.Language, entity.Enabled, entity.LastFetchErrorMessage);
     }
 
     public async Task<bool> RemoveAsync(int userPreferencesId, int customFeedId, CancellationToken cancellationToken = default)

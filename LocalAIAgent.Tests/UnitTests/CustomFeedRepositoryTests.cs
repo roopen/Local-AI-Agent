@@ -34,14 +34,44 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
 
-        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, "https://example.com/feed", "Example", "en", TestContext.Current.CancellationToken);
+        CustomFeedDescriptor created = await _sut.AddAsync(
+            prefs.Id, ["https://example.com/feed"], "Example", "en", TestContext.Current.CancellationToken);
 
         Assert.True(created.Id > 0);
         Assert.True(created.Enabled);
-        Assert.Equal("https://example.com/feed", created.Url);
+        Assert.Equal(["https://example.com/feed"], created.Urls);
         Assert.Equal("Example", created.DisplayName);
         Assert.Equal("en", created.Language);
         Assert.Single(await Db.CustomFeeds.ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AddAsync_MultipleUrlsForSameFeed_AreAllPersisted()
+    {
+        InfraModels.UserPreferences prefs = await SeedUserAsync();
+
+        CustomFeedDescriptor created = await _sut.AddAsync(
+            prefs.Id,
+            ["https://feeds.bloomberg.com/markets/news.rss", "https://feeds.bloomberg.com/technology/news.rss"],
+            "Bloomberg", "en", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, created.Urls.Count);
+        InfraModels.CustomFeed reloaded = await Db.CustomFeeds.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, reloaded.Urls.Count);
+    }
+
+    [Fact]
+    public async Task AddAsync_DedupesAndTrimsUrls()
+    {
+        InfraModels.UserPreferences prefs = await SeedUserAsync();
+
+        CustomFeedDescriptor created = await _sut.AddAsync(
+            prefs.Id,
+            ["  https://example.com/feed  ", "https://example.com/feed", "https://example.com/other"],
+            "Example", "en", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, created.Urls.Count);
+        Assert.Equal(["https://example.com/feed", "https://example.com/other"], created.Urls);
     }
 
     [Fact]
@@ -58,9 +88,9 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
         Db.Users.Add(bob);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        await _sut.AddAsync(alice.Id, "https://example.com/zebra", "Zebra", "en", TestContext.Current.CancellationToken);
-        await _sut.AddAsync(alice.Id, "https://example.com/apple", "Apple", "en", TestContext.Current.CancellationToken);
-        await _sut.AddAsync(bob.Preferences!.Id, "https://example.com/bobs", "Bobs", "en", TestContext.Current.CancellationToken);
+        await _sut.AddAsync(alice.Id, ["https://example.com/zebra"], "Zebra", "en", TestContext.Current.CancellationToken);
+        await _sut.AddAsync(alice.Id, ["https://example.com/apple"], "Apple", "en", TestContext.Current.CancellationToken);
+        await _sut.AddAsync(bob.Preferences!.Id, ["https://example.com/bobs"], "Bobs", "en", TestContext.Current.CancellationToken);
 
         List<CustomFeedDescriptor> list = await _sut.GetForUserAsync(alice.Id, TestContext.Current.CancellationToken);
 
@@ -73,7 +103,7 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
     public async Task RemoveAsync_DropsTheFeedScopedToOwner()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, "https://example.com/feed", "Example", "en", TestContext.Current.CancellationToken);
+        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, ["https://example.com/feed"], "Example", "en", TestContext.Current.CancellationToken);
 
         bool removed = await _sut.RemoveAsync(prefs.Id, created.Id, TestContext.Current.CancellationToken);
 
@@ -85,7 +115,7 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
     public async Task RemoveAsync_OtherUsersFeed_ReturnsFalse()
     {
         InfraModels.UserPreferences alice = await SeedUserAsync();
-        CustomFeedDescriptor created = await _sut.AddAsync(alice.Id, "https://example.com/feed", "Example", "en", TestContext.Current.CancellationToken);
+        CustomFeedDescriptor created = await _sut.AddAsync(alice.Id, ["https://example.com/feed"], "Example", "en", TestContext.Current.CancellationToken);
 
         bool removed = await _sut.RemoveAsync(userPreferencesId: alice.Id + 999, customFeedId: created.Id, TestContext.Current.CancellationToken);
 
@@ -97,7 +127,7 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
     public async Task SetEnabledAsync_FlipsTheFlag()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, "https://example.com/feed", "Example", "en", TestContext.Current.CancellationToken);
+        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, ["https://example.com/feed"], "Example", "en", TestContext.Current.CancellationToken);
 
         bool result = await _sut.SetEnabledAsync(prefs.Id, created.Id, enabled: false, TestContext.Current.CancellationToken);
 
@@ -110,22 +140,12 @@ public class CustomFeedRepositoryTests : InMemoryDbTestBase
     public async Task RecordFetchResultAsync_WithError_StoresMessageAndTimestamp()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, "https://example.com/feed", "Example", "en", TestContext.Current.CancellationToken);
+        CustomFeedDescriptor created = await _sut.AddAsync(prefs.Id, ["https://example.com/feed"], "Example", "en", TestContext.Current.CancellationToken);
 
         await _sut.RecordFetchResultAsync(created.Id, "DNS lookup failed", TestContext.Current.CancellationToken);
 
         InfraModels.CustomFeed reloaded = await Db.CustomFeeds.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal("DNS lookup failed", reloaded.LastFetchErrorMessage);
         Assert.NotNull(reloaded.LastFetchedAt);
-    }
-
-    [Fact]
-    public async Task AddAsync_DuplicateUrlForSameUser_Throws()
-    {
-        InfraModels.UserPreferences prefs = await SeedUserAsync();
-        await _sut.AddAsync(prefs.Id, "https://example.com/feed", "First", "en", TestContext.Current.CancellationToken);
-
-        await Assert.ThrowsAsync<DbUpdateException>(() =>
-            _sut.AddAsync(prefs.Id, "https://example.com/feed", "Second", "en", TestContext.Current.CancellationToken));
     }
 }

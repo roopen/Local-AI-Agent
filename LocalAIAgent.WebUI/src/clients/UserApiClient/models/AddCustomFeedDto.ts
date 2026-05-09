@@ -4,7 +4,7 @@
 /* eslint-disable */
 export type AddCustomFeedDto = {
     userId: number;
-    url: string | null;
+    urls: Array<string> | null;
     displayName: string | null;
     language: string | null;
 };

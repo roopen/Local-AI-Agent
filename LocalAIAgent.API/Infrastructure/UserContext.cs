@@ -51,9 +51,5 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .HasOne(f => f.UserPreferences)
             .WithMany(p => p.CustomFeeds)
             .HasForeignKey(f => f.UserPreferencesId);
-
-        modelBuilder.Entity<CustomFeed>()
-            .HasIndex(f => new { f.UserPreferencesId, f.Url })
-            .IsUnique();
     }
 }

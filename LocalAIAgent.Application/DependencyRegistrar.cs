@@ -30,10 +30,17 @@ namespace LocalAIAgent.Application
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<IFeedCatalog, FeedCatalog>();
             services.AddScoped<ICustomFeedFetcher, CustomFeedFetcher>();
+            services.AddScoped<IFeedValidator, FeedValidator>();
             services.AddHttpClient("CustomFeedClient", client =>
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
                 client.Timeout = TimeSpan.FromSeconds(30);
+            });
+            services.AddHttpClient("FeedValidatorClient", client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+                // Shorter timeout — the user is waiting on this synchronously in the Add-Feed flow.
+                client.Timeout = TimeSpan.FromSeconds(15);
             });
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();

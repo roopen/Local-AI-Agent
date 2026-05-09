@@ -2006,8 +2006,8 @@ namespace LocalAIAgent.Tests.Generated
         [Newtonsoft.Json.JsonProperty("userId", Required = Newtonsoft.Json.Required.Always)]
         public int UserId { get; set; }
 
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("urls", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Collections.Generic.ICollection<string> Urls { get; set; }
 
         [Newtonsoft.Json.JsonProperty("displayName", Required = Newtonsoft.Json.Required.AllowNull)]
         public string DisplayName { get; set; }
@@ -2571,8 +2571,8 @@ namespace LocalAIAgent.Tests.Generated
         [Newtonsoft.Json.JsonProperty("customFeedId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public int? CustomFeedId { get; set; }
 
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("urls", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Urls { get; set; }
 
         [Newtonsoft.Json.JsonProperty("lastFetchErrorMessage", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string LastFetchErrorMessage { get; set; }

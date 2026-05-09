@@ -5,38 +5,53 @@ import { FeedsService } from '../clients/UserApiClient';
 import type { FeedDto } from '../clients/UserApiClient';
 import UserService from '../users/UserService';
 import UserSettings from '../domain/UserSettings';
+import axios from 'axios';
 
+// eslint-disable-next-line complexity
 const FeedSettingsComponent: React.FC = () => {
     const userService = UserService.getInstance();
     const [feeds, setFeeds] = useState<FeedDto[]>([]);
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [urlErrors, setUrlErrors] = useState<Record<string, string> | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     // New-feed form state.
-    const [newUrl, setNewUrl] = useState('');
+    const [newUrls, setNewUrls] = useState<string[]>(['']);
     const [newName, setNewName] = useState('');
     const [newLanguage, setNewLanguage] = useState('en');
     const [adding, setAdding] = useState(false);
 
-    const loadFeeds = useCallback(async () => {
-        const user = userService.getCurrentUser();
-        if (!user) return;
-        try {
-            const list = await FeedsService.getApiFeeds(parseInt(user.id, 10));
-            setFeeds(list);
-            const prefs = await userService.getUserPreferences(user.id);
-            if (prefs) setSettings(prefs);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to load feeds');
-        } finally {
-            setLoading(false);
-        }
+    useEffect(() => {
+        let cancelled = false;
+        // eslint-disable-next-line complexity
+        (async () => {
+            const user = userService.getCurrentUser();
+            if (!user) return;
+            try {
+                const list = await FeedsService.getApiFeeds(parseInt(user.id, 10));
+                if (cancelled) return;
+                setFeeds(list);
+                const prefs = await userService.getUserPreferences(user.id);
+                if (cancelled) return;
+                if (prefs) setSettings(prefs);
+            } catch (e) {
+                if (cancelled) return;
+                setError(e instanceof Error ? e.message : 'Failed to load feeds');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
     }, [userService]);
 
+    // Auto-dismiss the success message after a few seconds.
     useEffect(() => {
-        loadFeeds();
-    }, [loadFeeds]);
+        if (!successMessage) return;
+        const timer = setTimeout(() => setSuccessMessage(null), 3500);
+        return () => clearTimeout(timer);
+    }, [successMessage]);
 
     const onToggle = useCallback(async (feed: FeedDto, enabled: boolean) => {
         const user = userService.getCurrentUser();
@@ -79,26 +94,40 @@ const FeedSettingsComponent: React.FC = () => {
 
     const onAddCustom = useCallback(async () => {
         const user = userService.getCurrentUser();
-        if (!user || !newUrl.trim() || !newName.trim()) return;
+        if (!user || !newName.trim()) return;
+        const trimmedUrls = newUrls.map(u => u.trim()).filter(u => u.length > 0);
+        if (trimmedUrls.length === 0) return;
+
         setAdding(true);
         setError(null);
+        setUrlErrors(null);
+        setSuccessMessage(null);
+
         try {
             const created = await FeedsService.postApiFeedsCustom({
                 userId: parseInt(user.id, 10),
-                url: newUrl.trim(),
+                urls: trimmedUrls,
                 displayName: newName.trim(),
                 language: newLanguage,
             });
             setFeeds(prev => [...prev, created]);
-            setNewUrl('');
+            setNewUrls(['']);
             setNewName('');
             setNewLanguage('en');
+            setSuccessMessage(`✓ Added "${created.displayName}" — ${trimmedUrls.length} URL${trimmedUrls.length === 1 ? '' : 's'} verified.`);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to add feed');
+            // The API returns AddCustomFeedErrorDto on validation failure.
+            if (axios.isAxiosError(e) && e.response?.status === 400 && e.response.data) {
+                const body = e.response.data as { message?: string; urlErrors?: Record<string, string> };
+                setError(body.message ?? 'Failed to add feed');
+                if (body.urlErrors) setUrlErrors(body.urlErrors);
+            } else {
+                setError(e instanceof Error ? e.message : 'Failed to add feed');
+            }
         } finally {
             setAdding(false);
         }
-    }, [userService, newUrl, newName, newLanguage]);
+    }, [userService, newUrls, newName, newLanguage]);
 
     const onDeleteCustom = useCallback(async (feed: FeedDto) => {
         const user = userService.getCurrentUser();
@@ -117,6 +146,16 @@ const FeedSettingsComponent: React.FC = () => {
         }
     }, [userService, feeds]);
 
+    const setUrlAtIndex = (index: number, value: string) => {
+        setNewUrls(prev => prev.map((u, i) => i === index ? value : u));
+    };
+
+    const addUrlInput = () => setNewUrls(prev => [...prev, '']);
+
+    const removeUrlInput = (index: number) => {
+        setNewUrls(prev => prev.length === 1 ? prev : prev.filter((_, i) => i !== index));
+    };
+
     // Build the language dropdown from the union of feed languages plus English (always offered).
     const languageOptions = React.useMemo(() => {
         const seen = new Map<string, string>();
@@ -133,6 +172,7 @@ const FeedSettingsComponent: React.FC = () => {
 
     const builtInFeeds = feeds.filter(f => !f.isCustom);
     const customFeeds = feeds.filter(f => f.isCustom);
+    const canSubmit = newName.trim().length > 0 && newUrls.some(u => u.trim().length > 0);
 
     return (
         <div>
@@ -155,7 +195,25 @@ const FeedSettingsComponent: React.FC = () => {
                 </select>
             </div>
 
-            {error && <div style={{ color: '#ff6b6b', marginBottom: '12px' }}>{error}</div>}
+            {successMessage && (
+                <div style={{ color: '#10b981', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'rgba(16, 185, 129, 0.12)', borderRadius: '4px' }}>
+                    {successMessage}
+                </div>
+            )}
+            {error && (
+                <div style={{ color: '#ff6b6b', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'rgba(255, 107, 107, 0.08)', borderRadius: '4px' }}>
+                    {error}
+                    {urlErrors && (
+                        <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
+                            {Object.entries(urlErrors).map(([url, msg]) => (
+                                <li key={url} style={{ fontSize: '0.85em' }}>
+                                    <code style={{ wordBreak: 'break-all' }}>{url}</code>: {msg}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            )}
 
             <h2>News sources</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -182,11 +240,6 @@ const FeedSettingsComponent: React.FC = () => {
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: '#1e1e22', borderRadius: '4px' }}>
                 <h3 style={{ margin: 0 }}>Add a custom feed</h3>
                 <TextBox
-                    placeholder="RSS feed URL (https://...)"
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(String(e.value ?? ''))}
-                />
-                <TextBox
                     placeholder="Display name"
                     value={newName}
                     onChange={(e) => setNewName(String(e.value ?? ''))}
@@ -205,11 +258,29 @@ const FeedSettingsComponent: React.FC = () => {
                         <option key={code} value={code}>{name}</option>
                     ))}
                 </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '0.85em', color: '#aaa' }}>RSS URLs (one per line — useful for sources with multiple sub-feeds):</span>
+                    {newUrls.map((url, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ flex: 1 }}>
+                                <TextBox
+                                    placeholder="https://..."
+                                    value={url}
+                                    onChange={(e) => setUrlAtIndex(index, String(e.value ?? ''))}
+                                />
+                            </div>
+                            {newUrls.length > 1 && (
+                                <Button fillMode="flat" onClick={() => removeUrlInput(index)} title="Remove URL">✕</Button>
+                            )}
+                        </div>
+                    ))}
+                    <Button fillMode="flat" themeColor="tertiary" onClick={addUrlInput}>+ Add another URL</Button>
+                </div>
                 <Button
                     themeColor="primary"
                     onClick={onAddCustom}
-                    disabled={adding || !newUrl.trim() || !newName.trim()}>
-                    {adding ? 'Adding...' : 'Add feed'}
+                    disabled={adding || !canSubmit}>
+                    {adding ? 'Validating feed...' : 'Add feed'}
                 </Button>
             </div>
         </div>
@@ -243,6 +314,17 @@ const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete }) => (
             }}>
                 {feed.languageName}
             </span>
+            {feed.urls && feed.urls.length > 1 && (
+                <span style={{
+                    fontSize: '0.8em',
+                    color: '#aaa',
+                    backgroundColor: '#2a2a30',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                }}>
+                    {feed.urls.length} URLs
+                </span>
+            )}
             {feed.lastFetchErrorMessage && (
                 <span style={{ fontSize: '0.8em', color: '#ff6b6b' }} title={feed.lastFetchErrorMessage}>
                     ⚠ fetch failed

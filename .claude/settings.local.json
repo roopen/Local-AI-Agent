@@ -14,7 +14,14 @@
       "Bash(npm audit *)",
       "Bash(npm run *)",
       "Bash(xargs -I {} grep -l \"IChatClient\" {})",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(dotnet list *)",
+      "Bash(npm outdated *)",
+      "Bash(npm update *)",
+      "Bash(rm -rf node_modules package-lock.json)",
+      "Bash(npm install *)",
+      "Bash(npm view *)",
+      "Bash(npx eslint *)"
     ]
   }
 }
