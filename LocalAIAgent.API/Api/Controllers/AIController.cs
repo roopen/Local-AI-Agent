@@ -1,4 +1,4 @@
-using LocalAIAgent.SemanticKernel.News.AI;
+﻿using LocalAIAgent.Application.News.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

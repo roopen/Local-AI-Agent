@@ -1,4 +1,4 @@
-using LocalAIAgent.SemanticKernel.News;
+﻿using LocalAIAgent.Application.News;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LocalAIAgent.Tests.IntegrationTests

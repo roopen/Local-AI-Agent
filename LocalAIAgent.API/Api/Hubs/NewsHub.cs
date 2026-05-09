@@ -1,7 +1,7 @@
 ﻿using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.Domain;
-using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.Application.News;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;

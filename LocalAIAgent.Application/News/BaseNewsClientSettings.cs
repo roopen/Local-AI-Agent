@@ -1,0 +1,24 @@
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace LocalAIAgent.Application.News
+{
+    internal abstract class BaseNewsClientSettings
+    {
+        public abstract string ClientName { get; }
+        public abstract string BaseUrl { get; }
+        public virtual string UserAgent => "Mozilla/5.0";
+        public string Host => GetHostFromBaseUrl();
+        public virtual bool RequiresTranslation => false;
+        public virtual List<string> AdditionalHosts => [];
+
+        private string GetHostFromBaseUrl()
+        {
+            Uri uri = new(BaseUrl);
+            return uri.DnsSafeHost;
+        }
+
+        public abstract List<string> GetNewsUrls();
+
+        public abstract void AddHttpClient(IServiceCollection services);
+    }
+}

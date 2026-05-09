@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.SemanticKernel.News;
+﻿using LocalAIAgent.Application.News;
 using System.ServiceModel.Syndication;
 
 namespace LocalAIAgent.Tests.UnitTests

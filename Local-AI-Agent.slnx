@@ -12,7 +12,7 @@
   <Project Path="LocalAIAgent.API/LocalAIAgent.API.csproj" />
   <Project Path="LocalAIAgent.AppHost/LocalAIAgent.AppHost.csproj" />
   <Project Path="LocalAIAgent.Domain/LocalAIAgent.Domain.csproj" />
-  <Project Path="LocalAIAgent.SemanticKernel/LocalAIAgent.SemanticKernel.csproj" />
+  <Project Path="LocalAIAgent.Application/LocalAIAgent.Application.csproj" />
   <Project Path="LocalAIAgent.ServiceDefaults/LocalAIAgent.ServiceDefaults.csproj" />
   <Project Path="LocalAIAgent.Tests/LocalAIAgent.Tests.csproj" />
   <Project Path="LocalAIAgent.WebUI/localaiagent.webui.esproj">

@@ -1,9 +1,9 @@
-using LocalAIAgent.API.Api.Controllers.Serialization;
+﻿using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
-using LocalAIAgent.SemanticKernel.News.AI;
+using LocalAIAgent.Application.News.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

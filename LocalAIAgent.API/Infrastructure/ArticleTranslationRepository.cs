@@ -1,6 +1,6 @@
-using LocalAIAgent.API.Infrastructure.Models;
+﻿using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.Domain;
-using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.Application.News;
 using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API.Infrastructure;
