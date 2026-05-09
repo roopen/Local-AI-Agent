@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Switch, TextBox } from '@progress/kendo-react-inputs';
 import { Button } from '@progress/kendo-react-buttons';
 import { FeedsService } from '../clients/UserApiClient';
-import type { FeedDto } from '../clients/UserApiClient';
+import type { FeedDto, LanguageOptionDto } from '../clients/UserApiClient';
 import UserService from '../users/UserService';
 import UserSettings from '../domain/UserSettings';
 import axios from 'axios';
@@ -11,6 +11,7 @@ import axios from 'axios';
 const FeedSettingsComponent: React.FC = () => {
     const userService = UserService.getInstance();
     const [feeds, setFeeds] = useState<FeedDto[]>([]);
+    const [allLanguages, setAllLanguages] = useState<LanguageOptionDto[]>([]);
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -30,9 +31,13 @@ const FeedSettingsComponent: React.FC = () => {
             const user = userService.getCurrentUser();
             if (!user) return;
             try {
-                const list = await FeedsService.getApiFeeds(parseInt(user.id, 10));
+                const [list, languages] = await Promise.all([
+                    FeedsService.getApiFeeds(parseInt(user.id, 10)),
+                    FeedsService.getApiFeedsLanguages(),
+                ]);
                 if (cancelled) return;
                 setFeeds(list);
+                setAllLanguages(languages);
                 const prefs = await userService.getUserPreferences(user.id);
                 if (cancelled) return;
                 if (prefs) setSettings(prefs);
@@ -156,17 +161,15 @@ const FeedSettingsComponent: React.FC = () => {
         setNewUrls(prev => prev.length === 1 ? prev : prev.filter((_, i) => i !== index));
     };
 
-    // Build the language dropdown from the union of feed languages plus English (always offered).
-    const languageOptions = React.useMemo(() => {
-        const seen = new Map<string, string>();
-        seen.set('en', 'English');
-        for (const feed of feeds) {
-            const code = feed.language ?? '';
-            const name = feed.languageName ?? code;
-            if (code && !seen.has(code)) seen.set(code, name);
-        }
-        return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    }, [feeds]);
+    // The dropdown lists every ISO 639-1 / BCP-47 language the server recognises.
+    // Falls back to a minimal {en} list during the initial load before the API responds.
+    const languageOptions = React.useMemo<[string, string][]>(() => {
+        if (allLanguages.length === 0) return [['en', 'English']];
+        return allLanguages
+            .filter((l): l is LanguageOptionDto & { code: string; name: string } =>
+                Boolean(l.code) && Boolean(l.name))
+            .map(l => [l.code, l.name] as [string, string]);
+    }, [allLanguages]);
 
     if (loading) return <div>Loading feeds...</div>;
 

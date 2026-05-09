@@ -242,12 +242,13 @@ public class FeedsControllerTests : InMemoryDbTestBase
         InfraModels.UserPreferences prefs = await SeedUserAsync();
         FeedsController sut = BuildController(new StubFeedCatalog());
 
+        // Definitively invalid code — not a real ISO 639 entry.
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
             UserId = prefs.UserId,
             Urls = ["https://example.com/rss"],
-            DisplayName = "Klingon",
-            Language = "tlh",
+            DisplayName = "Garbage",
+            Language = "zz-totally-fake",
         }, TestContext.Current.CancellationToken);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);

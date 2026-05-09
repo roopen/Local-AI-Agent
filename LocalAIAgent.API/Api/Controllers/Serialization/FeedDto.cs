@@ -44,4 +44,15 @@ namespace LocalAIAgent.API.Api.Controllers.Serialization
         /// <summary>Per-URL error map; key is the offending URL, value is the failure reason.</summary>
         public IReadOnlyDictionary<string, string>? UrlErrors { get; init; }
     }
+
+    /// <summary>One entry from <c>GET /api/Feeds/Languages</c>.</summary>
+    public sealed record LanguageOptionDto
+    {
+        /// <summary>BCP-47 / ISO 639-1 code (e.g. <c>"en"</c>, <c>"zh-TW"</c>).</summary>
+        public required string Code { get; init; }
+
+        /// <summary>English display name (e.g. <c>"English"</c>, <c>"Chinese (Traditional)"</c>).</summary>
+        public required string Name { get; init; }
+    }
 }
+

@@ -31,8 +31,8 @@ function setKendoTheme(theme: 'light' | 'dark') {
 }
 
 const themes = {
-    light: "https://unpkg.com/@progress/kendo-theme-default@12.3.0/dist/default-main.css",
-    dark: "https://unpkg.com/@progress/kendo-theme-default@12.3.0/dist/default-main-dark.css",
+    light: "https://unpkg.com/@progress/kendo-theme-default@13.1.1/dist/default-main.css",
+    dark: "https://unpkg.com/@progress/kendo-theme-default@13.1.1/dist/default-main-dark.css",
 };
 
 Modal.setAppElement('#root');
