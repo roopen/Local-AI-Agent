@@ -63,6 +63,17 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
         }
     }, [isSaving, persist, settings]);
 
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                void handleSaveClick();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [handleSaveClick]);
+
     const cloneWith = useCallback((overrides: Partial<UserSettings>): UserSettings => {
         return new UserSettings(
             overrides.likes ?? settings.likes,
