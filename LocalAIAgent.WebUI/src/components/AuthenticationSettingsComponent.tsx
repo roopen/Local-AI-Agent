@@ -7,19 +7,25 @@ import { Icon } from '@progress/kendo-react-common';
 const AuthenticationSettingsComponent: React.FC = () => {
     
     const [credentials, setCredentials] = useState<CredentialInfo[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const userService = UserService.getInstance();
 
     const loadCredentials = async () => {
-        setIsLoading(true);
         const creds = await userService.getCredentials();
         setCredentials(creds || []);
         setIsLoading(false);
     };
 
     useEffect(() => {
-        loadCredentials();
-    }, []);
+        let cancelled = false;
+        (async () => {
+            const creds = await userService.getCredentials();
+            if (cancelled) return;
+            setCredentials(creds || []);
+            setIsLoading(false);
+        })();
+        return () => { cancelled = true; };
+    }, [userService]);
 
     const handleRemove = async (id: string) => {
             try {

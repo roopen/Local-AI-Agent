@@ -33,9 +33,6 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
     useEffect(() => {
         if (!isSaving) return;
 
-        setTextStyle({ opacity: 1 });
-        setButtonText('Settings Saved!');
-
         const fadeOutTimer = setTimeout(() => {
             setTextStyle({ opacity: 0, transition: 'opacity 0.5s ease-out' });
         }, 1500);
@@ -60,6 +57,10 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
         if (isSaving) return;
         userService.saveUserPreferences(settings).then(() => {
             onSave?.();
+            // Show "Saved!" state at the moment of completion; the effect-driven timers
+            // then drive the fade out / restore.
+            setTextStyle({ opacity: 1 });
+            setButtonText('Settings Saved!');
             setIsSaving(true);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,7 +149,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                         disabled={newLike.length === 0}
                                         themeColor='tertiary'
                                         fillMode={"flat"}
-                                        rounded={null} >
+                                        rounded={undefined} >
                                         Add
                                     </Button>
                                 </InputSuffix>
@@ -191,7 +192,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                                         disabled={newDislike.length === 0}
                                         themeColor='primary'
                                         fillMode={"flat"}
-                                        rounded={null} >
+                                        rounded={undefined} >
                                         Add
                                     </Button>
                                 </InputSuffix>

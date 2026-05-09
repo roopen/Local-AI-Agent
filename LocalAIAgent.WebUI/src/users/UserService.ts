@@ -67,7 +67,7 @@ export default class UserService implements IUserService {
         await Fido2Service.postRemoveCredential(id);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     async addCredential(): Promise<void> {
         if (!this._currentUser) {
             throw new Error("User must be logged in to add a credential.");

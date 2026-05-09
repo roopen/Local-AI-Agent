@@ -16,6 +16,23 @@ public class FeedsControllerTests : InMemoryDbTestBase
         public IReadOnlyList<FeedDescriptor> GetAllFeeds() => feeds;
     }
 
+    /// <summary>Validator stub used when validation isn't the focus of the test.</summary>
+    private sealed class AlwaysValid : IFeedValidator
+    {
+        public Task<List<FeedUrlValidationResult>> ValidateAsync(IEnumerable<string> urls, CancellationToken cancellationToken = default) =>
+            Task.FromResult(urls.Select(u => new FeedUrlValidationResult(u, true, null)).ToList());
+    }
+
+    /// <summary>Validator stub that fails every URL with a fixed error.</summary>
+    private sealed class AlwaysInvalid(string error) : IFeedValidator
+    {
+        public Task<List<FeedUrlValidationResult>> ValidateAsync(IEnumerable<string> urls, CancellationToken cancellationToken = default) =>
+            Task.FromResult(urls.Select(u => new FeedUrlValidationResult(u, false, error)).ToList());
+    }
+
+    private FeedsController BuildController(IFeedCatalog catalog, IFeedValidator? validator = null) =>
+        new(Db, catalog, new CustomFeedRepository(Db), validator ?? new AlwaysValid());
+
     private async Task<InfraModels.UserPreferences> SeedUserAsync(List<string>? disabled = null)
     {
         InfraModels.User user = new()
@@ -44,7 +61,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
             new FeedDescriptor("BloombergClient", "Bloomberg", "en"),
             new FeedDescriptor("NipponHōsōKyōkaiClient", "NHK", "ja"));
 
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         ActionResult<List<FeedDto>> result = await sut.GetFeeds(prefs.UserId);
 
@@ -64,7 +81,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
     [Fact]
     public async Task GetFeeds_UnknownUser_ReturnsNotFound()
     {
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
         ActionResult<List<FeedDto>> result = await sut.GetFeeds(userId: 9999);
 
@@ -76,7 +93,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
@@ -95,7 +112,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync(disabled: ["BloombergClient"]);
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         await sut.Toggle(new ToggleFeedDto
         {
@@ -113,7 +130,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
@@ -129,7 +146,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
     public async Task Toggle_UnknownUser_ReturnsNotFound()
     {
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
@@ -150,7 +167,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         Db.CustomFeeds.Add(new InfraModels.CustomFeed
         {
             UserPreferencesId = prefs.Id,
-            Url = "https://example.com/rss",
+            Urls = ["https://example.com/rss"],
             DisplayName = "My Blog",
             Language = "en",
             Enabled = true,
@@ -158,7 +175,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = new(Db, catalog, new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(catalog);
 
         ActionResult<List<FeedDto>> result = await sut.GetFeeds(prefs.UserId);
 
@@ -168,85 +185,89 @@ public class FeedsControllerTests : InMemoryDbTestBase
         Assert.Equal(2, feeds.Count);
         FeedDto custom = feeds.Single(f => f.IsCustom);
         Assert.Equal("My Blog", custom.DisplayName);
-        Assert.Equal("https://example.com/rss", custom.Url);
+        Assert.Equal(["https://example.com/rss"], custom.Urls);
         Assert.NotNull(custom.CustomFeedId);
         Assert.True(custom.Enabled);
         Assert.False(feeds.Single(f => !f.IsCustom).IsCustom);
     }
 
     [Fact]
-    public async Task AddCustom_PersistsAndReturnsTheCreatedFeedDto()
+    public async Task AddCustom_AllUrlsValid_PersistsAndReturnsTheCreatedFeedDto()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
             UserId = prefs.UserId,
-            Url = "https://example.com/rss",
+            Urls = ["https://example.com/rss", "https://example.com/rss2"],
             DisplayName = "My Blog",
             Language = "ja",
-        });
+        }, TestContext.Current.CancellationToken);
 
         OkObjectResult ok = Assert.IsType<OkObjectResult>(result.Result);
         FeedDto created = Assert.IsType<FeedDto>(ok.Value);
         Assert.True(created.IsCustom);
         Assert.Equal("ja", created.Language);
         Assert.Equal("Japanese", created.LanguageName);
+        Assert.NotNull(created.Urls);
+        Assert.Equal(2, created.Urls!.Count);
         Assert.Single(await Db.CustomFeeds.ToListAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task AddCustom_InvalidUrl_ReturnsBadRequest()
+    public async Task AddCustom_ValidatorRejectsAUrl_ReturnsBadRequestWithUrlErrors_AndNothingPersisted()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog(), new AlwaysInvalid("HTTP 404 Not Found"));
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
             UserId = prefs.UserId,
-            Url = "not-a-url",
+            Urls = ["https://example.com/rss"],
             DisplayName = "Bad",
             Language = "en",
-        });
+        }, TestContext.Current.CancellationToken);
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        BadRequestObjectResult bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        AddCustomFeedErrorDto body = Assert.IsType<AddCustomFeedErrorDto>(bad.Value);
+        Assert.NotNull(body.UrlErrors);
+        Assert.Equal("HTTP 404 Not Found", body.UrlErrors!["https://example.com/rss"]);
+        Assert.Empty(await Db.CustomFeeds.ToListAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task AddCustom_UnsupportedLanguage_ReturnsBadRequest()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
             UserId = prefs.UserId,
-            Url = "https://example.com/rss",
+            Urls = ["https://example.com/rss"],
             DisplayName = "Klingon",
             Language = "tlh",
-        });
+        }, TestContext.Current.CancellationToken);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
-    public async Task AddCustom_DuplicateUrl_ReturnsConflict()
+    public async Task AddCustom_EmptyUrlsList_ReturnsBadRequest()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync();
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
-        await sut.AddCustom(new AddCustomFeedDto
+        ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
-            UserId = prefs.UserId, Url = "https://example.com/rss", DisplayName = "First", Language = "en",
-        });
+            UserId = prefs.UserId,
+            Urls = [],
+            DisplayName = "Empty",
+            Language = "en",
+        }, TestContext.Current.CancellationToken);
 
-        ActionResult<FeedDto> second = await sut.AddCustom(new AddCustomFeedDto
-        {
-            UserId = prefs.UserId, Url = "https://example.com/rss", DisplayName = "Second", Language = "en",
-        });
-
-        Assert.IsType<ConflictObjectResult>(second.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -256,7 +277,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         InfraModels.CustomFeed feed = new()
         {
             UserPreferencesId = prefs.Id,
-            Url = "https://example.com/rss",
+            Urls = ["https://example.com/rss"],
             DisplayName = "My Blog",
             Language = "en",
             Enabled = true,
@@ -264,7 +285,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         Db.CustomFeeds.Add(feed);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
         IActionResult result = await sut.RemoveCustom(feed.Id, prefs.UserId);
 
@@ -279,7 +300,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         InfraModels.CustomFeed feed = new()
         {
             UserPreferencesId = prefs.Id,
-            Url = "https://example.com/rss",
+            Urls = ["https://example.com/rss"],
             DisplayName = "My Blog",
             Language = "en",
             Enabled = true,
@@ -287,7 +308,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         Db.CustomFeeds.Add(feed);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        FeedsController sut = new(Db, new StubFeedCatalog(), new CustomFeedRepository(Db));
+        FeedsController sut = BuildController(new StubFeedCatalog());
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {

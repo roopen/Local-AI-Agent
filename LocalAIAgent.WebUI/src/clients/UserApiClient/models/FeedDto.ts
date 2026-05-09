@@ -10,7 +10,7 @@ export type FeedDto = {
     enabled: boolean;
     isCustom: boolean;
     customFeedId?: number | null;
-    url?: string | null;
+    urls?: Array<string> | null;
     lastFetchErrorMessage?: string | null;
 };
 

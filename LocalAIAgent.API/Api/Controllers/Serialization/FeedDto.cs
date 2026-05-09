@@ -14,8 +14,8 @@ namespace LocalAIAgent.API.Api.Controllers.Serialization
         /// <summary>The DB id of the custom feed (null for built-ins). Used by the delete endpoint.</summary>
         public int? CustomFeedId { get; init; }
 
-        /// <summary>The feed URL (only populated for custom feeds).</summary>
-        public string? Url { get; init; }
+        /// <summary>The feed URLs (only populated for custom feeds — a single feed entry can hold multiple URLs).</summary>
+        public IReadOnlyList<string>? Urls { get; init; }
 
         /// <summary>If the last fetch attempt failed, surfaces the error to the UI.</summary>
         public string? LastFetchErrorMessage { get; init; }
@@ -31,8 +31,17 @@ namespace LocalAIAgent.API.Api.Controllers.Serialization
     public sealed record AddCustomFeedDto
     {
         public required int UserId { get; init; }
-        public required string Url { get; init; }
+        public required IReadOnlyList<string> Urls { get; init; }
         public required string DisplayName { get; init; }
         public required string Language { get; init; }
+    }
+
+    /// <summary>Detailed result from <c>POST /api/Feeds/Custom</c> when validation fails.</summary>
+    public sealed record AddCustomFeedErrorDto
+    {
+        public required string Message { get; init; }
+
+        /// <summary>Per-URL error map; key is the offending URL, value is the failure reason.</summary>
+        public IReadOnlyDictionary<string, string>? UrlErrors { get; init; }
     }
 }

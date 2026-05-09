@@ -8,7 +8,7 @@ interface LoginComponentProps {
     onLogin: () => void;
 }
 
-// eslint-disable-next-line complexity
+ 
 const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
     const [username, setUsername] = useState('');
     const [isRegister, setIsRegister] = useState(false);

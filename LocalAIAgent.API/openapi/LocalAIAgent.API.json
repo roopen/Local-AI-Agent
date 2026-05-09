@@ -837,7 +837,7 @@
         "required": [
           "displayName",
           "language",
-          "url",
+          "urls",
           "userId"
         ],
         "type": "object",
@@ -846,8 +846,11 @@
             "type": "integer",
             "format": "int32"
           },
-          "url": {
-            "type": "string",
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "nullable": true
           },
           "displayName": {
@@ -1510,8 +1513,11 @@
             "format": "int32",
             "nullable": true
           },
-          "url": {
-            "type": "string",
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "nullable": true
           },
           "lastFetchErrorMessage": {
