@@ -34,6 +34,7 @@ export { CredentialProtectionPolicy } from './models/CredentialProtectionPolicy'
 export type { CredentialRegistrationRequest } from './models/CredentialRegistrationRequest';
 export type { ExpandedNewsResult } from './models/ExpandedNewsResult';
 export type { ExplanationString } from './models/ExplanationString';
+export type { FeedDto } from './models/FeedDto';
 export type { Fido2Id } from './models/Fido2Id';
 export type { Fido2User } from './models/Fido2User';
 export { LargeBlobSupport } from './models/LargeBlobSupport';
@@ -51,6 +52,7 @@ export { ResidentKeyRequirement } from './models/ResidentKeyRequirement';
 export type { StringAuthenticationExtensionsPRFValuesKeyValuePair } from './models/StringAuthenticationExtensionsPRFValuesKeyValuePair';
 export type { TermString } from './models/TermString';
 export type { TermStringExplanationStringKeyValuePair } from './models/TermStringExplanationStringKeyValuePair';
+export type { ToggleFeedDto } from './models/ToggleFeedDto';
 export type { User } from './models/User';
 export type { UserDto } from './models/UserDto';
 export type { UserId } from './models/UserId';
@@ -60,6 +62,7 @@ export { UserVerificationRequirement } from './models/UserVerificationRequiremen
 export type { VerifyAssertionResult } from './models/VerifyAssertionResult';
 
 export { AiService } from './services/AiService';
+export { FeedsService } from './services/FeedsService';
 export { Fido2Service } from './services/Fido2Service';
 export { LoginService } from './services/LoginService';
 export { NewsService } from './services/NewsService';

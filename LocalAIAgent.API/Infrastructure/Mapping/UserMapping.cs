@@ -21,6 +21,8 @@
                 Prompt = preferences.Prompt,
                 Interests = preferences.Interests,
                 Dislikes = preferences.Dislikes,
+                TargetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage,
+                DisabledFeedSources = preferences.DisabledFeedSources,
             };
         }
     }

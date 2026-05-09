@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class SkyNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "SkyNewsClient";
+        public override string DisplayName => "Sky News";
         public override string BaseUrl => "https://feeds.skynews.com/feeds/rss";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

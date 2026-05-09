@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import PromptSettingsComponent from './PromptSettingsComponent';
 import AuthenticationSettingsComponent from './AuthenticationSettingsComponent';
+import FeedSettingsComponent from './FeedSettingsComponent';
 
 interface SettingsComponentProps {
     onSave?: () => Promise<void>;
 }
 
+type SettingsTab = 'prompt' | 'feeds' | 'auth';
+
 const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
-    const [activeTab, setActiveTab] = useState<'prompt' | 'auth'>('prompt');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('prompt');
 
     return (
         <div style={{ backgroundColor: '#121214', color: 'var(--foreground)', padding: '20px', borderRadius: 8 }}>
@@ -20,6 +23,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
                     Prompt Settings
                 </button>
                 <button
+                    className={`settings-tab${activeTab === 'feeds' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('feeds')}>
+                    Feeds
+                </button>
+                <button
                     className={`settings-tab${activeTab === 'auth' ? ' active' : ''}`}
                     onClick={() => setActiveTab('auth')}>
                     Authentication
@@ -27,6 +35,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
             </div>
 
             {activeTab === 'prompt' && <PromptSettingsComponent onSave={onSave} />}
+            {activeTab === 'feeds' && <FeedSettingsComponent />}
             {activeTab === 'auth' && <AuthenticationSettingsComponent />}
         </div>
     );

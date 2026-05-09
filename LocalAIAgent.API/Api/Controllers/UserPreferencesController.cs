@@ -23,9 +23,12 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         return Ok(new UserPreferenceDto
         {
             Id = preferences.Id,
+            UserId = preferences.UserId,
             Prompt = preferences.Prompt,
             Interests = preferences.Interests,
-            Dislikes = preferences.Dislikes
+            Dislikes = preferences.Dislikes,
+            TargetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage,
+            DisabledFeedSources = preferences.DisabledFeedSources,
         });
     }
 
@@ -38,13 +41,17 @@ public class UserPreferencesController(UserContext context) : ControllerBase
             return NotFound();
         }
 
+        string targetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage;
+
         if (user.Preferences == null)
         {
             user.Preferences = new UserPreferences
             {
                 Prompt = preferences.Prompt,
                 Interests = preferences.Interests,
-                Dislikes = preferences.Dislikes
+                Dislikes = preferences.Dislikes,
+                TargetLanguage = targetLanguage,
+                DisabledFeedSources = preferences.DisabledFeedSources,
             };
             context.UserPreferences.Add(user.Preferences);
         }
@@ -53,6 +60,8 @@ public class UserPreferencesController(UserContext context) : ControllerBase
             user.Preferences.Prompt = preferences.Prompt;
             user.Preferences.Interests = preferences.Interests;
             user.Preferences.Dislikes = preferences.Dislikes;
+            user.Preferences.TargetLanguage = targetLanguage;
+            user.Preferences.DisabledFeedSources = preferences.DisabledFeedSources;
         }
 
         await context.SaveChangesAsync();

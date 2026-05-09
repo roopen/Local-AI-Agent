@@ -2,11 +2,20 @@ class UserSettings {
     likes: string[];
     dislikes: string[];
     prompt: string;
+    targetLanguage: string;
+    disabledFeedSources: string[];
 
-    constructor(likes: string[] = [], dislikes: string[] = [], prompt: string = '') {
+    constructor(
+        likes: string[] = [],
+        dislikes: string[] = [],
+        prompt: string = '',
+        targetLanguage: string = 'en',
+        disabledFeedSources: string[] = []) {
         this.likes = likes.filter(this.isValid);
         this.dislikes = dislikes.filter(this.isValid);
         this.prompt = prompt;
+        this.targetLanguage = targetLanguage || 'en';
+        this.disabledFeedSources = disabledFeedSources;
     }
 
     addLike(item: string): void {

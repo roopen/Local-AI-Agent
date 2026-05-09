@@ -7,5 +7,7 @@ export type UserPreferences = {
     prompt: string | null;
     interests: Array<string> | null;
     dislikes: Array<string> | null;
+    targetLanguage?: string | null;
+    disabledFeedSources?: Array<string> | null;
 };
 

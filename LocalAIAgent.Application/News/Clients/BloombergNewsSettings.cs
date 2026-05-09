@@ -7,6 +7,8 @@ namespace LocalAIAgent.Application.News.Clients
         public override string ClientName => "BloombergClient";
         public override string BaseUrl => "https://feeds.bloomberg.com";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return [

@@ -5,10 +5,9 @@ namespace LocalAIAgent.Application.News.Clients
     internal class LibertyTimesTaiwanNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "LibertyTimesTaiwanClient";
+        public override string DisplayName => "Liberty Times";
         public override string BaseUrl => "https://news.ltn.com.tw/rss";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "zh-TW";
         public override List<string> GetNewsUrls()
         {
             return

@@ -7,6 +7,8 @@ namespace LocalAIAgent.Application.News.Clients
         public override string ClientName => "PravdaClient";
         public override string BaseUrl => "https://www.pravda.com.ua/eng/rss/view_news/";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return new List<string> { BaseUrl };

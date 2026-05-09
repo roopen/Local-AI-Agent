@@ -16,16 +16,17 @@ public class GetTranslationUseCaseTests
     {
         public override string ClientName => "StubClient";
         public override string BaseUrl => $"https://{host}/";
-        public override bool RequiresTranslation => true;
+        public override string Language => "ja";
         public override List<string> GetNewsUrls() => [];
         public override void AddHttpClient(IServiceCollection services) { }
     }
 
-    /// <summary>Stub source that does not require translation.</summary>
+    /// <summary>Stub source publishing in the target language (no translation needed).</summary>
     private sealed class StubEnglishSource : BaseNewsClientSettings
     {
         public override string ClientName => "EnglishClient";
         public override string BaseUrl => "https://english.example/";
+        public override string Language => "en";
         public override List<string> GetNewsUrls() => [];
         public override void AddHttpClient(IServiceCollection services) { }
     }
@@ -49,11 +50,12 @@ public class GetTranslationUseCaseTests
     };
 
     [Fact]
-    public async Task TranslateArticleAsync_NoTranslatableSources_ReturnsArticlesUnchangedAndDoesNotCallLlm()
+    public async Task TranslateArticleAsync_AllSourcesMatchTargetLanguage_ReturnsArticlesUnchangedAndDoesNotCallLlm()
     {
         FakeChatClient chat = new();
         Mock<IArticleTranslationRepository> repo = new(MockBehavior.Strict);
 
+        // English source + English target = no translation needed.
         GetTranslationUseCase sut = new(
             [new StubEnglishSource()],
             repo.Object,
@@ -63,7 +65,7 @@ public class GetTranslationUseCaseTests
 
         List<NewsArticle> articles = [Article("Hello", "World", "https://english.example/x", "english.example")];
 
-        List<NewsArticle> result = await sut.TranslateArticleAsync(articles, "Spanish");
+        List<NewsArticle> result = await sut.TranslateArticleAsync(articles, "en");
 
         Assert.Empty(chat.Calls);
         Assert.Equal("Hello", result[0].Title);

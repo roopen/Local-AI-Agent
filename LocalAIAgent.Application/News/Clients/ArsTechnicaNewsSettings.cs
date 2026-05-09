@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class ArsTechnicaNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "ArsTechnicaClient";
+        public override string DisplayName => "Ars Technica";
         public override string BaseUrl => "https://feeds.arstechnica.com";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

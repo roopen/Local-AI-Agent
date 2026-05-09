@@ -19,7 +19,7 @@ namespace LocalAIAgent.Application.News
             UserPreferences preferences,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences.Dislikes);
+            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences);
 
 #if DEBUG
             bool saveDataset = true;
@@ -34,7 +34,8 @@ namespace LocalAIAgent.Application.News
                     includeReasoning: saveDataset);
 
                 evaluatedArticles.NewsArticles = evaluatedArticles.NewsArticles.Where(a => a.Relevancy is Relevancy.High).ToList();
-                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, "English");
+                string targetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage;
+                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, targetLanguage);
 
                 foreach (NewsArticle article in newsArticles)
                 {

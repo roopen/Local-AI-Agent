@@ -5,10 +5,9 @@ namespace LocalAIAgent.Application.News.Clients
     internal class DagensNyheterNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "DagensNyheterClient";
+        public override string DisplayName => "Dagens Nyheter";
         public override string BaseUrl => "https://www.dn.se";
-
-        public override bool RequiresTranslation => true;
-
+        public override string Language => "sv";
         public override List<string> GetNewsUrls()
         {
             return

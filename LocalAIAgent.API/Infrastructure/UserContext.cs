@@ -43,7 +43,7 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .IsUnique();
 
         modelBuilder.Entity<ArticleTranslation>()
-            .HasIndex(t => t.ArticleLink)
+            .HasIndex(t => new { t.ArticleLink, t.TargetLanguage })
             .IsUnique();
     }
 }

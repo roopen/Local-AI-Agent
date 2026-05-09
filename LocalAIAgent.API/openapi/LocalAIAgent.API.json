@@ -74,6 +74,86 @@
         }
       }
     },
+    "/api/Feeds/{userId}": {
+      "get": {
+        "tags": [
+          "Feeds"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Feeds/Toggle": {
+      "post": {
+        "tags": [
+          "Feeds"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFeedDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFeedDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFeedDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/assertionOptions": {
       "post": {
         "tags": [
@@ -1285,6 +1365,38 @@
         },
         "additionalProperties": false
       },
+      "FeedDto": {
+        "required": [
+          "clientName",
+          "displayName",
+          "enabled",
+          "language",
+          "languageName"
+        ],
+        "type": "object",
+        "properties": {
+          "clientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "languageName": {
+            "type": "string",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "Fido2Id": {
         "type": "object",
         "properties": {
@@ -1621,6 +1733,28 @@
         },
         "additionalProperties": false
       },
+      "ToggleFeedDto": {
+        "required": [
+          "clientName",
+          "enabled",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "User": {
         "required": [
           "fido2Id",
@@ -1697,6 +1831,17 @@
               "type": "string"
             },
             "nullable": true
+          },
+          "targetLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "disabledFeedSources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1725,6 +1870,17 @@
             "nullable": true
           },
           "dislikes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "targetLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "disabledFeedSources": {
             "type": "array",
             "items": {
               "type": "string"
@@ -1765,6 +1921,9 @@
   "tags": [
     {
       "name": "AI"
+    },
+    {
+      "name": "Feeds"
     },
     {
       "name": "Fido2"

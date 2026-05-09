@@ -5,8 +5,11 @@ namespace LocalAIAgent.Application.News.Clients
     internal class SpaceComNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "SpaceComClient";
+        public override string DisplayName => "Space.com";
         public override string BaseUrl => "https://www.space.com";
 
+
+        public override string Language => "en";
         public override List<string> GetNewsUrls()
         {
             return

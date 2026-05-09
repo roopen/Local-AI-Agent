@@ -1,4 +1,5 @@
 ﻿using LocalAIAgent.Domain;
+using LocalAIAgent.Application;
 using LocalAIAgent.Application.Chat;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -35,7 +36,10 @@ namespace LocalAIAgent.Application.News.AI
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            List<BaseNewsClientSettings> sourcesToTranslate = newsClientSettings.Where(s => s.RequiresTranslation).ToList();
+            // Translate any source whose published language differs from the user's target.
+            List<BaseNewsClientSettings> sourcesToTranslate = newsClientSettings
+                .Where(s => !string.Equals(s.Language, targetLanguage, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             if (sourcesToTranslate.Count is 0) return articles;
 
@@ -93,16 +97,20 @@ namespace LocalAIAgent.Application.News.AI
 
         private record TranslationDto(string Title, string Summary);
 
-        public string GetSystemPrompt(string targetLanguage) => $@"
+        public string GetSystemPrompt(string targetLanguage)
+        {
+            // Accept either an ISO code ("en") or a name ("English"); the LLM gets the name.
+            string languageName = Languages.GetDisplayName(targetLanguage);
+            return $@"
                 <|think|>
                 ## Role
-                Translate news JSON objects into {targetLanguage}.
+                Translate news JSON objects into {languageName}.
 
                 ## Critical Logic (<|channel>thought)
                 For each article:
                 1. Identify Source Language (e.g., Traditional Chinese).
-                2. List 2-3 'Anchor Terms' (e.g., OPEC+, AFP, technical nouns) and their {targetLanguage} equivalents.
-                3. Explicitly set internal state to {targetLanguage} mode.
+                2. List 2-3 'Anchor Terms' (e.g., OPEC+, AFP, technical nouns) and their {languageName} equivalents.
+                3. Explicitly set internal state to {languageName} mode.
                 *Do NOT write full draft sentences here.*
 
                 ## Output Rules
@@ -116,11 +124,12 @@ namespace LocalAIAgent.Application.News.AI
                 <|channel>thought
                 - Art 0: Traditional Chinese.
                 - Anchors: OPEC+ (OPEC+), 法新社 (AFP), 修復 (Repair).
-                - Mode: {targetLanguage}.
+                - Mode: {languageName}.
                 <channel|>
                 [{{""title"": ""OPEC+: Energy Facility Repairs Are Time-Consuming"", ""summary"": ""AFP reports...""}}]
                 [END EXAMPLE]
                 <|turn>";
+        }
 
         private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage, int attempt = 0)
         {
@@ -138,7 +147,7 @@ namespace LocalAIAgent.Application.News.AI
             List<ChatMessage> messages =
             [
                 new ChatMessage(ChatRole.System, systemPrompt),
-                new ChatMessage(ChatRole.User, $"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}"),
+                new ChatMessage(ChatRole.User, $"Translate this JSON array to {Languages.GetDisplayName(targetLanguage)}. Maintain the JSON structure perfectly:\n{combinedText}"),
             ];
 
             StringBuilder resultBuilder = new();

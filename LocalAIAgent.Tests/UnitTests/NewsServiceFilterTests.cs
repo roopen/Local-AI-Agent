@@ -24,6 +24,18 @@ public class NewsServiceFilterTests
         return new NewsItem(item);
     }
 
+    private static NewsItem BuildItemWithSource(string title, string summary, DateTimeOffset publishDate, string sourceClientName)
+    {
+        SyndicationItem item = new()
+        {
+            Title = new TextSyndicationContent(title),
+            Summary = new TextSyndicationContent(summary),
+            PublishDate = publishDate,
+        };
+        item.Links.Add(new SyndicationLink(new Uri("https://example.com/" + Guid.NewGuid())));
+        return new NewsItem(item, sourceClientName);
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 5, 9, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Cutoff = Now.AddDays(-1);
 
@@ -127,5 +139,44 @@ public class NewsServiceFilterTests
         NewsItem item = BuildItem("Headline about cats", "summary", Now);
 
         Assert.True(NewsService.PassesDislikeFilter(item, ["c.ts"]));
+    }
+
+    [Fact]
+    public void FilterNews_DropsItemsFromDisabledSources()
+    {
+        List<NewsItem> input =
+        [
+            BuildItemWithSource("Bloomberg headline", "summary", Now, "BloombergClient"),
+            BuildItemWithSource("Reuters headline", "summary", Now, "ReutersClient"),
+        ];
+        HashSet<string> disabled = new(["BloombergClient"], StringComparer.OrdinalIgnoreCase);
+
+        List<NewsItem> filtered = NewsService.FilterNews(input, dislikes: [], Cutoff, disabled);
+
+        NewsItem only = Assert.Single(filtered);
+        Assert.Equal("Reuters headline", only.Title);
+    }
+
+    [Fact]
+    public void FilterNews_KeepsItemsWithNullSourceClientName_EvenWhenDisabledSetGiven()
+    {
+        // Legacy or unattributed items shouldn't be dropped silently.
+        List<NewsItem> input = [BuildItem("Untagged article", "summary", Now)];
+        HashSet<string> disabled = new(["BloombergClient"], StringComparer.OrdinalIgnoreCase);
+
+        List<NewsItem> filtered = NewsService.FilterNews(input, dislikes: [], Cutoff, disabled);
+
+        Assert.Single(filtered);
+    }
+
+    [Fact]
+    public void FilterNews_DisabledSourceSetIsCaseInsensitive()
+    {
+        List<NewsItem> input = [BuildItemWithSource("Bloomberg headline", "summary", Now, "BloombergClient")];
+        HashSet<string> disabled = new(["bloombergCLIENT"], StringComparer.OrdinalIgnoreCase);
+
+        List<NewsItem> filtered = NewsService.FilterNews(input, dislikes: [], Cutoff, disabled);
+
+        Assert.Empty(filtered);
     }
 }

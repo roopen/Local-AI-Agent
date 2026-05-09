@@ -5,9 +5,10 @@ namespace LocalAIAgent.Application.News.Clients
     internal class NHKNewsSettings : BaseNewsClientSettings
     {
         public override string ClientName => "NipponHōsōKyōkaiClient";
+        public override string DisplayName => "NHK";
         public override string BaseUrl => "https://www3.nhk.or.jp/rss/news";
 
-        public override bool RequiresTranslation => true;
+        public override string Language => "ja";
 
         public override List<string> GetNewsUrls()
         {
