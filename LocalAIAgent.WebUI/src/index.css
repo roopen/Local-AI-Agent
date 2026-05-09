@@ -51,19 +51,25 @@
   --kendo-color-on-primary: #ffffff;
 }
 
-.k-button-solid-primary {
-  background-color: #2563eb !important;
-  border-color: #2563eb !important;
-  color: #ffffff !important;
+/* Higher-specificity selectors so the Kendo theme's own rule for k-button-solid-primary
+   doesn't override ours. The theme uses .k-button.k-button-solid.k-button-solid-primary
+   in v13 — match that depth so we win without needing !important on every property. */
+.k-button.k-button-solid.k-button-solid-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
 
-.k-button-solid-primary:hover {
+.k-button.k-button-solid.k-button-solid-primary:hover,
+.k-button.k-button-solid.k-button-solid-primary.k-hover {
   background-color: #1d4ed8 !important;
   border-color: #1d4ed8 !important;
 }
 
-.k-button-solid-primary:active,
-.k-button-solid-primary:focus {
+.k-button.k-button-solid.k-button-solid-primary:active,
+.k-button.k-button-solid.k-button-solid-primary:focus,
+.k-button.k-button-solid.k-button-solid-primary.k-active,
+.k-button.k-button-solid.k-button-solid-primary.k-focus {
   background-color: #1e40af !important;
   border-color: #1e40af !important;
 }

@@ -338,6 +338,8 @@ const FeedRow: React.FC<FeedRowProps> = ({ feed, onToggle, onDelete }) => (
             <Switch
                 checked={feed.enabled}
                 onChange={(e) => onToggle(feed, e.value)}
+                onLabel=""
+                offLabel=""
             />
             {onDelete && (
                 <Button fillMode="flat" onClick={onDelete} title="Remove feed">✕</Button>
