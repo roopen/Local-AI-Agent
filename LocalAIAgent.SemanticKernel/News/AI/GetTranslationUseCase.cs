@@ -1,8 +1,7 @@
-﻿using LocalAIAgent.Domain;
+using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -19,7 +18,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
         IArticleTranslationRepository translationRepository,
-        Kernel kernel,
+        [FromKeyedServices(DependencyRegistrar.TranslationChatClient)] IChatClient chatClient,
         AIOptions options) : IGetTranslationUseCase
     {
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
@@ -94,7 +93,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         public string GetSystemPrompt(string targetLanguage) => $@"
                 <|think|>
                 ## Role
-                Translate news JSON objects into {targetLanguage}. 
+                Translate news JSON objects into {targetLanguage}.
 
                 ## Critical Logic (<|channel>thought)
                 For each article:
@@ -112,7 +111,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 User: [{{""title"": ""OPEC+：能源設施修復費時"", ""summary"": ""法新社報導...""}}]
                 Model:
                 <|channel>thought
-                - Art 0: Traditional Chinese. 
+                - Art 0: Traditional Chinese.
                 - Anchors: OPEC+ (OPEC+), 法新社 (AFP), 修復 (Repair).
                 - Mode: {targetLanguage}.
                 <channel|>
@@ -131,26 +130,21 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
             string systemPrompt = GetSystemPrompt(targetLanguage);
+            ChatOptions chatOptions = options.BuildChatOptions();
 
-            ChatCompletionAgent agent = new()
-            {
-                Instructions = systemPrompt,
-                Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false)),
-            };
-
-            ChatHistoryAgentThread thread = new();
-            ChatMessageContent userMessage = new(AuthorRole.User, $"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}");
+            List<ChatMessage> messages =
+            [
+                new ChatMessage(ChatRole.System, systemPrompt),
+                new ChatMessage(ChatRole.User, $"Translate this JSON array to {targetLanguage}. Maintain the JSON structure perfectly:\n{combinedText}"),
+            ];
 
             StringBuilder resultBuilder = new();
 
-            await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(userMessage, thread)
+            await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(messages, chatOptions)
                                 .ConfigureAwait(false))
             {
-                if (string.IsNullOrEmpty(content.Content))
-                    continue;
-
-                resultBuilder.Append(content.Content);
+                if (!string.IsNullOrEmpty(update.Text))
+                    resultBuilder.Append(update.Text);
             }
             string result = resultBuilder.ToString();
 

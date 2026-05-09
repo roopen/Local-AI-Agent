@@ -1,17 +1,14 @@
-﻿using LocalAIAgent.Domain;
+using LocalAIAgent.Domain;
 using LocalAIAgent.SemanticKernel.Chat;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
-using Microsoft.SemanticKernel.ChatCompletion;
-using OpenAI.Chat;
 using Polly;
 using Polly.Retry;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 namespace LocalAIAgent.SemanticKernel.News.AI
 {
@@ -21,7 +18,8 @@ namespace LocalAIAgent.SemanticKernel.News.AI
     }
 
     public class EvaluateNewsUseCase(
-        Kernel kernel,
+        [FromKeyedServices(DependencyRegistrar.GeneralChatClient)] IChatClient generalChat,
+        [FromKeyedServices(DependencyRegistrar.TranslationChatClient)] IChatClient translationChat,
         AIOptions options,
         IMemoryCache memoryCache,
         INewsDatasetRepository newsDatasetRepository,
@@ -30,7 +28,7 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
         public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences, bool includeReasoning = false)
         {
-            List<NewsArticle> result = await EvaluateCoreAsync(articles, userPreferences, "General", includeReasoning);
+            List<NewsArticle> result = await EvaluateCoreAsync(articles, userPreferences, DependencyRegistrar.GeneralChatClient, includeReasoning);
 
             double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
@@ -41,23 +39,20 @@ namespace LocalAIAgent.SemanticKernel.News.AI
         private async Task<List<NewsArticle>> EvaluateCoreAsync(
             List<NewsItem> articles,
             UserPreferences userPreferences,
-            string serviceId,
+            string clientKey,
             bool includeReasoning = false)
         {
             const int BatchSize = 3;
 
-            ChatCompletionAgent agent = new()
-            {
-                Instructions = userPreferences.BuildSystemPrompt(),
-                Kernel = kernel,
-                Arguments = new KernelArguments(options.GetAgentExecutionSettings(allowFunctionUse: false, serviceId: serviceId)),
-            };
+            IChatClient chatClient = clientKey == DependencyRegistrar.TranslationChatClient ? translationChat : generalChat;
+            string systemPrompt = userPreferences.BuildSystemPrompt();
+            ChatOptions chatOptions = options.BuildChatOptions();
 
             List<NewsArticle> result = [];
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
                                         .Chunk(BatchSize);
 
-            string preferencesKey = GetPreferencesKey(userPreferences) + "_" + serviceId;
+            string preferencesKey = GetPreferencesKey(userPreferences) + "_" + clientKey;
 
             foreach (NewsItem[] batch in articleBatches)
             {
@@ -93,25 +88,28 @@ namespace LocalAIAgent.SemanticKernel.News.AI
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     uncachedBatch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
-                string jsonContent = string.Empty;
-
                 using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
-                ChatMessageContent userMessage = new(AuthorRole.User, batchContent);
-                List<StreamingChatMessageContent> stream = await GetStreamWithRetryAsync(agent, userMessage, cts.Token).ConfigureAwait(false);
+                List<ChatMessage> messages =
+                [
+                    new ChatMessage(ChatRole.System, systemPrompt),
+                    new ChatMessage(ChatRole.User, batchContent),
+                ];
+                List<ChatResponseUpdate> stream = await GetStreamWithRetryAsync(chatClient, messages, chatOptions, cts.Token).ConfigureAwait(false);
 
-                List<ChatTokenUsage> tokenUsageTotal = [];
-                if (stream.Select(c => c.Metadata?.GetValueOrDefault("Usage")).LastOrDefault(u => u is not null) is ChatTokenUsage tokenUsage)
+                StringBuilder jsonBuilder = new();
+                UsageDetails? totalUsage = null;
+                foreach (ChatResponseUpdate update in stream)
                 {
-                    tokenUsageTotal.Add(tokenUsage);
+                    if (!string.IsNullOrEmpty(update.Text))
+                        jsonBuilder.Append(update.Text);
+
+                    foreach (UsageContent usageContent in update.Contents.OfType<UsageContent>())
+                    {
+                        totalUsage = MergeUsage(totalUsage, usageContent.Details);
+                    }
                 }
 
-                foreach (StreamingChatMessageContent? content in stream)
-                {
-                    if (string.IsNullOrEmpty(content.Content))
-                        continue;
-
-                    jsonContent += content.Content;
-                }
+                string jsonContent = jsonBuilder.ToString();
 
                 if (!string.IsNullOrWhiteSpace(jsonContent))
                 {
@@ -121,21 +119,17 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 
                         if (evaluations != null)
                         {
-                            if (tokenUsageTotal.Count > 0)
+                            if (totalUsage is not null)
                             {
-                                try
-                                {
-                                    foreach (EvaluationResult evalr in evaluations)
-                                        foreach (ChatTokenUsage tu in tokenUsageTotal)
-                                            evalr.TokenUsage = tu;
-                                }
-                                catch { }
+                                foreach (EvaluationResult evalr in evaluations)
+                                    evalr.TokenUsage = totalUsage;
 
-                                int totalInputTokens = tokenUsageTotal.Sum(tu => tu.InputTokenCount);
-                                int totalOutputTokens = tokenUsageTotal.Sum(tu => tu.OutputTokenCount);
-                                int totalTokensUsed = totalInputTokens + totalOutputTokens;
-
-                                NewsLogging.LogTokenUsage(logger, totalInputTokens, totalOutputTokens, totalTokensUsed, null);
+                                NewsLogging.LogTokenUsage(
+                                    logger,
+                                    (int)(totalUsage.InputTokenCount ?? 0),
+                                    (int)(totalUsage.OutputTokenCount ?? 0),
+                                    (int)(totalUsage.TotalTokenCount ?? 0),
+                                    null);
                             }
                             UpdateKnownTopicsAndEvents(knownTopics, evaluations);
                             AddResults(result, uncachedBatch, evaluations, includeReasoning);
@@ -151,6 +145,19 @@ namespace LocalAIAgent.SemanticKernel.News.AI
             await newsDatasetRepository.SaveAsync(result, userPreferences.Id, options.UseResultsForDataset, options.ModelId, CancellationToken.None);
 
             return result;
+        }
+
+        private static UsageDetails MergeUsage(UsageDetails? running, UsageDetails next)
+        {
+            if (running is null)
+                return next;
+
+            return new UsageDetails
+            {
+                InputTokenCount = (running.InputTokenCount ?? 0) + (next.InputTokenCount ?? 0),
+                OutputTokenCount = (running.OutputTokenCount ?? 0) + (next.OutputTokenCount ?? 0),
+                TotalTokenCount = (running.TotalTokenCount ?? 0) + (next.TotalTokenCount ?? 0),
+            };
         }
 
         private const string TopicsCacheKeyPrefix = "news_known_topics_";
@@ -242,35 +249,32 @@ namespace LocalAIAgent.SemanticKernel.News.AI
 #endif
                     Topic = evaluations[i].Topic,
                     InputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).LastOrDefault()
-                        ? evaluations[i].TokenUsage?.InputTokenCount : null,
+                        ? (int?)evaluations[i].TokenUsage?.InputTokenCount : null,
                     OutputTokens = evaluations[i] == evaluations.Where(ev => ev.Relevancy is Relevancy.High).LastOrDefault()
-                        ? evaluations[i].TokenUsage?.OutputTokenCount : null
+                        ? (int?)evaluations[i].TokenUsage?.OutputTokenCount : null
                 };
                 result.Add(newsArticle);
             }
         }
 
-        private static async Task<List<StreamingChatMessageContent>> GetStreamWithRetryAsync(
-            ChatCompletionAgent agent,
-            ChatMessageContent message,
+        private static async Task<List<ChatResponseUpdate>> GetStreamWithRetryAsync(
+            IChatClient chatClient,
+            List<ChatMessage> messages,
+            ChatOptions chatOptions,
             CancellationToken cancellationToken)
         {
             AsyncRetryPolicy retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount: 5,
-                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(20, attempt)));
+                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
 
             return await retryPolicy.ExecuteAsync(async ct =>
             {
-                List<StreamingChatMessageContent> chunks = [];
-                ChatHistoryAgentThread thread = new();
-                await foreach (StreamingChatMessageContent? content in agent.InvokeStreamingAsync(message, thread, cancellationToken: ct)
-                                    .ConfigureAwait(false))
+                List<ChatResponseUpdate> chunks = [];
+                await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(messages, chatOptions, ct).ConfigureAwait(false))
                 {
-                    if (content is null)
-                        continue;
-                    chunks.Add(content);
+                    chunks.Add(update);
                 }
                 return chunks;
             }, cancellationToken).ConfigureAwait(false);
