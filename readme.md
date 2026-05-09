@@ -7,9 +7,9 @@ NOTE: Currently very much a Proof of Concept.
 ## Features
 
 - Fetches current news summaries from various freely available RSS feeds from major news outlets
-- AI Agent is powered by Microsoft Semantic Kernel
+- LLM access via `Microsoft.Extensions.AI` over an OpenAI-compatible endpoint (LM Studio by default)
 - Modern C# 13.0 syntax and .NET 10 support
-- Leverages RAG (Retrieval-Augmented Generation) for enhanced information retrieval. RAG is queried with vector embeddings to provide contextually relevant summaries.
+- Per-article relevancy filtering and translation, both driven by structured-output prompts
 
 ## Requirements
 
@@ -23,7 +23,7 @@ NOTE: Currently very much a Proof of Concept.
 - Download newest version
 - Unzip the archive
 - Create UserPrompt.txt file in the root directory with your custom prompt
-- Ensure LMStudio is running (ideally with gemma-3-27b-it-qat model and text-embedding-granite-embedding-125m-english) [You can customize appsettings.json to use different models]
+- Ensure LMStudio is running (ideally with `gemma-3-27b-it-qat`) — you can customize `appsettings.json` to use different models
 - Run the application
 
 ## License

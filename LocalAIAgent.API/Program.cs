@@ -1,11 +1,11 @@
-using LocalAIAgent.API.Api.Hubs;
+﻿using LocalAIAgent.API.Api.Hubs;
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
-using LocalAIAgent.SemanticKernel;
-using LocalAIAgent.SemanticKernel.News;
-using LocalAIAgent.SemanticKernel.News.AI;
+using LocalAIAgent.Application;
+using LocalAIAgent.Application.News;
+using LocalAIAgent.Application.News.AI;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -66,7 +66,7 @@ namespace LocalAIAgent.API
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();
                 builder.Services.AddSignalR();
-                builder.Services.AddSemanticKernel(builder.Configuration);
+                builder.Services.AddApplicationServices(builder.Configuration);
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
                 builder.Services.AddScoped<IGetDatasetUseCase, GetDatasetUseCase>();

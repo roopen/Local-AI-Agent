@@ -1,4 +1,4 @@
-﻿using LocalAIAgent.SemanticKernel.News;
+using LocalAIAgent.Application.News;
 
 namespace LocalAIAgent.Tests.ArchitecturalTests
 {
@@ -22,16 +22,16 @@ namespace LocalAIAgent.Tests.ArchitecturalTests
         }
 
         [Fact]
-        public void SemanticKernel_Project_Should_Not_Reference_Other_Projects()
+        public void Application_Project_Should_Not_Reference_Other_Projects()
         {
             // Arrange
-            System.Reflection.Assembly semanticKernelAssembly = typeof(SemanticKernel.DependencyRegistrar).Assembly;
-            System.Reflection.AssemblyName[] referencedAssemblies = semanticKernelAssembly.GetReferencedAssemblies();
+            System.Reflection.Assembly applicationAssembly = typeof(Application.DependencyRegistrar).Assembly;
+            System.Reflection.AssemblyName[] referencedAssemblies = applicationAssembly.GetReferencedAssemblies();
 
             // Act
             // Allow references to Domain project, but prevent other LocalAIAgent project references
             List<System.Reflection.AssemblyName> forbiddenReferences = referencedAssemblies
-                .Where(a => a.Name != semanticKernelAssembly.GetName().Name
+                .Where(a => a.Name != applicationAssembly.GetName().Name
                     && a.Name!.StartsWith("LocalAIAgent")
                     && a.Name != "LocalAIAgent.Domain")
                 .ToList();

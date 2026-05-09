@@ -1,7 +1,7 @@
-using LocalAIAgent.API.Infrastructure;
+﻿using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Mapping;
 using LocalAIAgent.API.Infrastructure.Models;
-using LocalAIAgent.SemanticKernel.News.AI;
+using LocalAIAgent.Application.News.AI;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
 using System.Text;
