@@ -29,7 +29,7 @@ namespace LocalAIAgent.Application.News
             }
         }
 
-        private static string GetDecodedHtmlString(string? text)
+        internal static string GetDecodedHtmlString(string? text)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return string.Empty;

@@ -83,17 +83,17 @@ public class UserPreferencesController(UserContext context) : ControllerBase
     [HttpPost("/api/SaveAiSettings")]
     public async Task<IActionResult> SaveAiSettings([FromBody] AiSettingsDto aiSettings)
     {
-        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync();
+        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == aiSettings.UserId);
         if (user is null) return NotFound();
 
         if (user.Preferences is null)
             return BadRequest("User preferences not found");
 
-        var aiSettingsExisting = context.AiSettings.FirstOrDefault(a => a.UserPreferencesId == user.Preferences.Id);
+        AiSettings? aiSettingsExisting = await context.AiSettings.FirstOrDefaultAsync(a => a.UserPreferencesId == user.Preferences.Id);
 
         if (aiSettingsExisting is null)
         {
-            var newAiSettings = new AiSettings
+            AiSettings newAiSettings = new()
             {
                 ModelId = aiSettings.ModelId,
                 Temperature = aiSettings.Temperature,
@@ -101,6 +101,7 @@ public class UserPreferencesController(UserContext context) : ControllerBase
                 ApiKey = aiSettings.ApiKey,
                 UserPreferencesId = user.Preferences.Id,
                 UserPreferences = user.Preferences,
+                TopP = aiSettings.TopP,
                 FrequencyPenalty = aiSettings.FrequencyPenalty,
                 PresencePenalty = aiSettings.PresencePenalty
             };

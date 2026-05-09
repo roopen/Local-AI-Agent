@@ -6,6 +6,7 @@ using LocalAIAgent.Application.News.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenAI;
 
 namespace LocalAIAgent.Application
@@ -21,6 +22,7 @@ namespace LocalAIAgent.Application
 
             services.AddSingleton(aiOptions);
             services.AddMemoryCache();
+            services.TryAddSingleton(TimeProvider.System);
 
             services.AddSingleton<IChatClient>(_ => BuildChatClient(aiOptions));
 
