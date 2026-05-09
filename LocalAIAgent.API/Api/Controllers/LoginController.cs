@@ -2,6 +2,7 @@ using LocalAIAgent.API.Api.Controllers.Serialization;
 using LocalAIAgent.API.Application.UseCases;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Security.Claims;
@@ -9,6 +10,7 @@ using System.Security.Claims;
 namespace LocalAIAgent.API.Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class LoginController(
         IGetUserUseCase getUserUseCase) : ControllerBase

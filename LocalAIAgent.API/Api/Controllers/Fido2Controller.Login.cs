@@ -1,6 +1,7 @@
 ﻿using Fido2NetLib;
 using Fido2NetLib.Objects;
 using LocalAIAgent.API.Infrastructure.Mapping;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -12,6 +13,7 @@ namespace LocalAIAgent.API.Api.Controllers
     {
         [HttpPost]
         [Route("/assertionOptions")]
+        [AllowAnonymous]
         public async Task<AssertionOptions> AssertionOptionsPostAsync()
         {
             var exts = new AuthenticationExtensionsClientInputs()
@@ -35,6 +37,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
         [HttpPost]
         [Route("/makeAssertion")]
+        [AllowAnonymous]
         public async Task<AttestationResult> MakeAssertion([FromBody] AuthenticatorAssertionRawResponse clientResponse, CancellationToken cancellationToken)
         {
             var clientData = CollectedClientData.FromRawAttestation(clientResponse.Response.ClientDataJson);

@@ -19,6 +19,7 @@ namespace LocalAIAgent.Application.News
     internal class NewsService(
         IHttpClientFactory httpClientFactory,
         IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
+        TimeProvider timeProvider,
         ILogger<NewsService> logger) : INewsService
     {
         private List<NewsItem> newsCache = [];
@@ -34,7 +35,8 @@ namespace LocalAIAgent.Application.News
         {
             if (newsCache.Count is 0) await LoadAllNews();
 
-            List<NewsItem> filteredNews = FilterNews(newsCache, dislikes);
+            DateTimeOffset cutoff = timeProvider.GetUtcNow().AddDays(-1);
+            List<NewsItem> filteredNews = FilterNews(newsCache, dislikes, cutoff);
 
             double filterPercentage = 100 - (filteredNews.Count / (double)newsCache.Count * 100);
             NewsLogging.LogNewsFiltered(logger, newsCache.Count, filteredNews.Count, filterPercentage, null);
@@ -63,7 +65,7 @@ namespace LocalAIAgent.Application.News
             }
 
             stopwatch.Stop();
-            Console.WriteLine($"NewsService: Loaded all news in {stopwatch.ElapsedMilliseconds} ms.");
+            logger.LogInformation("NewsService: loaded all news in {ElapsedMs} ms", stopwatch.ElapsedMilliseconds);
 
             return feeds.Sum(f => f.Items.Count());
         }
@@ -84,9 +86,9 @@ namespace LocalAIAgent.Application.News
             }
         }
 
-        private static async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
+        private async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
         {
-            Console.WriteLine($"NewsService: GetNews called with url: {newsClient.BaseAddress + url}");
+            logger.LogDebug("NewsService: fetching {Url}", newsClient.BaseAddress + url);
             try
             {
                 using Stream stream = await newsClient.GetStreamAsync(url);
@@ -96,15 +98,13 @@ namespace LocalAIAgent.Application.News
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"NewsService: Error fetching news from {url}: {ex.Message}");
+                logger.LogWarning(ex, "NewsService: failed to fetch news from {Url}", url);
                 return new SyndicationFeed();
             }
         }
 
-        internal static List<NewsItem> FilterNews(List<NewsItem> news, List<string> dislikes)
+        internal static List<NewsItem> FilterNews(List<NewsItem> news, List<string> dislikes, DateTimeOffset cutoff)
         {
-            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-1);
-
             return news
                 .Where(item => item.PublishDate >= cutoff)
                 .Where(item => PassesDislikeFilter(item, dislikes))

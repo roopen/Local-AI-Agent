@@ -3,6 +3,7 @@ using Fido2NetLib.Objects;
 using LocalAIAgent.API.Application.UseCases;
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -16,6 +17,7 @@ namespace LocalAIAgent.API.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public partial class Fido2Controller(
         IFido2 fido2,
         IMemoryCache memoryCache,
@@ -25,6 +27,7 @@ namespace LocalAIAgent.API.Api.Controllers
     {
         [HttpPost]
         [Route("/makeCredentialOptions")]
+        [AllowAnonymous]
         public async Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username)
         {
             return await GetOptionsForNewUserCreation(username);
@@ -32,6 +35,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
         [HttpPost]
         [Route("/makeCredential")]
+        [AllowAnonymous]
         public async Task<RegisteredPublicKeyCredential> MakeCredential(
             [FromBody] CredentialRegistrationRequest attestationResponse,
             CancellationToken cancellationToken)

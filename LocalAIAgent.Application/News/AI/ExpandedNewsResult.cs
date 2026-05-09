@@ -48,19 +48,20 @@ namespace LocalAIAgent.Application.News.AI
 
         internal static ExpandedNewsResult FromJson(string? content)
         {
-            if (content is null) return new();
+            if (string.IsNullOrEmpty(content)) return new();
 
             // The content might contain extra text before or after the JSON object
-            var json = ExtractFirstJsonObject(content);
+            string? json = ExtractFirstJsonObject(content);
+            if (string.IsNullOrEmpty(json)) return new();
 
 #pragma warning disable CA1869 // Cache and reuse 'JsonSerializerOptions' instances
-            var options = new JsonSerializerOptions
+            JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true
             };
 #pragma warning restore CA1869 // Cache and reuse 'JsonSerializerOptions' instances
 
-            return JsonSerializer.Deserialize<ExpandedNewsResult>(json ?? string.Empty, options)
+            return JsonSerializer.Deserialize<ExpandedNewsResult>(json, options)
                 ?? new ExpandedNewsResult();
         }
 

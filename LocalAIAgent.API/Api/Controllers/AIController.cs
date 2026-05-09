@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace LocalAIAgent.API.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class AIController(
     IGetLMStudioModelsUseCase getLMStudioModelsUseCase,
@@ -18,7 +19,6 @@ public class AIController(
     }
 
     [HttpPost("models/download")]
-    [Authorize]
     public async Task<IActionResult> DownloadModel([FromBody] string modelId)
     {
         bool success = await downloadLLMModelUseCase.DownloadModelAsync(modelId);

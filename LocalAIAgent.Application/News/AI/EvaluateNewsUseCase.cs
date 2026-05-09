@@ -131,9 +131,9 @@ namespace LocalAIAgent.Application.News.AI
                             AddResults(result, uncachedBatch, evaluations, includeReasoning);
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("Failed to deserialize LLM response: " + jsonContent);
+                        logger.LogWarning(ex, "Failed to deserialize LLM response: {JsonContent}", jsonContent);
                     }
                 }
             }
@@ -188,10 +188,10 @@ namespace LocalAIAgent.Application.News.AI
             }
         }
 
-        private static bool IsCompoundLabel(string label, HashSet<string> existing) =>
+        internal static bool IsCompoundLabel(string label, HashSet<string> existing) =>
             label.Contains('/') && label.Split('/').Select(p => p.Trim()).Any(existing.Contains);
 
-        private static string NormalizeLabel(string label)
+        internal static string NormalizeLabel(string label)
         {
             label = label.Trim();
             int start = 0;

@@ -12,7 +12,8 @@
       "Bash(dotnet tool *)",
       "Bash(dotnet restore *)",
       "Bash(npm audit *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(xargs -I {} grep -l \"IChatClient\" {})"
     ]
   }
 }

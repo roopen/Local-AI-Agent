@@ -1,6 +1,7 @@
 ﻿using LocalAIAgent.Domain;
 using LocalAIAgent.Application.Chat;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -18,7 +19,8 @@ namespace LocalAIAgent.Application.News.AI
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
         IArticleTranslationRepository translationRepository,
         IChatClient chatClient,
-        AIOptions options) : IGetTranslationUseCase
+        AIOptions options,
+        ILogger<GetTranslationUseCase> logger) : IGetTranslationUseCase
     {
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
         {
@@ -69,7 +71,8 @@ namespace LocalAIAgent.Application.News.AI
                 }
             }
 
-            Console.WriteLine($"GetTranslationUseCase: {cache.Count} articles served from cache, {uncachedArticles.Count} require translation.");
+            logger.LogInformation("GetTranslationUseCase: {CachedCount} articles served from cache, {UncachedCount} require translation",
+                cache.Count, uncachedArticles.Count);
 
             if (uncachedArticles.Count is 0) return articles;
 
@@ -82,7 +85,8 @@ namespace LocalAIAgent.Application.News.AI
             }
             await Task.WhenAll(batchTasks);
             stopwatch.Stop();
-            Console.WriteLine($"GetTranslationUseCase: Translated {uncachedArticles.Count} articles in {stopwatch.ElapsedMilliseconds} ms.");
+            logger.LogInformation("GetTranslationUseCase: translated {UncachedCount} articles in {ElapsedMs} ms",
+                uncachedArticles.Count, stopwatch.ElapsedMilliseconds);
 
             return articles;
         }
@@ -174,8 +178,7 @@ namespace LocalAIAgent.Application.News.AI
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Error deserializing translation response: {ex.Message}");
-                Console.WriteLine($"LLM Response: {result}");
+                logger.LogWarning(ex, "Error deserializing translation response. LLM response: {LlmResponse}", result);
             }
         }
 
@@ -184,7 +187,7 @@ namespace LocalAIAgent.Application.News.AI
         /// <paramref name="settingsHost"/>, including sibling subdomains.
         /// e.g. "news.ltn.com.tw" matches settings host "www.ltn.com.tw" via shared parent "ltn.com.tw".
         /// </summary>
-        private static bool MatchesHost(string articleSource, string settingsHost)
+        internal static bool MatchesHost(string articleSource, string settingsHost)
         {
             if (articleSource.Equals(settingsHost, StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -209,7 +212,7 @@ namespace LocalAIAgent.Application.News.AI
         }
 
         // Repairs common invalid-JSON patterns emitted by LLMs before deserialization.
-        private static string SanitizeJsonResponse(string json)
+        internal static string SanitizeJsonResponse(string json)
         {
             // \' is not a valid JSON escape sequence
             json = json.Replace("\\'", "'");
