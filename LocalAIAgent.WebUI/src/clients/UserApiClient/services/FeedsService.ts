@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AddCustomFeedDto } from '../models/AddCustomFeedDto';
 import type { FeedDto } from '../models/FeedDto';
 import type { ToggleFeedDto } from '../models/ToggleFeedDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -37,6 +38,42 @@ export class FeedsService {
             url: '/api/Feeds/Toggle',
             body: requestBody,
             mediaType: 'application/json',
+        });
+    }
+    /**
+     * @param requestBody
+     * @returns FeedDto OK
+     * @throws ApiError
+     */
+    public static postApiFeedsCustom(
+        requestBody?: AddCustomFeedDto,
+    ): CancelablePromise<FeedDto> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/Feeds/Custom',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @param customFeedId
+     * @param userId
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static deleteApiFeedsCustom(
+        customFeedId: number,
+        userId?: number,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/Feeds/Custom/{customFeedId}',
+            path: {
+                'customFeedId': customFeedId,
+            },
+            query: {
+                'userId': userId,
+            },
         });
     }
 }

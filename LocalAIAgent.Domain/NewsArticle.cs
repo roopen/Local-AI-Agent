@@ -14,6 +14,9 @@ namespace LocalAIAgent.Domain
         public string? Event { get; set; }
         public int? InputTokens { get; set; }
         public int? OutputTokens { get; set; }
+
+        /// <summary>BCP-47 code of the article's source language; null if unknown.</summary>
+        public string? SourceLanguage { get; set; }
     }
 
     public enum Relevancy

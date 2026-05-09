@@ -17,16 +17,28 @@ namespace LocalAIAgent.Application.News
         public string? Source { get; }
 
         /// <summary>
-        /// The <see cref="BaseNewsClientSettings.ClientName"/> of the source that produced this item.
-        /// Used by <c>NewsService.FilterNews</c> to honor the user's disabled-feeds list.
+        /// The <see cref="BaseNewsClientSettings.ClientName"/> of the source that produced this item,
+        /// or <c>"custom:{id}"</c> for items from a user's custom feed. Used by
+        /// <c>NewsService.FilterNews</c> to honor the user's disabled-feeds list.
         /// Null for items constructed before source attribution was added.
         /// </summary>
         [JsonIgnore]
         public string? SourceClientName { get; }
 
-        public NewsItem(SyndicationItem syndicationItem) : this(syndicationItem, null) { }
+        /// <summary>
+        /// BCP-47 / ISO 639-1 code of the language this article was published in.
+        /// Drives the per-article translation decision (translate when this differs from
+        /// the user's target language). Null for legacy items without language attribution.
+        /// </summary>
+        [JsonIgnore]
+        public string? Language { get; }
+
+        public NewsItem(SyndicationItem syndicationItem) : this(syndicationItem, null, null) { }
 
         public NewsItem(SyndicationItem syndicationItem, string? sourceClientName)
+            : this(syndicationItem, sourceClientName, null) { }
+
+        public NewsItem(SyndicationItem syndicationItem, string? sourceClientName, string? language)
         {
             Title = GetDecodedHtmlString(syndicationItem.Title?.Text);
             Summary = GetDecodedHtmlString(syndicationItem.Summary?.Text);
@@ -34,6 +46,7 @@ namespace LocalAIAgent.Application.News
             Link = syndicationItem.Links.FirstOrDefault()?.Uri.ToString();
             Source = string.IsNullOrWhiteSpace(Link) ? null : new Uri(Link).DnsSafeHost;
             SourceClientName = sourceClientName;
+            Language = language;
             if (syndicationItem.Categories is not null)
             {
                 Categories = syndicationItem.Categories.Select(c => c.Name ?? c.Label).ToList();

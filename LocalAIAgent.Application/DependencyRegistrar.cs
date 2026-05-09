@@ -29,6 +29,12 @@ namespace LocalAIAgent.Application
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();
             services.AddSingleton<IFeedCatalog, FeedCatalog>();
+            services.AddScoped<ICustomFeedFetcher, CustomFeedFetcher>();
+            services.AddHttpClient("CustomFeedClient", client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
             services.AddScoped<INewsChatUseCase, NewsChatUseCase>();

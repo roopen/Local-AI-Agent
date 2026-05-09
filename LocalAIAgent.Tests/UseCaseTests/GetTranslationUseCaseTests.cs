@@ -38,12 +38,13 @@ public class GetTranslationUseCaseTests
         UseResultsForDataset = useResultsForDataset,
     };
 
-    private static NewsArticle Article(string title, string summary, string link, string source) => new()
+    private static NewsArticle Article(string title, string summary, string link, string source, string sourceLanguage = "ja") => new()
     {
         Title = title,
         Summary = summary,
         Link = link,
         Source = source,
+        SourceLanguage = sourceLanguage,
         PublishedDate = DateTime.UtcNow,
         Categories = [],
         Relevancy = Relevancy.High,
@@ -63,7 +64,7 @@ public class GetTranslationUseCaseTests
             Options(),
             NullLogger<GetTranslationUseCase>.Instance);
 
-        List<NewsArticle> articles = [Article("Hello", "World", "https://english.example/x", "english.example")];
+        List<NewsArticle> articles = [Article("Hello", "World", "https://english.example/x", "english.example", sourceLanguage: "en")];
 
         List<NewsArticle> result = await sut.TranslateArticleAsync(articles, "en");
 
@@ -100,7 +101,7 @@ public class GetTranslationUseCaseTests
     }
 
     [Fact]
-    public async Task TranslateArticleAsync_OnlyArticlesFromTranslatableHosts_AreSentToLlm()
+    public async Task TranslateArticleAsync_OnlyArticlesWithDifferentLanguage_AreSentToLlm()
     {
         FakeChatClient chat = new();
         Mock<IArticleTranslationRepository> repo = new();
@@ -108,8 +109,6 @@ public class GetTranslationUseCaseTests
             .ReturnsAsync(new Dictionary<string, CachedTranslation>());
         chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
 
-        // Hosts deliberately don't share any parent domain, otherwise MatchesHost's
-        // 1-level parent strip lets them match each other (see MatchesHostTests).
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("news.taiwan.tw")],
             repo.Object,
@@ -117,15 +116,16 @@ public class GetTranslationUseCaseTests
             Options(useResultsForDataset: false),
             NullLogger<GetTranslationUseCase>.Instance);
 
+        // Each article carries its own language; the filter is purely article-level.
         List<NewsArticle> articles =
         [
-            Article("foreign", "foreign summary", "https://news.taiwan.tw/a", "news.taiwan.tw"),
-            Article("english", "english summary", "https://nytimes.com/x", "nytimes.com"),
+            Article("foreign", "foreign summary", "https://news.taiwan.tw/a", "news.taiwan.tw", sourceLanguage: "ja"),
+            Article("english", "english summary", "https://nytimes.com/x", "nytimes.com", sourceLanguage: "es"),
         ];
 
-        await sut.TranslateArticleAsync(articles, "Spanish");
+        await sut.TranslateArticleAsync(articles, "es");
 
-        // The LLM is only invoked for the foreign article.
+        // Only the foreign-language article (ja) is translated; the matching-language one (es) is skipped.
         Assert.Single(chat.Calls);
         string userPayload = chat.Calls[0].Messages.Last(m => m.Role == Microsoft.Extensions.AI.ChatRole.User).Text!;
         Assert.Contains("foreign", userPayload);

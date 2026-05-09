@@ -65,6 +65,7 @@ namespace LocalAIAgent.Application.News.AI
                         PublishedDate = item.PublishDate.DateTime,
                         Link = item.Link!,
                         Source = item.Source ?? string.Empty,
+                        SourceLanguage = item.Language,
                         Categories = [],
                         Relevancy = entry.Relevancy,
                         Topic = entry.Topic,
@@ -236,6 +237,7 @@ namespace LocalAIAgent.Application.News.AI
                     PublishedDate = batch[i].PublishDate.DateTime,
                     Link = batch[i].Link ?? string.Empty,
                     Source = batch[i].Source ?? string.Empty,
+                    SourceLanguage = batch[i].Language,
                     Categories = [],
                     Relevancy = evaluations[i].Relevancy,
 #if DEBUG

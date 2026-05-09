@@ -72,6 +72,7 @@ namespace LocalAIAgent.API
                 builder.Services.AddScoped<IGetDatasetUseCase, GetDatasetUseCase>();
                 builder.Services.AddScoped<INewsDatasetRepository, NewsDatasetRepository>();
                 builder.Services.AddScoped<IArticleTranslationRepository, ArticleTranslationRepository>();
+                builder.Services.AddScoped<ICustomFeedRepository, CustomFeedRepository>();
                 builder.Services.AddScoped<NewsMetrics>();
                 builder.Services.AddMemoryCache();
                 builder.Services.AddDistributedMemoryCache();

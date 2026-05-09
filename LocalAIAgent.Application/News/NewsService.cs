@@ -79,7 +79,7 @@ namespace LocalAIAgent.Application.News
         {
             List<NewsItem> newItems = feed.Items
                 .Where(item => item != null)
-                .Select(item => new NewsItem(item, settings.ClientName))
+                .Select(item => new NewsItem(item, settings.ClientName, settings.Language))
                 .ToList();
 
             lock (newsCache)
