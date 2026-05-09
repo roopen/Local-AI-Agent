@@ -1,5 +1,4 @@
-﻿using LocalAIAgent.Domain;
-using LocalAIAgent.Application.Chat;
+using LocalAIAgent.Domain;
 using LocalAIAgent.Application.News.AI;
 using System.Runtime.CompilerServices;
 
@@ -12,6 +11,8 @@ namespace LocalAIAgent.Application.News
 
     public class GetNewsUseCase(
         INewsService newsService,
+        ICustomFeedRepository customFeedRepository,
+        ICustomFeedFetcher customFeedFetcher,
         IEvaluateNewsUseCase evaluateNewsUseCase,
         IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
     {
@@ -19,7 +20,17 @@ namespace LocalAIAgent.Application.News
             UserPreferences preferences,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            List<NewsItem> newsItems = await newsService.GetNewsAsync(preferences);
+            List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences);
+
+            // Fetch the user's enabled custom feeds and merge into the stream.
+            List<CustomFeedDescriptor> customFeeds = await customFeedRepository.GetForUserAsync(preferences.Id, cancellationToken);
+            List<CustomFeedDescriptor> enabledCustom = [.. customFeeds.Where(f => f.Enabled)];
+            List<NewsItem> customItems = enabledCustom.Count == 0
+                ? []
+                : await customFeedFetcher.FetchAsync(enabledCustom, cancellationToken);
+
+            // Merge and dedupe by Link so a user's custom feed pointing at a built-in URL doesn't duplicate.
+            List<NewsItem> newsItems = [.. builtInItems.Concat(customItems).DistinctBy(i => i.Link)];
 
 #if DEBUG
             bool saveDataset = true;

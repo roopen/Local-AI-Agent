@@ -11,4 +11,5 @@ public class UserPreferences
     public int UserId { get; set; }
     public User? User { get; set; }
     public List<NewsEvaluationEntry> EvaluationEntries { get; set; } = [];
+    public List<CustomFeed> CustomFeeds { get; set; } = [];
 }

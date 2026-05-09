@@ -8,5 +8,9 @@ export type FeedDto = {
     language: string | null;
     languageName: string | null;
     enabled: boolean;
+    isCustom: boolean;
+    customFeedId?: number | null;
+    url?: string | null;
+    lastFetchErrorMessage?: string | null;
 };
 

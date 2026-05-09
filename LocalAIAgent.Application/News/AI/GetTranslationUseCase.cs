@@ -36,24 +36,13 @@ namespace LocalAIAgent.Application.News.AI
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            // Translate any source whose published language differs from the user's target.
-            List<BaseNewsClientSettings> sourcesToTranslate = newsClientSettings
-                .Where(s => !string.Equals(s.Language, targetLanguage, StringComparison.OrdinalIgnoreCase))
-                .ToList();
 
-            if (sourcesToTranslate.Count is 0) return articles;
-
-            List<NewsArticle> articlesToTranslate = [];
-
-            foreach (BaseNewsClientSettings source in sourcesToTranslate)
-            {
-                string sourceName = source.ClientName.Replace("Client", null).ToLowerInvariant();
-
-                // Filter articles that belong to the current source and require translation
-                articlesToTranslate.AddRange(articles.Where(a => MatchesHost(a.Source, source.Host)
-                    || source.AdditionalHosts.Any(h => MatchesHost(a.Source, h))
-                    || a.Source.Contains(sourceName)));
-            }
+            // Translate any article whose source language differs from the user's target.
+            // Article-level language tagging means built-in and custom feeds use the same code path —
+            // no host-based registry lookup is needed.
+            List<NewsArticle> articlesToTranslate = [.. articles
+                .Where(a => !string.IsNullOrEmpty(a.SourceLanguage)
+                    && !string.Equals(a.SourceLanguage, targetLanguage, StringComparison.OrdinalIgnoreCase))];
 
             if (articlesToTranslate.Count is 0) return articles;
 

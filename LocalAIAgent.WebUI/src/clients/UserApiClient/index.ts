@@ -7,6 +7,7 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AddCustomFeedDto } from './models/AddCustomFeedDto';
 export type { AiSettingsDto } from './models/AiSettingsDto';
 export { Algorithm } from './models/Algorithm';
 export type { AssertionOptions } from './models/AssertionOptions';

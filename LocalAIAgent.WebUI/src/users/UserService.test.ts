@@ -245,6 +245,8 @@ describe('UserService', () => {
                 prompt: preferences.prompt,
                 interests: preferences.likes,
                 dislikes: preferences.dislikes,
+                targetLanguage: preferences.targetLanguage,
+                disabledFeedSources: preferences.disabledFeedSources,
             });
         });
     });

@@ -13,7 +13,8 @@
       "Bash(dotnet restore *)",
       "Bash(npm audit *)",
       "Bash(npm run *)",
-      "Bash(xargs -I {} grep -l \"IChatClient\" {})"
+      "Bash(xargs -I {} grep -l \"IChatClient\" {})",
+      "Bash(npm test *)"
     ]
   }
 }

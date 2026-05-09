@@ -11,6 +11,7 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
     public required DbSet<AiSettings> AiSettings { get; set; }
     public required DbSet<NewsEvaluationEntry> NewsEvaluationEntries { get; set; }
     public required DbSet<ArticleTranslation> ArticleTranslations { get; set; }
+    public required DbSet<CustomFeed> CustomFeeds { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +45,15 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
 
         modelBuilder.Entity<ArticleTranslation>()
             .HasIndex(t => new { t.ArticleLink, t.TargetLanguage })
+            .IsUnique();
+
+        modelBuilder.Entity<CustomFeed>()
+            .HasOne(f => f.UserPreferences)
+            .WithMany(p => p.CustomFeeds)
+            .HasForeignKey(f => f.UserPreferencesId);
+
+        modelBuilder.Entity<CustomFeed>()
+            .HasIndex(f => new { f.UserPreferencesId, f.Url })
             .IsUnique();
     }
 }

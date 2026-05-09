@@ -154,6 +154,85 @@
         }
       }
     },
+    "/api/Feeds/Custom": {
+      "post": {
+        "tags": [
+          "Feeds"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCustomFeedDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCustomFeedDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCustomFeedDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Feeds/Custom/{customFeedId}": {
+      "delete": {
+        "tags": [
+          "Feeds"
+        ],
+        "parameters": [
+          {
+            "name": "customFeedId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/assertionOptions": {
       "post": {
         "tags": [
@@ -754,6 +833,34 @@
   },
   "components": {
     "schemas": {
+      "AddCustomFeedDto": {
+        "required": [
+          "displayName",
+          "language",
+          "url",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AiSettingsDto": {
         "required": [
           "endpointUrl",
@@ -1370,6 +1477,7 @@
           "clientName",
           "displayName",
           "enabled",
+          "isCustom",
           "language",
           "languageName"
         ],
@@ -1393,6 +1501,22 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "isCustom": {
+            "type": "boolean"
+          },
+          "customFeedId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastFetchErrorMessage": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
