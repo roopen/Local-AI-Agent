@@ -21,7 +21,10 @@
       "Bash(rm -rf node_modules package-lock.json)",
       "Bash(npm install *)",
       "Bash(npm view *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "PowerShell(head *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Repos\\\\Local-AI-Agent\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne \"bin\" -and $_.Name -ne \"obj\" } | Select-Object -ExpandProperty FullName | Select-Object -First 40)",
+      "Bash(start *)"
     ]
   }
 }
