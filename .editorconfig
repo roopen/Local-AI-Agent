@@ -8,3 +8,6 @@ root = true
 dotnet_diagnostic.CA1502.severity = error
 dotnet_code_quality.CA1502.api_surface = public,internal
 dotnet_code_quality.CA1502.max_complexity = 7
+
+# CA1848: LoggerMessage delegates - logging perf isn't a concern for this app
+dotnet_diagnostic.CA1848.severity = none
