@@ -34,15 +34,19 @@ public class ArticleTranslationRepositoryTests : InMemoryDbTestBase
             new InfraModels.ArticleTranslation
             {
                 ArticleLink = "https://x.com/a",
-                OriginalTitle = "Hola", OriginalSummary = "...",
-                TranslatedTitle = "Hello", TranslatedSummary = "world",
+                OriginalTitle = "Hola",
+                OriginalSummary = "...",
+                TranslatedTitle = "Hello",
+                TranslatedSummary = "world",
                 TargetLanguage = "English",
             },
             new InfraModels.ArticleTranslation
             {
                 ArticleLink = "https://x.com/b",
-                OriginalTitle = "Bonjour", OriginalSummary = "...",
-                TranslatedTitle = "Hello B", TranslatedSummary = "world B",
+                OriginalTitle = "Bonjour",
+                OriginalSummary = "...",
+                TranslatedTitle = "Hello B",
+                TranslatedSummary = "world B",
                 TargetLanguage = "English",
             });
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -68,15 +72,19 @@ public class ArticleTranslationRepositoryTests : InMemoryDbTestBase
             new InfraModels.ArticleTranslation
             {
                 ArticleLink = "https://x.com/english",
-                OriginalTitle = "Hola", OriginalSummary = "...",
-                TranslatedTitle = "Hello", TranslatedSummary = "world",
+                OriginalTitle = "Hola",
+                OriginalSummary = "...",
+                TranslatedTitle = "Hello",
+                TranslatedSummary = "world",
                 TargetLanguage = "English",
             },
             new InfraModels.ArticleTranslation
             {
                 ArticleLink = "https://x.com/spanish",
-                OriginalTitle = "Bonjour", OriginalSummary = "...",
-                TranslatedTitle = "Hola", TranslatedSummary = "mundo",
+                OriginalTitle = "Bonjour",
+                OriginalSummary = "...",
+                TranslatedTitle = "Hola",
+                TranslatedSummary = "mundo",
                 TargetLanguage = "Spanish",
             });
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -132,8 +140,10 @@ public class ArticleTranslationRepositoryTests : InMemoryDbTestBase
         Db.ArticleTranslations.Add(new InfraModels.ArticleTranslation
         {
             ArticleLink = "https://x.com/a",
-            OriginalTitle = "old original", OriginalSummary = "...",
-            TranslatedTitle = "old translation", TranslatedSummary = "...",
+            OriginalTitle = "old original",
+            OriginalSummary = "...",
+            TranslatedTitle = "old translation",
+            TranslatedSummary = "...",
             TargetLanguage = "English",
         });
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);

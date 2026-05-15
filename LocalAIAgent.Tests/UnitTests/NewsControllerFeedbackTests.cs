@@ -91,7 +91,9 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
         InfraModels.UserPreferences prefs = await SeedUserAsync("alice");
         Db.NewsEvaluationEntries.Add(new InfraModels.NewsEvaluationEntry
         {
-            ArticleTitle = "old", ArticleSummary = "old", ArticleSource = "x.com",
+            ArticleTitle = "old",
+            ArticleSummary = "old",
+            ArticleSource = "x.com",
             ArticleLink = "https://x.com/a",
             Relevancy = "Low",
             Reasoning = "old reason",
