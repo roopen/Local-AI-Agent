@@ -7,6 +7,8 @@ using System.Xml;
 
 namespace LocalAIAgent.Application.News
 {
+    public record FeedKeywordEvaluationResult(List<NewsArticle> EvaluatedArticles, NewsItem[] UnresolvedArticles);
+
     public interface INewsService
     {
         Task<List<NewsItem>> GetNewsAsync();
@@ -17,6 +19,7 @@ namespace LocalAIAgent.Application.News
         /// and articles from feeds the user has disabled.
         /// </summary>
         Task<List<NewsItem>> GetNewsAsync(UserPreferences preferences);
+        FeedKeywordEvaluationResult EvaluateFeedKeywords(NewsItem[] articles, UserPreferences userPreferences, bool includeReasoning);
     }
 
     internal class NewsService(
@@ -132,6 +135,93 @@ namespace LocalAIAgent.Application.News
 
             return false;
         }
+
+        public FeedKeywordEvaluationResult EvaluateFeedKeywords(
+            NewsItem[] articles,
+            UserPreferences userPreferences,
+            bool includeReasoning)
+        {
+            List<NewsArticle> evaluatedArticles = [];
+            List<NewsItem> unresolvedArticles = [];
+
+            foreach (NewsItem item in articles)
+            {
+                if (TryEvaluateFromFeedKeywords(item, userPreferences, includeReasoning, out NewsArticle? article))
+                    evaluatedArticles.Add(article!);
+                else
+                    unresolvedArticles.Add(item);
+            }
+
+            return new FeedKeywordEvaluationResult(evaluatedArticles, [.. unresolvedArticles]);
+        }
+
+        private static bool TryEvaluateFromFeedKeywords(
+            NewsItem item,
+            UserPreferences userPreferences,
+            bool includeReasoning,
+            out NewsArticle? article)
+        {
+            article = null;
+
+            List<string> feedKeywords = [.. item.Categories.Where(c => !string.IsNullOrWhiteSpace(c))];
+            if (feedKeywords.Count == 0)
+                return false;
+
+            (string Term, string Keyword)? dislikeMatch = FindKeywordMatch(feedKeywords, userPreferences.Dislikes);
+            if (dislikeMatch is not null)
+            {
+                article = CreateKeywordEvaluatedArticle(
+                    item,
+                    Relevancy.Low,
+                    topic: null,
+                    reasoning: includeReasoning
+                        ? $"RSS keyword matched dislike '{dislikeMatch.Value.Term}' in '{dislikeMatch.Value.Keyword}'."
+                        : null);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static (string Term, string Keyword)? FindKeywordMatch(IEnumerable<string> feedKeywords, IEnumerable<string> terms)
+        {
+            foreach (string term in terms.Where(t => !string.IsNullOrWhiteSpace(t)))
+            {
+                foreach (string keyword in feedKeywords)
+                {
+                    if (KeywordMatchesTerm(keyword, term))
+                        return (term, keyword);
+                }
+            }
+
+            return null;
+        }
+
+        private static bool KeywordMatchesTerm(string keyword, string term)
+        {
+            string pattern = $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(term.Trim())}(?![\p{{L}}\p{{N}}])";
+            return Regex.IsMatch(keyword, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        private static NewsArticle CreateKeywordEvaluatedArticle(
+            NewsItem item,
+            Relevancy relevancy,
+            string? topic,
+            string? reasoning) => new()
+            {
+                Title = item.Title,
+                Summary = item.Summary,
+                PublishedDate = item.PublishDate.DateTime,
+                Link = item.Link ?? string.Empty,
+                Source = item.Source ?? string.Empty,
+                SourceLanguage = item.Language,
+                Categories = [],
+                Relevancy = relevancy,
+                Topic = topic,
+                Reasoning = reasoning,
+                InputTokens = null,
+                OutputTokens = null,
+            };
 
         /// <summary>
         /// Filters out articles based on simple word matching.

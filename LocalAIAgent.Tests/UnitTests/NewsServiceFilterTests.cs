@@ -1,4 +1,8 @@
 using LocalAIAgent.Application.News;
+using LocalAIAgent.Domain;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using System.Net.Http;
 using System.ServiceModel.Syndication;
 
 namespace LocalAIAgent.Tests.UnitTests;
@@ -38,6 +42,9 @@ public class NewsServiceFilterTests
 
     private static readonly DateTimeOffset Now = new(2026, 5, 9, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Cutoff = Now.AddDays(-1);
+
+    private static NewsService BuildService() =>
+        new(Mock.Of<IHttpClientFactory>(), [], TimeProvider.System, NullLogger<NewsService>.Instance);
 
     [Fact]
     public void FilterNews_KeepsItemsAtOrAfterCutoff()
@@ -178,5 +185,61 @@ public class NewsServiceFilterTests
         List<NewsItem> filtered = NewsService.FilterNews(input, dislikes: [], Cutoff, disabled);
 
         Assert.Empty(filtered);
+    }
+
+    [Fact]
+    public void EvaluateFeedKeywords_InterestMatch_LeavesArticleUnresolved()
+    {
+        UserPreferences prefs = new()
+        {
+            Id = 7,
+            Prompt = "Be helpful.",
+            Interests = ["AI"],
+            Dislikes = [],
+        };
+        NewsItem item = BuildItem("AI breakthrough", "summary", Now, categories: ["AI"]);
+
+        FeedKeywordEvaluationResult result = BuildService().EvaluateFeedKeywords([item], prefs, includeReasoning: false);
+
+        Assert.Empty(result.EvaluatedArticles);
+        Assert.Same(item, Assert.Single(result.UnresolvedArticles));
+    }
+
+    [Fact]
+    public void EvaluateFeedKeywords_DislikeMatch_ReturnsLowArticle()
+    {
+        UserPreferences prefs = new()
+        {
+            Id = 7,
+            Prompt = "Be helpful.",
+            Interests = ["AI"],
+            Dislikes = ["Crypto"],
+        };
+        NewsItem item = BuildItem("AI crypto crossover", "summary", Now, categories: ["AI", "Crypto"]);
+
+        FeedKeywordEvaluationResult result = BuildService().EvaluateFeedKeywords([item], prefs, includeReasoning: false);
+
+        Assert.Empty(result.UnresolvedArticles);
+        NewsArticle only = Assert.Single(result.EvaluatedArticles);
+        Assert.Equal(Relevancy.Low, only.Relevancy);
+        Assert.Null(only.Topic);
+    }
+
+    [Fact]
+    public void EvaluateFeedKeywords_NoFeedKeywordMatch_LeavesArticleUnresolved()
+    {
+        UserPreferences prefs = new()
+        {
+            Id = 7,
+            Prompt = "Be helpful.",
+            Interests = ["AI"],
+            Dislikes = ["Crypto"],
+        };
+        NewsItem item = BuildItem("Robotics update", "summary", Now, categories: ["Robotics"]);
+
+        FeedKeywordEvaluationResult result = BuildService().EvaluateFeedKeywords([item], prefs, includeReasoning: false);
+
+        Assert.Empty(result.EvaluatedArticles);
+        Assert.Same(item, Assert.Single(result.UnresolvedArticles));
     }
 }

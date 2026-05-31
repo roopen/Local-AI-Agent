@@ -133,6 +133,45 @@ public class GetTranslationUseCaseTests
     }
 
     [Fact]
+    public async Task TranslateArticleAsync_UsesInitialBatchesOfFive()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+
+        chat.EnqueueStreamingText("""
+            [
+              {"Title":"Translated 0","Summary":"Summary 0"},
+              {"Title":"Translated 1","Summary":"Summary 1"},
+              {"Title":"Translated 2","Summary":"Summary 2"},
+              {"Title":"Translated 3","Summary":"Summary 3"},
+              {"Title":"Translated 4","Summary":"Summary 4"}
+            ]
+            """);
+        chat.EnqueueStreamingText("""[{"Title":"Translated 5","Summary":"Summary 5"}]""");
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            chat,
+            Options(useResultsForDataset: false),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        List<NewsArticle> articles = [.. Enumerable.Range(0, 6)
+            .Select(i => Article($"title {i}", $"summary {i}", $"https://taiwan.example/{i}", "taiwan.example"))];
+
+        await sut.TranslateArticleAsync(articles, "Spanish");
+
+        Assert.Equal(2, chat.Calls.Count);
+        string firstPayload = chat.Calls[0].Messages.Last(m => m.Role == Microsoft.Extensions.AI.ChatRole.User).Text!;
+        string secondPayload = chat.Calls[1].Messages.Last(m => m.Role == Microsoft.Extensions.AI.ChatRole.User).Text!;
+        Assert.Contains("title 4", firstPayload);
+        Assert.DoesNotContain("title 5", firstPayload);
+        Assert.Contains("title 5", secondPayload);
+    }
+
+    [Fact]
     public async Task TranslateArticleAsync_SuccessfulResponse_OverwritesTitleAndSummary()
     {
         FakeChatClient chat = new();
@@ -159,6 +198,80 @@ public class GetTranslationUseCaseTests
 
         Assert.Equal("Hola", article.Title);
         Assert.Equal("Mundo", article.Summary);
+    }
+
+    [Fact]
+    public async Task TranslateArticleAsync_BatchLengthMismatch_FallsBackToSingleArticleTranslations()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+        repo.Setup(r => r.SaveTranslationsAsync(It.IsAny<List<NewsArticle>>(),
+                It.IsAny<List<(string OriginalTitle, string OriginalSummary)>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // First response is structurally valid JSON, but invalid for the 3-article request.
+        chat.EnqueueStreamingText("""[{"Title":"partial one","Summary":"partial"},{"Title":"partial two","Summary":"partial"}]""");
+        chat.EnqueueStreamingText("""[{"Title":"Uno","Summary":"Uno summary"}]""");
+        chat.EnqueueStreamingText("""[{"Title":"Dos","Summary":"Dos summary"}]""");
+        chat.EnqueueStreamingText("""[{"Title":"Tres","Summary":"Tres summary"}]""");
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            chat,
+            Options(),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        List<NewsArticle> articles =
+        [
+            Article("one", "one summary", "https://taiwan.example/a", "taiwan.example"),
+            Article("two", "two summary", "https://taiwan.example/b", "taiwan.example"),
+            Article("three", "three summary", "https://taiwan.example/c", "taiwan.example"),
+        ];
+
+        await sut.TranslateArticleAsync(articles, "Spanish");
+
+        Assert.Equal(["Uno", "Dos", "Tres"], articles.Select(a => a.Title));
+        Assert.Equal(4, chat.Calls.Count);
+        repo.Verify(r => r.SaveTranslationsAsync(
+            It.Is<List<NewsArticle>>(batch => batch.Count > 1),
+            It.IsAny<List<(string, string)>>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.SaveTranslationsAsync(
+            It.Is<List<NewsArticle>>(batch => batch.Count == 1),
+            It.IsAny<List<(string, string)>>(),
+            "Spanish",
+            It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task TranslateArticleAsync_SingleArticleFailure_RetriesOnce()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+
+        chat.EnqueueStreamingText("not json");
+        chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            chat,
+            Options(useResultsForDataset: false),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        NewsArticle article = Article("foreign", "summary", "https://taiwan.example/a", "taiwan.example");
+        await sut.TranslateArticleAsync([article], "Spanish");
+
+        Assert.Equal("Hola", article.Title);
+        Assert.Equal(2, chat.Calls.Count);
     }
 
     [Fact]

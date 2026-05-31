@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace LocalAIAgent.Application.News.AI
 {
@@ -23,6 +22,9 @@ namespace LocalAIAgent.Application.News.AI
         AIOptions options,
         ILogger<GetTranslationUseCase> logger) : IGetTranslationUseCase
     {
+        private const int TranslationBatchSize = 5;
+        private const int SingleArticleMaxAttempts = 2;
+
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -69,17 +71,16 @@ namespace LocalAIAgent.Application.News.AI
 
             if (uncachedArticles.Count is 0) return articles;
 
-            // Process batches of 3 in parallel
-            List<Task> batchTasks = [];
-            for (int i = 0; i < uncachedArticles.Count; i += 3)
+            int translatedCount = 0;
+            for (int i = 0; i < uncachedArticles.Count; i += TranslationBatchSize)
             {
-                List<NewsArticle> batch = uncachedArticles.Skip(i).Take(3).ToList();
-                batchTasks.Add(TranslateBatchAsync(batch, targetLanguage));
+                List<NewsArticle> batch = uncachedArticles.Skip(i).Take(TranslationBatchSize).ToList();
+                translatedCount += await TranslateBatchWithFallbackAsync(batch, targetLanguage);
             }
-            await Task.WhenAll(batchTasks);
+
             stopwatch.Stop();
-            logger.LogInformation("GetTranslationUseCase: translated {UncachedCount} articles in {ElapsedMs} ms",
-                uncachedArticles.Count, stopwatch.ElapsedMilliseconds);
+            logger.LogInformation("GetTranslationUseCase: translated {TranslatedCount}/{UncachedCount} articles in {ElapsedMs} ms",
+                translatedCount, uncachedArticles.Count, stopwatch.ElapsedMilliseconds);
 
             return articles;
         }
@@ -120,7 +121,39 @@ namespace LocalAIAgent.Application.News.AI
                 <|turn>";
         }
 
-        private async Task TranslateBatchAsync(List<NewsArticle> batch, string targetLanguage, int attempt = 0)
+        private async Task<int> TranslateBatchWithFallbackAsync(List<NewsArticle> batch, string targetLanguage)
+        {
+            if (batch.Count == 0)
+                return 0;
+
+            if (await TryTranslateBatchAsync(batch, targetLanguage))
+                return batch.Count;
+
+            if (batch.Count == 1)
+            {
+                for (int attempt = 1; attempt < SingleArticleMaxAttempts; attempt++)
+                {
+                    if (await TryTranslateBatchAsync(batch, targetLanguage))
+                        return 1;
+                }
+
+                logger.LogWarning("GetTranslationUseCase: failed to translate article {ArticleLink}; leaving original text",
+                    batch[0].Link);
+                return 0;
+            }
+
+            logger.LogWarning(
+                "GetTranslationUseCase: batch of {BatchSize} failed; retrying articles individually",
+                batch.Count);
+
+            int translatedCount = 0;
+            foreach (NewsArticle article in batch)
+                translatedCount += await TranslateBatchWithFallbackAsync([article], targetLanguage);
+
+            return translatedCount;
+        }
+
+        private async Task<bool> TryTranslateBatchAsync(List<NewsArticle> batch, string targetLanguage)
         {
             // Capture originals before they are overwritten
             List<(string OriginalTitle, string OriginalSummary)> originals = batch
@@ -141,17 +174,30 @@ namespace LocalAIAgent.Application.News.AI
 
             StringBuilder resultBuilder = new();
 
-            await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(messages, chatOptions)
-                                .ConfigureAwait(false))
+            try
             {
-                if (!string.IsNullOrEmpty(update.Text))
-                    resultBuilder.Append(update.Text);
+                await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(messages, chatOptions)
+                                    .ConfigureAwait(false))
+                {
+                    if (!string.IsNullOrEmpty(update.Text))
+                        resultBuilder.Append(update.Text);
+                }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "GetTranslationUseCase: translation request failed for batch size {BatchSize}",
+                    batch.Count);
+                return false;
+            }
+
             string result = resultBuilder.ToString();
 
             // Extract the JSON array, discarding any reasoning or markdown the model emitted around it
-            Match jsonMatch = Regex.Match(result, @"\[[\s\S]*\]");
-            result = jsonMatch.Success ? jsonMatch.Value : result;
+            result = ExtractJsonArray(result);
 
             result = SanitizeJsonResponse(result);
 
@@ -159,25 +205,62 @@ namespace LocalAIAgent.Application.News.AI
             {
                 List<TranslationDto>? translatedArticles = JsonSerializer.Deserialize<List<TranslationDto>>(result, s_jsonDeserializerOptions);
 
-                if (translatedArticles != null)
-                {
-                    for (int i = 0; i < batch.Count; i++)
-                    {
-                        if (i < translatedArticles.Count)
-                        {
-                            batch[i].Title = translatedArticles[i].Title;
-                            batch[i].Summary = translatedArticles[i].Summary;
-                        }
-                    }
+                if (translatedArticles is null)
+                    return false;
 
-                    if (options.UseResultsForDataset)
-                        await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
+                if (translatedArticles.Count != batch.Count)
+                {
+                    logger.LogWarning(
+                        "GetTranslationUseCase: translation response length mismatch. Expected {ExpectedCount}, got {ActualCount}. Response: {LlmResponse}",
+                        batch.Count,
+                        translatedArticles.Count,
+                        result);
+                    return false;
                 }
+
+                if (translatedArticles.Any(t => string.IsNullOrWhiteSpace(t.Title) || t.Summary is null))
+                {
+                    logger.LogWarning(
+                        "GetTranslationUseCase: translation response contained missing title or summary. Response: {LlmResponse}",
+                        result);
+                    return false;
+                }
+
+                for (int i = 0; i < batch.Count; i++)
+                {
+                    batch[i].Title = translatedArticles[i].Title;
+                    batch[i].Summary = translatedArticles[i].Summary;
+                }
+
+                if (options.UseResultsForDataset)
+                    await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
+
+                return true;
             }
             catch (JsonException ex)
             {
                 logger.LogWarning(ex, "Error deserializing translation response. LLM response: {LlmResponse}", result);
+                return false;
             }
+        }
+
+        private static string ExtractJsonArray(string result)
+        {
+            const string channelMarker = "<channel|>";
+            int markerIndex = result.LastIndexOf(channelMarker, StringComparison.Ordinal);
+            if (markerIndex >= 0)
+                result = result[(markerIndex + channelMarker.Length)..];
+
+            result = result
+                .Replace("```json", "")
+                .Replace("```", "")
+                .Trim();
+
+            int arrayStart = result.IndexOf('[');
+            int arrayEnd = result.LastIndexOf(']');
+            return arrayStart >= 0 && arrayEnd >= arrayStart
+                ? result[arrayStart..(arrayEnd + 1)]
+                : result;
         }
 
         /// <summary>

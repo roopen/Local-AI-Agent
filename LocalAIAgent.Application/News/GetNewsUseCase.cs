@@ -39,14 +39,24 @@ namespace LocalAIAgent.Application.News
 #endif
             foreach (NewsItem[] newsBatch in newsItems.Chunk(5))
             {
-                EvaluatedNewsArticles evaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(
-                    newsBatch.ToList(),
+                FeedKeywordEvaluationResult keywordEvaluation = newsService.EvaluateFeedKeywords(
+                    newsBatch,
                     preferences,
                     includeReasoning: saveDataset);
 
-                evaluatedArticles.NewsArticles = evaluatedArticles.NewsArticles.Where(a => a.Relevancy is Relevancy.High).ToList();
+                List<NewsArticle> evaluatedNewsArticles = [.. keywordEvaluation.EvaluatedArticles];
+                if (keywordEvaluation.UnresolvedArticles.Length > 0)
+                {
+                    EvaluatedNewsArticles llmEvaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(
+                        keywordEvaluation.UnresolvedArticles.ToList(),
+                        preferences,
+                        includeReasoning: saveDataset);
+                    evaluatedNewsArticles.AddRange(llmEvaluatedArticles.NewsArticles);
+                }
+
+                evaluatedNewsArticles = [.. evaluatedNewsArticles.Where(a => a.Relevancy is Relevancy.High)];
                 string targetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage;
-                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedArticles.NewsArticles, targetLanguage);
+                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedNewsArticles, targetLanguage);
 
                 foreach (NewsArticle article in newsArticles)
                 {
