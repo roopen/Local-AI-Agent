@@ -15,11 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.3.0" />
-    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.7" />
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Sqlite" Version="13.1.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.3.5" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.3.5" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.8" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Sqlite" Version="13.3.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
