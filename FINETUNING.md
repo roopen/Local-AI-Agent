@@ -30,7 +30,7 @@ The application already builds a chat-format dataset for you while you use it. Y
 |---|---|---|
 | Decide what to translate | `GetTranslationUseCase.TranslateArticleAsync` (`LocalAIAgent.Application/News/AI/GetTranslationUseCase.cs:36`) | Only articles where `SourceLanguage != UserPreferences.TargetLanguage`. |
 | Cache lookup | `IArticleTranslationRepository.GetCachedTranslationsAsync` | Hits go straight to the article, no LLM call. |
-| Translate | `TranslateBatchWithFallbackAsync` (`GetTranslationUseCase.cs`) | Batches of up to 5 articles. The short system prompt disables translation-time reasoning, and LM Studio constrains the response to `{"translations":[{index,title,summary}]}`. Valid indexed results are kept while only missing items are retried; total failures are split into smaller batches. |
+| Translate | `TranslateBatchWithFallbackAsync` (`GetTranslationUseCase.cs`) | Batches of up to 5 articles. The short system prompt disables translation-time reasoning, and LM Studio constrains the response to `[{index,title,summary}]`. Valid indexed results are kept while only missing items are retried; total failures are split into smaller batches. |
 | Robust parsing | `SanitizeJsonResponse` (line 213) | Regex extracts the JSON array; a small state machine repairs unescaped quotes and `\'`. |
 | Persist | `translationRepository.SaveTranslationsAsync` (line 174) | Only when `AIOptions.UseResultsForDataset == true`. Stores `ArticleLink`, `OriginalTitle`, `OriginalSummary`, `TranslatedTitle`, `TranslatedSummary`, `TargetLanguage`, `CreatedAt`. |
 
@@ -45,7 +45,7 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 ```
 
 - **Recommendation samples** (`GetBalancedNewsEntries`, line 96): system = `UserPreferences.BuildSystemPrompt()`; user = `FormatKnownTopics(...)` + 1–3 articles joined by `---ARTICLE SEPARATOR---`; assistant = optional `<|think|>…<|end|>` block + JSON `[{ArticleIndex, Relevancy, Topic}]`. The exporter prefers the *original* (untranslated) text via `translationsByLink` so the recommender trains on source language, matching how it's called at inference.
-- **Translation samples** (lines 38–55): system = the same prompt `GetTranslationUseCase.GetSystemPrompt(targetLang)` used at inference; user = `"Translate every item. Input JSON:"` + serialized `[{index, title, summary}]`; assistant = serialized `{"translations":[{index, title, summary}]}`.
+- **Translation samples** (lines 38–55): system = the same prompt `GetTranslationUseCase.GetSystemPrompt(targetLang)` used at inference; user = `"Translate every item. Input JSON:"` + serialized `[{index, title, summary}]`; assistant = serialized `[{index, title, summary}]`.
 - **Balancing**: news entries are sampled to roughly equal the translation batch count, then both pools are shuffled together. Eval split is `clamp(translation_share, 15%, 30%)`.
 - **Output**: `training_dataset.jsonl` and `evaluation_dataset.jsonl` inside `dataset.zip`.
 
@@ -136,7 +136,7 @@ Either way: ship the result as a GGUF (`llama.cpp` / Unsloth `save_pretrained_gg
 The evaluation JSONL is a holdout. Measure both metrics offline before swapping in production:
 
 - **Recommender**: per-row, parse the assistant JSON and compare `Relevancy` against ground truth. Report precision/recall for the `High` class — that's the user-facing one. A 5-point bump in `High`-recall over the base model is the bar for shipping.
-- **Translator**: BLEU/chrF against the gold `assistant` content is fine for a sanity number, but the structural check matters more: how often is the response a valid `{"translations":[...]}` object with one unique, matching index per input? A fine-tune should hit 99%+.
+- **Translator**: BLEU/chrF against the gold `assistant` content is fine for a sanity number, but the structural check matters more: how often is the response a valid JSON array with one unique, matching index per input? A fine-tune should hit 99%+.
 
 ---
 

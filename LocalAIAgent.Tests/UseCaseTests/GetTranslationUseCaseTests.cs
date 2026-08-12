@@ -106,7 +106,7 @@ public class GetTranslationUseCaseTests
         Mock<IArticleTranslationRepository> repo = new();
         repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<string, CachedTranslation>());
-        chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
+        chat.EnqueueStreamingText("""[{"index":0,"title":"Hola","summary":"Mundo"}]""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("news.taiwan.tw")],
@@ -140,14 +140,14 @@ public class GetTranslationUseCaseTests
 
         chat.EnqueueStreamingText("""
             [
-              {"Title":"Translated 0","Summary":"Summary 0"},
-              {"Title":"Translated 1","Summary":"Summary 1"},
-              {"Title":"Translated 2","Summary":"Summary 2"},
-              {"Title":"Translated 3","Summary":"Summary 3"},
-              {"Title":"Translated 4","Summary":"Summary 4"}
+              {"index":0,"title":"Translated 0","summary":"Summary 0"},
+              {"index":1,"title":"Translated 1","summary":"Summary 1"},
+              {"index":2,"title":"Translated 2","summary":"Summary 2"},
+              {"index":3,"title":"Translated 3","summary":"Summary 3"},
+              {"index":4,"title":"Translated 4","summary":"Summary 4"}
             ]
             """);
-        chat.EnqueueStreamingText("""[{"Title":"Translated 5","Summary":"Summary 5"}]""");
+        chat.EnqueueStreamingText("""[{"index":0,"title":"Translated 5","summary":"Summary 5"}]""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
@@ -180,7 +180,7 @@ public class GetTranslationUseCaseTests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        chat.EnqueueStreamingText("""{"translations":[{"index":0,"title":"Hola","summary":"Mundo"}]}""");
+        chat.EnqueueStreamingText("""[{"index":0,"title":"Hola","summary":"Mundo"}]""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
@@ -203,6 +203,7 @@ public class GetTranslationUseCaseTests
 
         ChatResponseFormatJson responseFormat = Assert.IsType<ChatResponseFormatJson>(call.Options.ResponseFormat);
         Assert.True(responseFormat.Schema.HasValue);
+        Assert.Equal("array", responseFormat.Schema.Value.GetProperty("type").GetString());
 
         string systemPrompt = call.Messages.Single(m => m.Role == ChatRole.System).Text!;
         Assert.DoesNotContain("<|think|>", systemPrompt);
@@ -227,13 +228,13 @@ public class GetTranslationUseCaseTests
             .Returns(Task.CompletedTask);
 
         chat.EnqueueStreamingText("""
-            {"translations":[
+            [
                 {"index":0,"title":"Uno","summary":"Uno summary"},
                 {"index":2,"title":"Tres","summary":"Tres summary"}
-            ]}
+            ]
             """);
         chat.EnqueueStreamingText("""
-            {"translations":[{"index":0,"title":"Dos","summary":"Dos summary"}]}
+            [{"index":0,"title":"Dos","summary":"Dos summary"}]
             """);
 
         GetTranslationUseCase sut = new(
@@ -280,7 +281,7 @@ public class GetTranslationUseCaseTests
             .ReturnsAsync(new Dictionary<string, CachedTranslation>());
 
         chat.EnqueueStreamingText("not json");
-        chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
+        chat.EnqueueStreamingText("""[{"index":0,"title":"Hola","summary":"Mundo"}]""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
@@ -324,7 +325,7 @@ public class GetTranslationUseCaseTests
         Mock<IArticleTranslationRepository> repo = new(MockBehavior.Strict);
         repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<string, CachedTranslation>());
-        chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
+        chat.EnqueueStreamingText("""[{"index":0,"title":"Hola","summary":"Mundo"}]""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],

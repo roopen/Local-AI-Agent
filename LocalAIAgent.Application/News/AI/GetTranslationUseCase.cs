@@ -33,10 +33,10 @@ namespace LocalAIAgent.Application.News.AI
         };
 
         private static readonly ChatResponseFormat s_translationResponseFormat =
-            ChatResponseFormat.ForJsonSchema<TranslationResponse>(
+            ChatResponseFormat.ForJsonSchema<List<TranslationDto>>(
                 s_jsonSerializerOptions,
-                schemaName: "translation_response",
-                schemaDescription: "Translations keyed by their unchanged input index.");
+                schemaName: "translations",
+                schemaDescription: "An array of translations keyed by their unchanged input index.");
 
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
@@ -94,13 +94,6 @@ namespace LocalAIAgent.Application.News.AI
             [property: JsonPropertyName("title")] string Title,
             [property: JsonPropertyName("summary")] string Summary);
 
-        private sealed record TranslationResponse(
-            [property: JsonPropertyName("translations")] List<TranslationDto> Translations);
-
-        private sealed record LegacyTranslationDto(
-            [property: JsonPropertyName("title")] string Title,
-            [property: JsonPropertyName("summary")] string Summary);
-
         private sealed record TranslationAttemptResult(
             int TranslatedCount,
             List<NewsArticle> UnresolvedArticles);
@@ -112,7 +105,8 @@ namespace LocalAIAgent.Application.News.AI
                 Translate every news item into {languageName}.
                 Preserve facts, names, numbers, dates, quotations, links, and meaning.
                 Do not summarize, explain, or add information.
-                Copy each input index unchanged and return only the required JSON.
+                Return one object per input item in a JSON array.
+                Copy each input index unchanged and return only the JSON array.
                 """;
         }
 
@@ -226,7 +220,7 @@ namespace LocalAIAgent.Application.News.AI
             }
 
             string result = resultBuilder.ToString();
-            List<TranslationDto>? translatedArticles = DeserializeTranslations(result, batch.Count);
+            List<TranslationDto>? translatedArticles = DeserializeTranslations(result);
             if (translatedArticles is null)
             {
                 logger.LogWarning(
@@ -283,41 +277,14 @@ namespace LocalAIAgent.Application.News.AI
             return new TranslationAttemptResult(translatedBatch.Count, unresolvedArticles);
         }
 
-        private static List<TranslationDto>? DeserializeTranslations(string result, int expectedCount)
+        private static List<TranslationDto>? DeserializeTranslations(string result)
         {
             result = StripResponseDecorations(result);
 
             try
             {
-                int objectStart = result.IndexOf('{');
-                int objectEnd = result.LastIndexOf('}');
-                if (objectStart >= 0 && objectEnd >= objectStart)
-                {
-                    string jsonObject = SanitizeJsonResponse(result[objectStart..(objectEnd + 1)]);
-                    TranslationResponse? response =
-                        JsonSerializer.Deserialize<TranslationResponse>(jsonObject, s_jsonSerializerOptions);
-                    if (response?.Translations is not null)
-                        return response.Translations;
-                }
-            }
-            catch (JsonException)
-            {
-                // Fall through to the legacy array format used by older fine-tunes.
-            }
-
-            try
-            {
                 string jsonArray = SanitizeJsonResponse(ExtractJsonArray(result));
-                List<LegacyTranslationDto>? legacy =
-                    JsonSerializer.Deserialize<List<LegacyTranslationDto>>(jsonArray, s_jsonSerializerOptions);
-
-                if (legacy?.Count != expectedCount)
-                    return null;
-
-                return legacy
-                    .Select((translation, index) =>
-                        new TranslationDto(index, translation.Title, translation.Summary))
-                    .ToList();
+                return JsonSerializer.Deserialize<List<TranslationDto>>(jsonArray, s_jsonSerializerOptions);
             }
             catch (JsonException)
             {

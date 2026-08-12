@@ -180,5 +180,29 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
         Assert.True(totalLines > 0, "Expected translation entries in the dataset.");
+
+        bool foundTranslationEntry = false;
+        foreach (string line in trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Concat(evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries)))
+        {
+            using JsonDocument entry = JsonDocument.Parse(line);
+            JsonElement messages = entry.RootElement.GetProperty("messages");
+            string systemPrompt = messages[0].GetProperty("content").GetString() ?? string.Empty;
+            if (!systemPrompt.StartsWith("Translate every news item into", StringComparison.Ordinal))
+                continue;
+
+            foundTranslationEntry = true;
+            string assistantContent = messages[2].GetProperty("content").GetString()!;
+            using JsonDocument translations = JsonDocument.Parse(assistantContent);
+            Assert.Equal(JsonValueKind.Array, translations.RootElement.ValueKind);
+            Assert.All(translations.RootElement.EnumerateArray(), translation =>
+            {
+                Assert.True(translation.TryGetProperty("index", out _));
+                Assert.True(translation.TryGetProperty("title", out _));
+                Assert.True(translation.TryGetProperty("summary", out _));
+            });
+        }
+
+        Assert.True(foundTranslationEntry, "Expected an indexed-array translation sample.");
     }
 }

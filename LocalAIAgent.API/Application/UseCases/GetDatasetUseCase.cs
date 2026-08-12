@@ -47,8 +47,8 @@ internal sealed class GetDatasetUseCase(
                         summary = t.OriginalSummary
                     }));
 
-                string assistantContent = JsonSerializer.Serialize(new { translations = batch.Select((t, index) =>
-                    new { index, title = t.TranslatedTitle, summary = t.TranslatedSummary }) });
+                string assistantContent = JsonSerializer.Serialize(batch.Select((t, index) =>
+                    new { index, title = t.TranslatedTitle, summary = t.TranslatedSummary }));
 
                 translationEntries.Add(BuildEntry(translationSystemPrompt, userContent, assistantContent));
                 translationBatchCount++;
