@@ -15,5 +15,5 @@ export interface IUserService {
     removeCredential(id: string): Promise<void>;
     addCredential(): Promise<void>;
     getAiSettings(): Promise<AISettings>;
-    saveAiSettings(settings: AISettings): Promise<void>;
+    saveAiSettings(settings: AISettings, clearApiKey?: boolean): Promise<AISettings>;
 }

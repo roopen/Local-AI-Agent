@@ -8,17 +8,22 @@ const SetupComponent: React.FC = () => {
 
   const handleSettingsSaved = async () => {
     const user = userService.getCurrentUser();
-    const preferences = await userService.getUserPreferences(user!.id);
+    const [preferences, aiSettings] = await Promise.all([
+      userService.getUserPreferences(user!.id),
+      userService.getAiSettings(),
+    ]);
 
-    if (preferences != null && !preferences.isEmpty()) {
+    if (preferences != null && !preferences.isEmpty() && aiSettings.isConfigured) {
         setSettingsCompleted(true);
+    } else {
+        setSettingsCompleted(false);
     }
   }
 
   return (
     <div style={{ margin: "0 auto" }}>
       <h2>👋 Welcome!</h2>
-      <p>Let's set up your preferences so that we can curate news to your liking.</p>
+      <p>Set your news preferences and connect an LLM API to continue.</p>
 
       <SettingsComponent onSave={handleSettingsSaved} />
 

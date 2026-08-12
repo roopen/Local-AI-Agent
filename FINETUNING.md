@@ -30,7 +30,7 @@ The application already builds a chat-format dataset for you while you use it. Y
 |---|---|---|
 | Decide what to translate | `GetTranslationUseCase.TranslateArticleAsync` (`LocalAIAgent.Application/News/AI/GetTranslationUseCase.cs:36`) | Only articles where `SourceLanguage != UserPreferences.TargetLanguage`. |
 | Cache lookup | `IArticleTranslationRepository.GetCachedTranslationsAsync` | Hits go straight to the article, no LLM call. |
-| Translate | `TranslateBatchAsync` (`GetTranslationUseCase.cs:123`) | Batches of 3 articles in parallel. System prompt at `GetSystemPrompt` (line 89) uses `<\|think\|>`/`<\|channel>` tags with an in-context example. The LLM returns a JSON array of `{title, summary}`. |
+| Translate | `TranslateBatchWithFallbackAsync` (`GetTranslationUseCase.cs`) | Batches of up to 5 articles. The short system prompt disables translation-time reasoning, and LM Studio constrains the response to `{"translations":[{index,title,summary}]}`. Valid indexed results are kept while only missing items are retried; total failures are split into smaller batches. |
 | Robust parsing | `SanitizeJsonResponse` (line 213) | Regex extracts the JSON array; a small state machine repairs unescaped quotes and `\'`. |
 | Persist | `translationRepository.SaveTranslationsAsync` (line 174) | Only when `AIOptions.UseResultsForDataset == true`. Stores `ArticleLink`, `OriginalTitle`, `OriginalSummary`, `TranslatedTitle`, `TranslatedSummary`, `TargetLanguage`, `CreatedAt`. |
 
@@ -45,7 +45,7 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 ```
 
 - **Recommendation samples** (`GetBalancedNewsEntries`, line 96): system = `UserPreferences.BuildSystemPrompt()`; user = `FormatKnownTopics(...)` + 1–3 articles joined by `---ARTICLE SEPARATOR---`; assistant = optional `<|think|>…<|end|>` block + JSON `[{ArticleIndex, Relevancy, Topic}]`. The exporter prefers the *original* (untranslated) text via `translationsByLink` so the recommender trains on source language, matching how it's called at inference.
-- **Translation samples** (lines 38–50): system = the same prompt `GetTranslationUseCase.GetSystemPrompt(targetLang)` used at inference; user = `"Translate this JSON array to <Lang>…"` + serialized `[{title, summary}]`; assistant = serialized translated `[{title, summary}]`.
+- **Translation samples** (lines 38–55): system = the same prompt `GetTranslationUseCase.GetSystemPrompt(targetLang)` used at inference; user = `"Translate every item. Input JSON:"` + serialized `[{index, title, summary}]`; assistant = serialized `{"translations":[{index, title, summary}]}`.
 - **Balancing**: news entries are sampled to roughly equal the translation batch count, then both pools are shuffled together. Eval split is `clamp(translation_share, 15%, 30%)`.
 - **Output**: `training_dataset.jsonl` and `evaluation_dataset.jsonl` inside `dataset.zip`.
 
@@ -56,7 +56,7 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 1. **Use the app for real for at least a week with `AIOptions.UseResultsForDataset = true`.** Without this flag, translations are not persisted and evaluations are flagged `UseInDataset = false`. Target ≥1000 evaluations and ≥300 translation pairs (per target language) before training — fewer can fine-tune a tiny model but won't beat the base on a 7B+.
 2. **Give honest feedback in the UI.** Like/dislike clicks overwrite the LLM's guess on `NewsEvaluationEntry.Relevancy`. Those rows are the gold labels — the more you click, the more the recommender will resemble *your* taste rather than the bootstrap model's.
 3. **Don't mutate an existing `UserPreferences` row mid-collection.** Different users with different prompts/interests/dislikes are *desirable* — that variation is what teaches the model to condition on the system prompt instead of memorizing one taste. The narrow problem is in-place edits to a single row: `GetBalancedNewsEntries` calls `BuildSystemPrompt()` on the *current* preferences at export time (`GetDatasetUseCase.cs:141`), so every historical `NewsEvaluationEntry` joined by `UserPreferencesId` gets re-paired with the new prompt text — including labels that were produced under the old prompt. If you need to change your preferences, prefer creating a new `UserPreferences` row (new `Id`) so old rows stay attached to the prompt they were actually judged under, or filter out evaluations older than the edit before training.
-4. **Pick a base model that already runs in your LM Studio / Ollama.** The dataset uses `<|think|>` / `<|channel>` style markers — any instruction-tuned chat model that respects role separators will work. Recommended starting points: a 4B–8B instruct model for the recommender (Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct, Gemma-2-9B), and the same or larger for translation if your target language is non-Latin.
+4. **Pick a base model that already runs in your LM Studio / Ollama.** Recommendation samples use reasoning markers, while translation samples use a concise indexed JSON contract. Recommended starting points: a 4B–8B instruct model for the recommender (Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct, Gemma-2-9B), and the same or larger for translation if your target language is non-Latin.
 
 ---
 
@@ -107,7 +107,7 @@ Hyperparameters that match this dataset's shape (short prompts, structured JSON 
 The dataset mixes both tasks. You have two reasonable options:
 
 1. **One adapter, mixed training** — simplest. The base model learns both behaviors from the role of the system prompt. Recommended unless evaluation shows interference.
-2. **Two adapters** — split the JSONL by whether the system prompt starts with `"Evaluate the following news articles"` (recommender) or `"<|think|>\n## Role\nTranslate"` (translator), train each separately, then load whichever adapter the runtime needs. More work, but gives sharper specialization for translation in particular.
+2. **Two adapters** — split the JSONL by whether the system prompt starts with `"Evaluate the following news articles"` (recommender) or `"Translate every news item into"` (translator), train each separately, then load whichever adapter the runtime needs. More work, but gives sharper specialization for translation in particular.
 
 Either way: ship the result as a GGUF (`llama.cpp` / Unsloth `save_pretrained_gguf`) so LM Studio can load it directly.
 
@@ -136,7 +136,7 @@ Either way: ship the result as a GGUF (`llama.cpp` / Unsloth `save_pretrained_gg
 The evaluation JSONL is a holdout. Measure both metrics offline before swapping in production:
 
 - **Recommender**: per-row, parse the assistant JSON and compare `Relevancy` against ground truth. Report precision/recall for the `High` class — that's the user-facing one. A 5-point bump in `High`-recall over the base model is the bar for shipping.
-- **Translator**: BLEU/chrF against the gold `assistant` content is fine for a sanity number, but the structural check matters more: how often is the response a valid JSON array of length-matching the input? Base models often dip to 90% here; a fine-tune should hit 99%+.
+- **Translator**: BLEU/chrF against the gold `assistant` content is fine for a sanity number, but the structural check matters more: how often is the response a valid `{"translations":[...]}` object with one unique, matching index per input? A fine-tune should hit 99%+.
 
 ---
 
@@ -144,6 +144,6 @@ The evaluation JSONL is a holdout. Measure both metrics offline before swapping 
 
 - **In-place edits to a `UserPreferences` row retroactively re-label history.** `BuildSystemPrompt` runs at export time against the *current* row, while assistant labels were produced against the row's *then-current* values. Across separate users this is fine and even helpful (varied system prompts → the model learns to condition on them). Within one user, in-place edits create rows whose system prompt contradicts the saved label. Filter by `NewsEvaluationEntry.CreatedAt > <last edit>` before training, or create a new `UserPreferences` row instead of mutating.
 - **`#if DEBUG` `Reasoning` field.** The system prompt and dataset include a `Reasoning` field only in Debug builds (`UserPreferences.cs:56`, `EvaluateNewsUseCase.cs:243`). Train and serve in the *same* build configuration or strip the field manually from the JSONL.
-- **The `<|think|>` block in assistant outputs is informational, not enforced at parse time.** Don't train the model to emit it for translation if the inference path strips it via `Regex.Match(result, @"\[[\s\S]*\]")` — fine, it'll be discarded — but you do want it for the recommender, where downstream code does not parse it but humans read it in Debug.
+- **Do not add a `<|think|>` block to translation samples.** Translation uses schema-constrained JSON directly because reasoning tokens add latency and create another failure point. Reasoning remains useful for the recommender, where humans inspect it in Debug.
 - **24-hour news cutoff.** `NewsService.FilterNews` drops articles older than 24h at *inference* time. The dataset has no such cutoff — historical evaluations stay forever, which is what you want for training. Just don't compute "model accuracy this week" from the eval JSONL alone; it's a static snapshot.
 - **Language coverage.** Translation rows only exist for languages you actually used `TargetLanguage` for. If you fine-tune on en-only data, the model's other-language fluency degrades. Either keep one adapter per language or use option B above.

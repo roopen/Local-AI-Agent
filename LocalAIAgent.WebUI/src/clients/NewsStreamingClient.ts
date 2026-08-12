@@ -149,7 +149,7 @@ export class NewsStreamClient {
                     this._loadEndTime = new Date();
                     onLoadingChange(false);
                     console.error("❌ News stream error:", err);
-                    onError(err);
+                    onError(err instanceof Error ? err : new Error(String(err)));
                 }
             });
         } catch (err) {

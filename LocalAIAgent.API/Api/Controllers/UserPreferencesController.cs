@@ -17,9 +17,8 @@ public class UserPreferencesController(UserContext context) : ControllerBase
     {
         UserPreferences? preferences = await context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences == null)
-        {
             return NotFound();
-        }
+
         return Ok(new UserPreferenceDto
         {
             Id = preferences.Id,
@@ -37,9 +36,7 @@ public class UserPreferencesController(UserContext context) : ControllerBase
     {
         User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == preferences.UserId);
         if (user == null)
-        {
             return NotFound();
-        }
 
         string targetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage;
 
@@ -65,70 +62,6 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         }
 
         await context.SaveChangesAsync();
-        return Ok();
-    }
-
-    [HttpPost("api/GetAiSettings")]
-    public async Task<ActionResult<AiSettingsDto>> GetAiSettings([FromBody] int userId)
-    {
-        AiSettings? aiSettings = await context.AiSettings
-            .Include(a => a.UserPreferences)
-            .FirstOrDefaultAsync(a => a.UserPreferences.UserId == userId);
-
-        if (aiSettings == null) return NotFound();
-
-        return Ok(new AiSettingsDto
-        {
-            ModelId = aiSettings.ModelId,
-            ApiKey = aiSettings.ApiKey,
-            EndpointUrl = aiSettings.EndpointUrl,
-            Temperature = aiSettings.Temperature,
-            TopP = aiSettings.TopP,
-            FrequencyPenalty = aiSettings.FrequencyPenalty,
-            PresencePenalty = aiSettings.PresencePenalty
-        });
-    }
-
-    [HttpPost("/api/SaveAiSettings")]
-    public async Task<IActionResult> SaveAiSettings([FromBody] AiSettingsDto aiSettings)
-    {
-        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == aiSettings.UserId);
-        if (user is null) return NotFound();
-
-        if (user.Preferences is null)
-            return BadRequest("User preferences not found");
-
-        AiSettings? aiSettingsExisting = await context.AiSettings.FirstOrDefaultAsync(a => a.UserPreferencesId == user.Preferences.Id);
-
-        if (aiSettingsExisting is null)
-        {
-            AiSettings newAiSettings = new()
-            {
-                ModelId = aiSettings.ModelId,
-                Temperature = aiSettings.Temperature,
-                EndpointUrl = aiSettings.EndpointUrl,
-                ApiKey = aiSettings.ApiKey,
-                UserPreferencesId = user.Preferences.Id,
-                UserPreferences = user.Preferences,
-                TopP = aiSettings.TopP,
-                FrequencyPenalty = aiSettings.FrequencyPenalty,
-                PresencePenalty = aiSettings.PresencePenalty
-            };
-            context.AiSettings.Add(newAiSettings);
-        }
-        else
-        {
-            aiSettingsExisting.ModelId = aiSettings.ModelId;
-            aiSettingsExisting.Temperature = aiSettings.Temperature;
-            aiSettingsExisting.EndpointUrl = aiSettings.EndpointUrl;
-            aiSettingsExisting.ApiKey = aiSettings.ApiKey;
-            aiSettingsExisting.TopP = aiSettings.TopP;
-            aiSettingsExisting.FrequencyPenalty = aiSettings.FrequencyPenalty;
-            aiSettingsExisting.PresencePenalty = aiSettings.PresencePenalty;
-        }
-
-        await context.SaveChangesAsync();
-
         return Ok();
     }
 }

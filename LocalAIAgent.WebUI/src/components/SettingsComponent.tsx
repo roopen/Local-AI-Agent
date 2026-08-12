@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import PromptSettingsComponent from './PromptSettingsComponent';
 import AuthenticationSettingsComponent from './AuthenticationSettingsComponent';
 import FeedSettingsComponent from './FeedSettingsComponent';
+import LlmSettingsComponent from './LlmSettingsComponent';
 
 interface SettingsComponentProps {
     onSave?: () => Promise<void>;
 }
 
-type SettingsTab = 'prompt' | 'feeds' | 'auth';
+type SettingsTab = 'prompt' | 'llm' | 'feeds' | 'auth';
 
 const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('prompt');
@@ -17,6 +18,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
             <h1 className="settings-page-title">Settings</h1>
 
             <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 0 }}>
+                <button
+                    className={`settings-tab${activeTab === 'llm' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('llm')}>
+                    LLM API
+                </button>
                 <button
                     className={`settings-tab${activeTab === 'prompt' ? ' active' : ''}`}
                     onClick={() => setActiveTab('prompt')}>
@@ -35,6 +41,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
             </div>
 
             {activeTab === 'prompt' && <PromptSettingsComponent onSave={onSave} />}
+            {activeTab === 'llm' && <LlmSettingsComponent onSave={onSave} />}
             {activeTab === 'feeds' && <FeedSettingsComponent />}
             {activeTab === 'auth' && <AuthenticationSettingsComponent />}
         </div>

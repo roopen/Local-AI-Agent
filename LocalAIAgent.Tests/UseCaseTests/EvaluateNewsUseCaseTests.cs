@@ -54,7 +54,11 @@ public class EvaluateNewsUseCaseTests
 
         configureRepo?.Invoke(repo);
 
-        EvaluateNewsUseCase sut = new(chat, TestOptions, cache, repo.Object, NullLogger<EvaluateNewsUseCase>.Instance);
+        EvaluateNewsUseCase sut = new(
+            new FakeLlmRuntimeManager(TestOptions, chat),
+            cache,
+            repo.Object,
+            NullLogger<EvaluateNewsUseCase>.Instance);
         return (sut, chat, repo);
     }
 
@@ -163,7 +167,11 @@ public class EvaluateNewsUseCaseTests
         (EvaluateNewsUseCase sut, _, Mock<INewsDatasetRepository> repo) = BuildSut();
         FakeChatClient chat = new();
         chat.EnqueueStreamingText("""[{"ArticleIndex":0,"Relevancy":"High"}]""");
-        sut = new EvaluateNewsUseCase(chat, TestOptions, new MemoryCache(new MemoryCacheOptions()), repo.Object, NullLogger<EvaluateNewsUseCase>.Instance);
+        sut = new EvaluateNewsUseCase(
+            new FakeLlmRuntimeManager(TestOptions, chat),
+            new MemoryCache(new MemoryCacheOptions()),
+            repo.Object,
+            NullLogger<EvaluateNewsUseCase>.Instance);
 
         await sut.EvaluateArticlesV2([item], TestPrefs);
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LocalAIAgent.Application.News.AI
 {
@@ -18,8 +19,7 @@ namespace LocalAIAgent.Application.News.AI
     internal class GetTranslationUseCase(
         IEnumerable<BaseNewsClientSettings> newsClientSettings,
         IArticleTranslationRepository translationRepository,
-        IChatClient chatClient,
-        AIOptions options,
+        ILlmRuntimeManager runtimeManager,
         ILogger<GetTranslationUseCase> logger) : IGetTranslationUseCase
     {
         private const int TranslationBatchSize = 5;
@@ -27,13 +27,16 @@ namespace LocalAIAgent.Application.News.AI
 
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
         {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-
-        private static readonly JsonSerializerOptions s_jsonDeserializerOptions = new()
-        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true
         };
+
+        private static readonly ChatResponseFormat s_translationResponseFormat =
+            ChatResponseFormat.ForJsonSchema<TranslationResponse>(
+                s_jsonSerializerOptions,
+                schemaName: "translation_response",
+                schemaDescription: "Translations keyed by their unchanged input index.");
 
         public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
         {
@@ -71,11 +74,12 @@ namespace LocalAIAgent.Application.News.AI
 
             if (uncachedArticles.Count is 0) return articles;
 
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
             int translatedCount = 0;
             for (int i = 0; i < uncachedArticles.Count; i += TranslationBatchSize)
             {
                 List<NewsArticle> batch = uncachedArticles.Skip(i).Take(TranslationBatchSize).ToList();
-                translatedCount += await TranslateBatchWithFallbackAsync(batch, targetLanguage);
+                translatedCount += await TranslateBatchWithFallbackAsync(batch, targetLanguage, runtime);
             }
 
             stopwatch.Stop();
@@ -85,91 +89,116 @@ namespace LocalAIAgent.Application.News.AI
             return articles;
         }
 
-        private record TranslationDto(string Title, string Summary);
+        private sealed record TranslationDto(
+            [property: JsonPropertyName("index")] int Index,
+            [property: JsonPropertyName("title")] string Title,
+            [property: JsonPropertyName("summary")] string Summary);
+
+        private sealed record TranslationResponse(
+            [property: JsonPropertyName("translations")] List<TranslationDto> Translations);
+
+        private sealed record LegacyTranslationDto(
+            [property: JsonPropertyName("title")] string Title,
+            [property: JsonPropertyName("summary")] string Summary);
+
+        private sealed record TranslationAttemptResult(
+            int TranslatedCount,
+            List<NewsArticle> UnresolvedArticles);
 
         public string GetSystemPrompt(string targetLanguage)
         {
-            // Accept either an ISO code ("en") or a name ("English"); the LLM gets the name.
             string languageName = Languages.GetDisplayName(targetLanguage);
-            return $@"
-                <|think|>
-                ## Role
-                Translate news JSON objects into {languageName}.
-
-                ## Critical Logic (<|channel>thought)
-                For each article:
-                1. Identify Source Language (e.g., Traditional Chinese).
-                2. List 2-3 'Anchor Terms' (e.g., OPEC+, AFP, technical nouns) and their {languageName} equivalents.
-                3. Explicitly set internal state to {languageName} mode.
-                *Do NOT write full draft sentences here.*
-
-                ## Output Rules
-                - Provide ONLY the JSON array after the <channel|> tag.
-                - Translate 'title' and 'summary' only.
-                - Strict JSON: No markdown, no trailing commas, start with '['.
-
-                [EXAMPLE]
-                User: [{{""title"": ""OPEC+：能源設施修復費時"", ""summary"": ""法新社報導...""}}]
-                Model:
-                <|channel>thought
-                - Art 0: Traditional Chinese.
-                - Anchors: OPEC+ (OPEC+), 法新社 (AFP), 修復 (Repair).
-                - Mode: {languageName}.
-                <channel|>
-                [{{""title"": ""OPEC+: Energy Facility Repairs Are Time-Consuming"", ""summary"": ""AFP reports...""}}]
-                [END EXAMPLE]
-                <|turn>";
+            return $"""
+                Translate every news item into {languageName}.
+                Preserve facts, names, numbers, dates, quotations, links, and meaning.
+                Do not summarize, explain, or add information.
+                Copy each input index unchanged and return only the required JSON.
+                """;
         }
 
-        private async Task<int> TranslateBatchWithFallbackAsync(List<NewsArticle> batch, string targetLanguage)
+        private async Task<int> TranslateBatchWithFallbackAsync(
+            List<NewsArticle> batch,
+            string targetLanguage,
+            LlmRuntimeSnapshot runtime)
         {
             if (batch.Count == 0)
                 return 0;
 
-            if (await TryTranslateBatchAsync(batch, targetLanguage))
-                return batch.Count;
+            TranslationAttemptResult attempt = await TryTranslateBatchAsync(batch, targetLanguage, runtime);
+            if (attempt.UnresolvedArticles.Count == 0)
+                return attempt.TranslatedCount;
 
             if (batch.Count == 1)
             {
-                for (int attempt = 1; attempt < SingleArticleMaxAttempts; attempt++)
+                int translatedCount = attempt.TranslatedCount;
+                for (int retry = 1; retry < SingleArticleMaxAttempts; retry++)
                 {
-                    if (await TryTranslateBatchAsync(batch, targetLanguage))
-                        return 1;
+                    TranslationAttemptResult retryResult =
+                        await TryTranslateBatchAsync(attempt.UnresolvedArticles, targetLanguage, runtime);
+                    translatedCount += retryResult.TranslatedCount;
+                    if (retryResult.UnresolvedArticles.Count == 0)
+                        return translatedCount;
                 }
 
                 logger.LogWarning("GetTranslationUseCase: failed to translate article {ArticleLink}; leaving original text",
                     batch[0].Link);
-                return 0;
+                return translatedCount;
             }
 
+            if (attempt.TranslatedCount > 0)
+            {
+                logger.LogWarning(
+                    "GetTranslationUseCase: recovered {TranslatedCount}/{BatchSize} translations; retrying only {MissingCount} missing articles",
+                    attempt.TranslatedCount,
+                    batch.Count,
+                    attempt.UnresolvedArticles.Count);
+
+                return attempt.TranslatedCount
+                    + await TranslateBatchWithFallbackAsync(attempt.UnresolvedArticles, targetLanguage, runtime);
+            }
+
+            int splitIndex = (batch.Count + 1) / 2;
             logger.LogWarning(
-                "GetTranslationUseCase: batch of {BatchSize} failed; retrying articles individually",
-                batch.Count);
+                "GetTranslationUseCase: batch of {BatchSize} failed; retrying as batches of {FirstBatchSize} and {SecondBatchSize}",
+                batch.Count,
+                splitIndex,
+                batch.Count - splitIndex);
 
-            int translatedCount = 0;
-            foreach (NewsArticle article in batch)
-                translatedCount += await TranslateBatchWithFallbackAsync([article], targetLanguage);
-
-            return translatedCount;
+            List<NewsArticle> firstBatch = batch.GetRange(0, splitIndex);
+            List<NewsArticle> secondBatch = batch.GetRange(splitIndex, batch.Count - splitIndex);
+            return await TranslateBatchWithFallbackAsync(firstBatch, targetLanguage, runtime)
+                + await TranslateBatchWithFallbackAsync(secondBatch, targetLanguage, runtime);
         }
 
-        private async Task<bool> TryTranslateBatchAsync(List<NewsArticle> batch, string targetLanguage)
+        private async Task<TranslationAttemptResult> TryTranslateBatchAsync(
+            List<NewsArticle> batch,
+            string targetLanguage,
+            LlmRuntimeSnapshot runtime)
         {
-            // Capture originals before they are overwritten
+            IChatClient chatClient = runtime.ChatClient;
+            AIOptions options = runtime.Options;
             List<(string OriginalTitle, string OriginalSummary)> originals = batch
                 .Select(a => (a.Title, a.Summary))
                 .ToList();
 
-            var articlesToTranslateForJson = batch.Select(a => new { title = a.Title, summary = a.Summary }).ToList();
+            var articlesToTranslateForJson = batch.Select((a, index) => new
+            {
+                index,
+                title = a.Title,
+                summary = a.Summary
+            }).ToList();
             string combinedText = JsonSerializer.Serialize(articlesToTranslateForJson, s_jsonSerializerOptions);
 
             string systemPrompt = GetSystemPrompt(targetLanguage);
-            ChatOptions chatOptions = options.BuildChatOptions();
+            ChatOptions chatOptions = options.BuildChatOptions(s_translationResponseFormat);
+            chatOptions.Temperature = 0;
+            chatOptions.FrequencyPenalty = 0;
+            chatOptions.PresencePenalty = 0;
 
             List<ChatMessage> messages =
             [
                 new ChatMessage(ChatRole.System, systemPrompt),
-                new ChatMessage(ChatRole.User, $"Translate this JSON array to {Languages.GetDisplayName(targetLanguage)}. Maintain the JSON structure perfectly:\n{combinedText}"),
+                new ChatMessage(ChatRole.User, $"Translate every item. Input JSON:\n{combinedText}"),
             ];
 
             StringBuilder resultBuilder = new();
@@ -189,73 +218,128 @@ namespace LocalAIAgent.Application.News.AI
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "GetTranslationUseCase: translation request failed for batch size {BatchSize}",
-                    batch.Count);
-                return false;
+                logger.LogWarning(
+                    "GetTranslationUseCase: translation request failed for batch size {BatchSize}: {Message}",
+                    batch.Count,
+                    LlmErrorSanitizer.GetSafeMessage(ex));
+                throw;
             }
 
             string result = resultBuilder.ToString();
+            List<TranslationDto>? translatedArticles = DeserializeTranslations(result, batch.Count);
+            if (translatedArticles is null)
+            {
+                logger.LogWarning(
+                    "GetTranslationUseCase: translation response was not valid JSON in the expected shape. Response: {LlmResponse}",
+                    result);
+                return new TranslationAttemptResult(0, batch);
+            }
 
-            // Extract the JSON array, discarding any reasoning or markdown the model emitted around it
-            result = ExtractJsonArray(result);
+            Dictionary<int, TranslationDto> validTranslations = translatedArticles
+                .Where(t => t.Index >= 0
+                    && t.Index < batch.Count
+                    && !string.IsNullOrWhiteSpace(t.Title)
+                    && t.Summary is not null)
+                .GroupBy(t => t.Index)
+                .Where(group => group.Count() == 1)
+                .ToDictionary(group => group.Key, group => group.Single());
 
-            result = SanitizeJsonResponse(result);
+            List<NewsArticle> translatedBatch = [];
+            List<(string OriginalTitle, string OriginalSummary)> translatedOriginals = [];
+            List<NewsArticle> unresolvedArticles = [];
+
+            for (int i = 0; i < batch.Count; i++)
+            {
+                if (!validTranslations.TryGetValue(i, out TranslationDto? translation))
+                {
+                    unresolvedArticles.Add(batch[i]);
+                    continue;
+                }
+
+                batch[i].Title = translation.Title;
+                batch[i].Summary = translation.Summary;
+                translatedBatch.Add(batch[i]);
+                translatedOriginals.Add(originals[i]);
+            }
+
+            if (unresolvedArticles.Count > 0 || translatedArticles.Count != batch.Count)
+            {
+                logger.LogWarning(
+                    "GetTranslationUseCase: expected {ExpectedCount} unique translations, accepted {AcceptedCount}; {MissingCount} will be retried. Response: {LlmResponse}",
+                    batch.Count,
+                    translatedBatch.Count,
+                    unresolvedArticles.Count,
+                    result);
+            }
+
+            if (options.UseResultsForDataset && translatedBatch.Count > 0)
+            {
+                await translationRepository.SaveTranslationsAsync(
+                    translatedBatch,
+                    translatedOriginals,
+                    targetLanguage);
+            }
+
+            return new TranslationAttemptResult(translatedBatch.Count, unresolvedArticles);
+        }
+
+        private static List<TranslationDto>? DeserializeTranslations(string result, int expectedCount)
+        {
+            result = StripResponseDecorations(result);
 
             try
             {
-                List<TranslationDto>? translatedArticles = JsonSerializer.Deserialize<List<TranslationDto>>(result, s_jsonDeserializerOptions);
-
-                if (translatedArticles is null)
-                    return false;
-
-                if (translatedArticles.Count != batch.Count)
+                int objectStart = result.IndexOf('{');
+                int objectEnd = result.LastIndexOf('}');
+                if (objectStart >= 0 && objectEnd >= objectStart)
                 {
-                    logger.LogWarning(
-                        "GetTranslationUseCase: translation response length mismatch. Expected {ExpectedCount}, got {ActualCount}. Response: {LlmResponse}",
-                        batch.Count,
-                        translatedArticles.Count,
-                        result);
-                    return false;
+                    string jsonObject = SanitizeJsonResponse(result[objectStart..(objectEnd + 1)]);
+                    TranslationResponse? response =
+                        JsonSerializer.Deserialize<TranslationResponse>(jsonObject, s_jsonSerializerOptions);
+                    if (response?.Translations is not null)
+                        return response.Translations;
                 }
-
-                if (translatedArticles.Any(t => string.IsNullOrWhiteSpace(t.Title) || t.Summary is null))
-                {
-                    logger.LogWarning(
-                        "GetTranslationUseCase: translation response contained missing title or summary. Response: {LlmResponse}",
-                        result);
-                    return false;
-                }
-
-                for (int i = 0; i < batch.Count; i++)
-                {
-                    batch[i].Title = translatedArticles[i].Title;
-                    batch[i].Summary = translatedArticles[i].Summary;
-                }
-
-                if (options.UseResultsForDataset)
-                    await translationRepository.SaveTranslationsAsync(batch, originals, targetLanguage);
-
-                return true;
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
-                logger.LogWarning(ex, "Error deserializing translation response. LLM response: {LlmResponse}", result);
-                return false;
+                // Fall through to the legacy array format used by older fine-tunes.
+            }
+
+            try
+            {
+                string jsonArray = SanitizeJsonResponse(ExtractJsonArray(result));
+                List<LegacyTranslationDto>? legacy =
+                    JsonSerializer.Deserialize<List<LegacyTranslationDto>>(jsonArray, s_jsonSerializerOptions);
+
+                if (legacy?.Count != expectedCount)
+                    return null;
+
+                return legacy
+                    .Select((translation, index) =>
+                        new TranslationDto(index, translation.Title, translation.Summary))
+                    .ToList();
+            }
+            catch (JsonException)
+            {
+                return null;
             }
         }
 
-        private static string ExtractJsonArray(string result)
+        private static string StripResponseDecorations(string result)
         {
             const string channelMarker = "<channel|>";
             int markerIndex = result.LastIndexOf(channelMarker, StringComparison.Ordinal);
             if (markerIndex >= 0)
                 result = result[(markerIndex + channelMarker.Length)..];
 
-            result = result
+            return result
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Trim();
+        }
 
+        private static string ExtractJsonArray(string result)
+        {
             int arrayStart = result.IndexOf('[');
             int arrayEnd = result.LastIndexOf(']');
             return arrayStart >= 0 && arrayEnd >= arrayStart

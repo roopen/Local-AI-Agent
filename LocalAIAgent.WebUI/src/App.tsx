@@ -22,7 +22,7 @@ const MainApp = () => {
 
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isUserPreferencesSet, setIsUserPreferencesSet] = useState(false);
+    const [isSetupComplete, setIsSetupComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const checkLoginStatus = useCallback(async () => {
@@ -31,14 +31,17 @@ function App() {
             setIsLoggedIn(loginStatus);
             if (loginStatus) {
                 const currentUser = userService.getCurrentUser();
-                const userPreferences = await userService.getUserPreferences(currentUser!.id);
+                const [userPreferences, aiSettings] = await Promise.all([
+                    userService.getUserPreferences(currentUser!.id),
+                    userService.getAiSettings(),
+                ]);
 
-                if (!userPreferences || userPreferences.isEmpty()) {
-                    setIsUserPreferencesSet(false);
-                }
-                else {
-                    setIsUserPreferencesSet(true);
-                }
+                setIsSetupComplete(Boolean(
+                    userPreferences
+                    && !userPreferences.isEmpty()
+                    && aiSettings.isConfigured));
+            } else {
+                setIsSetupComplete(false);
             }
         } finally {
             setIsLoading(false);
@@ -47,7 +50,7 @@ function App() {
 
     useEffect(() => {
         checkLoginStatus();
-    }, [isUserPreferencesSet, checkLoginStatus]);
+    }, [checkLoginStatus]);
 
     const handleLogin = async () => {
         await checkLoginStatus();
@@ -62,18 +65,18 @@ function App() {
             <Routes>
                 <Route path="/" element={
                     <ProtectedRoute condition={isLoggedIn && !isLoading} redirectTo="/login">
-                        <ProtectedRoute condition={isUserPreferencesSet} redirectTo="/setup">
+                        <ProtectedRoute condition={isSetupComplete} redirectTo="/setup">
                             <MainApp />
                         </ProtectedRoute>
                     </ProtectedRoute>}
                 />
                 <Route path="/news" element={
-                    <ProtectedRoute condition={isUserPreferencesSet && !isLoading} redirectTo="/setup">
+                    <ProtectedRoute condition={isSetupComplete && !isLoading} redirectTo="/setup">
                         <MainApp />
                     </ProtectedRoute>
                 } />
                 <Route path="/setup" element={
-                    <ProtectedRoute condition={(isLoggedIn && !isUserPreferencesSet && !isLoading)} redirectTo="/login">
+                    <ProtectedRoute condition={(isLoggedIn && !isSetupComplete && !isLoading)} redirectTo="/login">
                         <SetupComponent />
                     </ProtectedRoute>
                 } />

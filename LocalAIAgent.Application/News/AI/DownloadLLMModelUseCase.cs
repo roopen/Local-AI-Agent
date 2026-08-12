@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using LocalAIAgent.Application.Chat;
 using Serilog;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -13,7 +13,7 @@ public interface IDownloadLLMModelUseCase
 }
 
 internal class DownloadLLMModelUseCase(
-    IConfiguration configuration,
+    ILlmRuntimeManager runtimeManager,
     HttpClient httpClient) : IDownloadLLMModelUseCase
 {
     private sealed record DownloadModelRequest(
@@ -21,10 +21,8 @@ internal class DownloadLLMModelUseCase(
 
     public async Task<bool> DownloadModelAsync(string modelId)
     {
-        string endpointUrl = configuration["AIOptions:EndpointUrl"]
-            ?? throw new InvalidOperationException("AIOptions:EndpointUrl is not configured.");
-
-        Uri downloadUrl = new(new Uri(endpointUrl), "/api/v1/models/download");
+        AIOptions options = runtimeManager.GetRequiredSnapshot().Options;
+        Uri downloadUrl = new(new Uri(options.EndpointUrl), "/api/v1/models/download");
 
         try
         {
@@ -36,9 +34,8 @@ internal class DownloadLLMModelUseCase(
                 })
             };
 
-            string? apiToken = Environment.GetEnvironmentVariable("LM_API_TOKEN");
-            if (!string.IsNullOrEmpty(apiToken))
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
+            if (!string.IsNullOrEmpty(options.ApiKey))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
             using HttpResponseMessage response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
@@ -47,7 +44,10 @@ internal class DownloadLLMModelUseCase(
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to download LLM model {ModelId}", modelId);
+            Log.Warning(
+                "Failed to download LLM model {ModelId}: {Message}",
+                modelId,
+                LlmErrorSanitizer.GetSafeMessage(ex));
             return false;
         }
     }

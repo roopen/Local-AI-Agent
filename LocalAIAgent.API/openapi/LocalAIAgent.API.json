@@ -74,6 +74,81 @@
         }
       }
     },
+    "/api/ai-settings": {
+      "get": {
+        "tags": [
+          "AiSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AiSettings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiSettingsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiSettingsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Feeds/Languages": {
       "get": {
         "tags": [
@@ -785,88 +860,6 @@
           }
         }
       }
-    },
-    "/api/UserPreferences/api/GetAiSettings": {
-      "post": {
-        "tags": [
-          "UserPreferences"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "integer",
-                "format": "int32"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "type": "integer",
-                "format": "int32"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "type": "integer",
-                "format": "int32"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiSettingsDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiSettingsDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiSettingsDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/SaveAiSettings": {
-      "post": {
-        "tags": [
-          "UserPreferences"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AiSettingsDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AiSettingsDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AiSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     }
   },
   "components": {
@@ -902,22 +895,20 @@
         },
         "additionalProperties": false
       },
-      "AiSettingsDto": {
+      "AiSettingsResponse": {
         "required": [
           "endpointUrl",
           "modelId"
         ],
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "integer",
-            "format": "int32"
+          "isConfigured": {
+            "type": "boolean"
+          },
+          "hasApiKey": {
+            "type": "boolean"
           },
           "modelId": {
-            "type": "string",
-            "nullable": true
-          },
-          "apiKey": {
             "type": "string",
             "nullable": true
           },
@@ -1941,6 +1932,55 @@
         },
         "additionalProperties": false
       },
+      "UpdateAiSettingsRequest": {
+        "required": [
+          "endpointUrl",
+          "modelId"
+        ],
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "endpointUrl": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "clearApiKey": {
+            "type": "boolean"
+          },
+          "temperature": {
+            "maximum": 2,
+            "minimum": 0,
+            "type": "number",
+            "format": "double"
+          },
+          "topP": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "format": "double"
+          },
+          "frequencyPenalty": {
+            "maximum": 2,
+            "minimum": -2,
+            "type": "number",
+            "format": "double"
+          },
+          "presencePenalty": {
+            "maximum": 2,
+            "minimum": -2,
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
       "User": {
         "required": [
           "fido2Id",
@@ -2107,6 +2147,9 @@
   "tags": [
     {
       "name": "AI"
+    },
+    {
+      "name": "AiSettings"
     },
     {
       "name": "Feeds"

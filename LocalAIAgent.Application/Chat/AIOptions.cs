@@ -2,18 +2,23 @@
 
 namespace LocalAIAgent.Application.Chat
 {
-    public class AIOptions
+    public sealed class AIApplicationOptions
     {
-        public required string ModelId { get; set; }
-        public required string EndpointUrl { get; set; }
-        public string ApiKey { get; set; } = string.Empty;
+        public bool UseResultsForDataset { get; init; }
+    }
 
-        public bool UseResultsForDataset { get; set; }
+    public sealed class AIOptions
+    {
+        public required string ModelId { get; init; }
+        public required string EndpointUrl { get; init; }
+        public string ApiKey { get; init; } = string.Empty;
 
-        public decimal Temperature { get; set; }
-        public decimal TopP { get; set; }
-        public decimal FrequencyPenalty { get; set; }
-        public decimal PresencePenalty { get; set; }
+        public bool UseResultsForDataset { get; init; }
+
+        public decimal Temperature { get; init; }
+        public decimal TopP { get; init; }
+        public decimal FrequencyPenalty { get; init; }
+        public decimal PresencePenalty { get; init; }
 
         public ChatOptions BuildChatOptions(ChatResponseFormat? responseFormat = null)
         {

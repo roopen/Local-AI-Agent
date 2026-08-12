@@ -4,9 +4,11 @@ using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.Application;
+using LocalAIAgent.Application.Chat;
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Application.News.AI;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Diagnostics;
@@ -36,6 +38,17 @@ namespace LocalAIAgent.API
                     serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
                 });
 
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string localAppFolder = Path.Combine(localAppData, "LocalAIAgent");
+                Directory.CreateDirectory(localAppFolder);
+                string dataProtectionKeysPath = builder.Configuration["DATA_PROTECTION_KEYS_PATH"]
+                    ?? Path.Combine(localAppFolder, "DataProtectionKeys");
+                builder.Services.AddDataProtection()
+                    .SetApplicationName("LocalAIAgent")
+                    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+                builder.Services.AddSingleton<IAiSettingsSecretProtector, AiSettingsSecretProtector>();
+                builder.Services.AddScoped<AiSettingsStartupService>();
+
                 string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");
                 if (!string.IsNullOrEmpty(httpsUrl))
                 {
@@ -51,10 +64,7 @@ namespace LocalAIAgent.API
                     }
                     else
                     {
-                        string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                        string appFolder = Path.Combine(appData, "LocalAIAgent");
-                        Directory.CreateDirectory(appFolder);
-                        connectionString = Path.Combine(appFolder, "ainews.db");
+                        connectionString = Path.Combine(localAppFolder, "ainews.db");
                     }
                 }
 
@@ -132,7 +142,11 @@ namespace LocalAIAgent.API
                 {
                     UserContext dbContext = scope.ServiceProvider.GetRequiredService<UserContext>();
                     if (!isIntegrationTests && !isSwaggerGen)
+                    {
                         dbContext.Database.Migrate();
+                        scope.ServiceProvider.GetRequiredService<AiSettingsStartupService>()
+                            .UpgradePlaintextTokensAsync().GetAwaiter().GetResult();
+                    }
                 }
 
                 // Configure the HTTP request pipeline.
@@ -165,8 +179,10 @@ namespace LocalAIAgent.API
                 // Run initial news fetch on startup
                 if (!isIntegrationTests && !isSwaggerGen)
                 {
+                    using IServiceScope startupScope = app.Services.CreateScope();
+                    startupScope.ServiceProvider.GetRequiredService<AiSettingsStartupService>()
+                        .ActivateFirstAndWarmUpAsync().GetAwaiter().GetResult();
                     InitializeNewsCache(app);
-                    LoadLLMOnStartup(app).Wait();
                 }
 
                 app.Run();
@@ -221,32 +237,5 @@ namespace LocalAIAgent.API
             }
         }
 
-        private static async Task LoadLLMOnStartup(WebApplication app)
-        {
-            IServiceScopeFactory scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-            await Task.Run(async () =>
-            {
-                using IServiceScope scope = scopeFactory.CreateScope();
-
-                UserContext userContext = scope.ServiceProvider.GetRequiredService<UserContext>();
-                AiSettings? settings = await userContext.AiSettings.FirstOrDefaultAsync();
-
-                IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-
-                if (settings is not null)
-                {
-                    configuration["AIOptions:ModelId"] = settings.ModelId;
-                    configuration["AIOptions:ApiKey"] = settings.ApiKey;
-                    configuration["AIOptions:EndpointUrl"] = settings.EndpointUrl;
-                    configuration["AIOptions:Temperature"] = settings.Temperature.ToString(CultureInfo.InvariantCulture);
-                    configuration["AIOptions:TopP"] = settings.TopP.ToString(CultureInfo.InvariantCulture);
-                    configuration["AIOptions:FrequencyPenalty"] = settings.FrequencyPenalty.ToString(CultureInfo.InvariantCulture);
-                    configuration["AIOptions:PresencePenalty"] = settings.PresencePenalty.ToString(CultureInfo.InvariantCulture);
-                }
-
-                ILoadLLMUseCase loadLLMUseCase = scope.ServiceProvider.GetRequiredService<ILoadLLMUseCase>();
-                await loadLLMUseCase.LoadLLMUseCaseAsync();
-            });
-        }
     }
 }

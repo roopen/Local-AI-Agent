@@ -10,11 +10,13 @@ namespace LocalAIAgent.Application.News.AI
     }
 
     internal class NewsChatUseCase(
-        IChatClient chatClient,
-        AIOptions options) : INewsChatUseCase
+        ILlmRuntimeManager runtimeManager) : INewsChatUseCase
     {
         public async Task<ExpandedNewsResult> GetExpandedNewsAsync(string article)
         {
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
+            IChatClient chatClient = runtime.ChatClient;
+            AIOptions options = runtime.Options;
             string prompt =
                 "User is reading a news summary. " +
                 "Translate the news to English. If the article is already in English, don't include a translation." +

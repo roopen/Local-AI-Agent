@@ -3,6 +3,7 @@ using LocalAIAgent.Application.News;
 using LocalAIAgent.Application.News.AI;
 using LocalAIAgent.Domain;
 using LocalAIAgent.Tests.TestInfrastructure;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -60,8 +61,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubEnglishSource()],
             repo.Object,
-            chat,
-            Options(),
+            new FakeLlmRuntimeManager(Options(), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         List<NewsArticle> articles = [Article("Hello", "World", "https://english.example/x", "english.example", sourceLanguage: "en")];
@@ -87,8 +87,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(),
+            new FakeLlmRuntimeManager(Options(), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         List<NewsArticle> articles = [Article("Original", "Original summary", "https://taiwan.example/a", "taiwan.example")];
@@ -112,8 +111,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("news.taiwan.tw")],
             repo.Object,
-            chat,
-            Options(useResultsForDataset: false),
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         // Each article carries its own language; the filter is purely article-level.
@@ -154,8 +152,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(useResultsForDataset: false),
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         List<NewsArticle> articles = [.. Enumerable.Range(0, 6)
@@ -183,13 +180,12 @@ public class GetTranslationUseCaseTests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        chat.EnqueueStreamingText("""[{"Title":"Hola","Summary":"Mundo"}]""");
+        chat.EnqueueStreamingText("""{"translations":[{"index":0,"title":"Hola","summary":"Mundo"}]}""");
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(),
+            new FakeLlmRuntimeManager(Options(), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         NewsArticle article = Article("foreign title", "foreign summary", "https://taiwan.example/a", "taiwan.example");
@@ -198,10 +194,27 @@ public class GetTranslationUseCaseTests
 
         Assert.Equal("Hola", article.Title);
         Assert.Equal("Mundo", article.Summary);
+
+        RecordedCall call = Assert.Single(chat.Calls);
+        Assert.NotNull(call.Options);
+        Assert.Equal(0f, call.Options.Temperature.GetValueOrDefault());
+        Assert.Equal(0f, call.Options.FrequencyPenalty.GetValueOrDefault());
+        Assert.Equal(0f, call.Options.PresencePenalty.GetValueOrDefault());
+
+        ChatResponseFormatJson responseFormat = Assert.IsType<ChatResponseFormatJson>(call.Options.ResponseFormat);
+        Assert.True(responseFormat.Schema.HasValue);
+
+        string systemPrompt = call.Messages.Single(m => m.Role == ChatRole.System).Text!;
+        Assert.DoesNotContain("<|think|>", systemPrompt);
+        Assert.DoesNotContain("<|channel>", systemPrompt);
+        Assert.DoesNotContain("<|turn>", systemPrompt);
+
+        string userPayload = call.Messages.Single(m => m.Role == ChatRole.User).Text!;
+        Assert.Contains("\"index\":0", userPayload);
     }
 
     [Fact]
-    public async Task TranslateArticleAsync_BatchLengthMismatch_FallsBackToSingleArticleTranslations()
+    public async Task TranslateArticleAsync_PartialIndexedBatchResponse_RetriesOnlyMissingArticle()
     {
         FakeChatClient chat = new();
         Mock<IArticleTranslationRepository> repo = new();
@@ -213,17 +226,20 @@ public class GetTranslationUseCaseTests
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // First response is structurally valid JSON, but invalid for the 3-article request.
-        chat.EnqueueStreamingText("""[{"Title":"partial one","Summary":"partial"},{"Title":"partial two","Summary":"partial"}]""");
-        chat.EnqueueStreamingText("""[{"Title":"Uno","Summary":"Uno summary"}]""");
-        chat.EnqueueStreamingText("""[{"Title":"Dos","Summary":"Dos summary"}]""");
-        chat.EnqueueStreamingText("""[{"Title":"Tres","Summary":"Tres summary"}]""");
+        chat.EnqueueStreamingText("""
+            {"translations":[
+                {"index":0,"title":"Uno","summary":"Uno summary"},
+                {"index":2,"title":"Tres","summary":"Tres summary"}
+            ]}
+            """);
+        chat.EnqueueStreamingText("""
+            {"translations":[{"index":0,"title":"Dos","summary":"Dos summary"}]}
+            """);
 
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(),
+            new FakeLlmRuntimeManager(Options(), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         List<NewsArticle> articles =
@@ -236,17 +252,23 @@ public class GetTranslationUseCaseTests
         await sut.TranslateArticleAsync(articles, "Spanish");
 
         Assert.Equal(["Uno", "Dos", "Tres"], articles.Select(a => a.Title));
-        Assert.Equal(4, chat.Calls.Count);
+        Assert.Equal(2, chat.Calls.Count);
+
+        string retryPayload = chat.Calls[1].Messages.Single(m => m.Role == ChatRole.User).Text!;
+        Assert.Contains("\"title\":\"two\"", retryPayload);
+        Assert.DoesNotContain("\"title\":\"one\"", retryPayload);
+        Assert.DoesNotContain("\"title\":\"three\"", retryPayload);
+
         repo.Verify(r => r.SaveTranslationsAsync(
-            It.Is<List<NewsArticle>>(batch => batch.Count > 1),
+            It.Is<List<NewsArticle>>(batch => batch.Count == 2),
             It.IsAny<List<(string, string)>>(),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+            "Spanish",
+            It.IsAny<CancellationToken>()), Times.Once);
         repo.Verify(r => r.SaveTranslationsAsync(
             It.Is<List<NewsArticle>>(batch => batch.Count == 1),
             It.IsAny<List<(string, string)>>(),
             "Spanish",
-            It.IsAny<CancellationToken>()), Times.Exactly(3));
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -263,8 +285,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(useResultsForDataset: false),
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         NewsArticle article = Article("foreign", "summary", "https://taiwan.example/a", "taiwan.example");
@@ -272,6 +293,28 @@ public class GetTranslationUseCaseTests
 
         Assert.Equal("Hola", article.Title);
         Assert.Equal(2, chat.Calls.Count);
+    }
+
+    [Fact]
+    public async Task TranslateArticleAsync_RequestFailure_PropagatesToCaller()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        NewsArticle article = Article("foreign", "summary", "https://taiwan.example/a", "taiwan.example");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.TranslateArticleAsync([article], "Spanish"));
+
+        Assert.Contains("no streaming response was queued", exception.Message);
     }
 
     [Fact]
@@ -286,8 +329,7 @@ public class GetTranslationUseCaseTests
         GetTranslationUseCase sut = new(
             [new StubTranslatableSource("taiwan.example")],
             repo.Object,
-            chat,
-            Options(useResultsForDataset: false),
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
             NullLogger<GetTranslationUseCase>.Instance);
 
         NewsArticle article = Article("foreign", "summary", "https://taiwan.example/a", "taiwan.example");

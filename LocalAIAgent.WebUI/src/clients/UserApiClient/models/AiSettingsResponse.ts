@@ -2,10 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type AiSettingsDto = {
-    userId?: number;
+export type AiSettingsResponse = {
+    isConfigured?: boolean;
+    hasApiKey?: boolean;
     modelId: string | null;
-    apiKey?: string | null;
     endpointUrl: string | null;
     temperature?: number;
     topP?: number;

@@ -1,88 +1,32 @@
-﻿using LocalAIAgent.Application.Chat;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
+using LocalAIAgent.Application.Chat;
 using Serilog;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace LocalAIAgent.Application.News.AI
 {
     public interface ILoadLLMUseCase
     {
-        Task<bool> LoadLLMUseCaseAsync();
+        Task<bool> LoadLLMUseCaseAsync(CancellationToken cancellationToken = default);
     }
 
-    internal class LoadLLMUseCase(
-        IConfiguration configuration,
-        AIOptions options,
-        HttpClient httpClient,
-        IChatClient chatClient) : ILoadLLMUseCase
+    internal class LoadLLMUseCase(ILlmRuntimeManager runtimeManager) : ILoadLLMUseCase
     {
-        private sealed record LoadModelRequest(
-            string Model,
-            int ContextLength,
-            bool FlashAttention,
-            bool EchoLoadConfig);
-
-        public async Task<bool> LoadLLMUseCaseAsync()
+        public async Task<bool> LoadLLMUseCaseAsync(CancellationToken cancellationToken = default)
         {
-            string endpointUrl = configuration["AIOptions:EndpointUrl"]
-                ?? throw new InvalidOperationException("AIOptions:EndpointUrl is not configured.");
-            string modelId = configuration["AIOptions:ModelId"]
-                ?? throw new InvalidOperationException("AIOptions:ModelId is not configured.");
-
-            if (await IsModelResponsiveAsync(modelId))
-            {
-                Log.Information("LLM model {ModelId} is already loaded and responsive, skipping explicit load", modelId);
-                return true;
-            }
-
-            Uri lmStudioLoadUrl = new(new Uri(endpointUrl), "/api/v1/models/load");
-
-            try
-            {
-                LoadModelRequest request = new(
-                    Model: modelId,
-                    ContextLength: 23322,
-                    FlashAttention: true,
-                    EchoLoadConfig: true);
-
-                using HttpRequestMessage httpRequest = new(HttpMethod.Post, lmStudioLoadUrl)
-                {
-                    Content = JsonContent.Create(request, options: new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                    })
-                };
-
-                string? apiToken = Environment.GetEnvironmentVariable("LM_API_TOKEN");
-                if (!string.IsNullOrEmpty(apiToken))
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
-
-                using HttpResponseMessage response = await httpClient.SendAsync(httpRequest);
-                response.EnsureSuccessStatusCode();
-                Log.Information("LLM model loaded: {ModelId}", modelId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Failed to load LLM model {ModelId}", modelId);
+            if (!runtimeManager.IsConfigured)
                 return false;
-            }
-        }
 
-        private async Task<bool> IsModelResponsiveAsync(string modelId)
-        {
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
             try
             {
-                List<ChatMessage> messages = [new ChatMessage(ChatRole.User, "ping")];
-                ChatResponse response = await chatClient.GetResponseAsync(messages, options.BuildChatOptions());
-                return response.Messages.Count > 0;
+                await runtimeManager.WarmUpAsync(runtime, cancellationToken);
+                Log.Information("AI model {ModelId} warm-up completed", runtime.Options.ModelId);
+                return true;
             }
-            catch (Exception ex)
+            catch (LlmConnectionException ex)
             {
-                Log.Debug(ex, "LLM model {ModelId} probe failed, will attempt explicit load", modelId);
+                Log.Warning("AI model {ModelId} warm-up failed: {Message}",
+                    runtime.Options.ModelId,
+                    ex.Message);
                 return false;
             }
         }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using LocalAIAgent.Application.Chat;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,7 +12,7 @@ public interface IGetLMStudioModelsUseCase
 }
 
 internal class GetLMStudioModelsUseCase(
-    IConfiguration configuration,
+    ILlmRuntimeManager runtimeManager,
     HttpClient httpClient) : IGetLMStudioModelsUseCase
 {
     private sealed record ModelsResponse(
@@ -20,16 +20,12 @@ internal class GetLMStudioModelsUseCase(
 
     public async Task<List<LMStudioModel>> GetModelsAsync()
     {
-        string endpointUrl = configuration["AIOptions:EndpointUrl"]
-            ?? throw new InvalidOperationException("AIOptions:EndpointUrl is not configured.");
-
-        Uri modelsUrl = new(new Uri(endpointUrl), "/api/v1/models");
-
+        AIOptions options = runtimeManager.GetRequiredSnapshot().Options;
+        Uri modelsUrl = new(new Uri(options.EndpointUrl), "/api/v1/models");
         using HttpRequestMessage request = new(HttpMethod.Get, modelsUrl);
 
-        string? apiToken = Environment.GetEnvironmentVariable("LM_API_TOKEN");
-        if (!string.IsNullOrEmpty(apiToken))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
+        if (!string.IsNullOrEmpty(options.ApiKey))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         using HttpResponseMessage response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();

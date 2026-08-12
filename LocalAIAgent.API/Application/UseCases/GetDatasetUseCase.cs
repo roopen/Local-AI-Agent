@@ -35,15 +35,20 @@ internal sealed class GetDatasetUseCase(
             string translationSystemPrompt = translationUseCase.GetSystemPrompt(group.Key);
             List<ArticleTranslation> translations = [.. group];
 
-            for (int i = 0; i < translations.Count; i += 3)
+            for (int i = 0; i < translations.Count; i += 5)
             {
-                ArticleTranslation[] batch = translations.Skip(i).Take(3).ToArray();
+                ArticleTranslation[] batch = translations.Skip(i).Take(5).ToArray();
 
-                string userContent = $"Translate this JSON array to {group.Key}. Maintain the JSON structure perfectly:\n" +
-                    JsonSerializer.Serialize(batch.Select(t => new { title = t.OriginalTitle, summary = t.OriginalSummary }));
+                string userContent = "Translate every item. Input JSON:\n" +
+                    JsonSerializer.Serialize(batch.Select((t, index) => new
+                    {
+                        index,
+                        title = t.OriginalTitle,
+                        summary = t.OriginalSummary
+                    }));
 
-                string assistantContent = JsonSerializer.Serialize(
-                    batch.Select(t => new { title = t.TranslatedTitle, summary = t.TranslatedSummary }));
+                string assistantContent = JsonSerializer.Serialize(new { translations = batch.Select((t, index) =>
+                    new { index, title = t.TranslatedTitle, summary = t.TranslatedSummary }) });
 
                 translationEntries.Add(BuildEntry(translationSystemPrompt, userContent, assistantContent));
                 translationBatchCount++;

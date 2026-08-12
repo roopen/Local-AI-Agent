@@ -8,7 +8,7 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AddCustomFeedDto } from './models/AddCustomFeedDto';
-export type { AiSettingsDto } from './models/AiSettingsDto';
+export type { AiSettingsResponse } from './models/AiSettingsResponse';
 export { Algorithm } from './models/Algorithm';
 export type { AssertionOptions } from './models/AssertionOptions';
 export type { AssertionResponse } from './models/AssertionResponse';
@@ -55,6 +55,7 @@ export type { StringAuthenticationExtensionsPRFValuesKeyValuePair } from './mode
 export type { TermString } from './models/TermString';
 export type { TermStringExplanationStringKeyValuePair } from './models/TermStringExplanationStringKeyValuePair';
 export type { ToggleFeedDto } from './models/ToggleFeedDto';
+export type { UpdateAiSettingsRequest } from './models/UpdateAiSettingsRequest';
 export type { User } from './models/User';
 export type { UserDto } from './models/UserDto';
 export type { UserId } from './models/UserId';
@@ -64,6 +65,7 @@ export { UserVerificationRequirement } from './models/UserVerificationRequiremen
 export type { VerifyAssertionResult } from './models/VerifyAssertionResult';
 
 export { AiService } from './services/AiService';
+export { AiSettingsService } from './services/AiSettingsService';
 export { FeedsService } from './services/FeedsService';
 export { Fido2Service } from './services/Fido2Service';
 export { LoginService } from './services/LoginService';

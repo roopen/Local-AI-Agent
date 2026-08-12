@@ -1,6 +1,8 @@
 export default class AISettings {
+    isConfigured: boolean;
+    hasApiKey: boolean;
     modelId: string;
-    apikey: string;
+    apiKey: string;
     endpointUrl: string;
     temperature: number;
     topP: number;
@@ -9,15 +11,19 @@ export default class AISettings {
 
     // eslint-disable-next-line complexity
     constructor(
+        isConfigured: boolean = false,
+        hasApiKey: boolean = false,
         modelId: string = 'gemma-3-27b-it-qat', 
-        apikey: string = '', 
         endpointUrl: string = 'http://localhost:1234/v1/', 
         temperature: number = 0.2,
         topP: number = 1.0,
         frequencyPenalty: number = 1.0,
-        presencePenalty: number = 1.0) {
+        presencePenalty: number = 1.0,
+        apiKey: string = '') {
+        this.isConfigured = isConfigured;
+        this.hasApiKey = hasApiKey;
         this.modelId = modelId;
-        this.apikey = apikey;
+        this.apiKey = apiKey;
         this.endpointUrl = endpointUrl;
         this.temperature = temperature;
         this.topP = topP;

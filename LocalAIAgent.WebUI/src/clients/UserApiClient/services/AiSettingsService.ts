@@ -2,38 +2,33 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { UserPreferenceDto } from '../models/UserPreferenceDto';
+import type { AiSettingsResponse } from '../models/AiSettingsResponse';
+import type { UpdateAiSettingsRequest } from '../models/UpdateAiSettingsRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
-export class UserPreferencesService {
+export class AiSettingsService {
     /**
-     * @param userId
-     * @returns UserPreferenceDto OK
+     * @returns AiSettingsResponse OK
      * @throws ApiError
      */
-    public static getApiUserPreferences(
-        userId: number,
-    ): CancelablePromise<UserPreferenceDto> {
+    public static getApiAiSettings(): CancelablePromise<AiSettingsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/UserPreferences/{userId}',
-            path: {
-                'userId': userId,
-            },
+            url: '/api/ai-settings',
         });
     }
     /**
      * @param requestBody
-     * @returns any OK
+     * @returns AiSettingsResponse OK
      * @throws ApiError
      */
-    public static postApiSavePreferences(
-        requestBody?: UserPreferenceDto,
-    ): CancelablePromise<any> {
+    public static putApiAiSettings(
+        requestBody?: UpdateAiSettingsRequest,
+    ): CancelablePromise<AiSettingsResponse> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/SavePreferences',
+            method: 'PUT',
+            url: '/api/ai-settings',
             body: requestBody,
             mediaType: 'application/json',
         });

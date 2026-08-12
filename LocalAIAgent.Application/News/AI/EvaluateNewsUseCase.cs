@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using System.ClientModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,8 +18,7 @@ namespace LocalAIAgent.Application.News.AI
     }
 
     public class EvaluateNewsUseCase(
-        IChatClient chatClient,
-        AIOptions options,
+        ILlmRuntimeManager runtimeManager,
         IMemoryCache memoryCache,
         INewsDatasetRepository newsDatasetRepository,
         ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
@@ -40,6 +40,10 @@ namespace LocalAIAgent.Application.News.AI
             bool includeReasoning = false)
         {
             const int BatchSize = 3;
+
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
+            IChatClient chatClient = runtime.ChatClient;
+            AIOptions options = runtime.Options;
 
             string systemPrompt = userPreferences.BuildSystemPrompt();
             ChatOptions chatOptions = options.BuildChatOptions();
@@ -262,7 +266,7 @@ namespace LocalAIAgent.Application.News.AI
             CancellationToken cancellationToken)
         {
             AsyncRetryPolicy retryPolicy = Policy
-                .Handle<Exception>()
+                .Handle<Exception>(IsTransientFailure)
                 .WaitAndRetryAsync(
                     retryCount: 5,
                     sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
@@ -276,6 +280,20 @@ namespace LocalAIAgent.Application.News.AI
                 }
                 return chunks;
             }, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static bool IsTransientFailure(Exception exception)
+        {
+            if (exception is OperationCanceledException)
+                return false;
+
+            if (exception is ClientResultException clientResultException)
+            {
+                return clientResultException.Status is 408 or 429
+                    || clientResultException.Status >= 500;
+            }
+
+            return exception is HttpRequestException or TimeoutException;
         }
     }
 }

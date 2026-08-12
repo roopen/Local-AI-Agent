@@ -2,11 +2,13 @@ import UserService from './UserService';
 import { 
     LoginService, 
     UserPreferencesService, 
+    AiSettingsService,
     Fido2Service,
     UserVerificationRequirement,
     AttestationConveyancePreference
 } from '../clients/UserApiClient';
 import UserSettings from '../domain/UserSettings';
+import AISettings from '../domain/AISettings';
 import type { 
     AssertionOptions,
     CredentialCreateOptions,
@@ -26,6 +28,10 @@ jest.mock('../clients/UserApiClient', () => ({
         postApiSavePreferences: jest.fn(),
         postApiSaveAiSettings: jest.fn(),
         getApiAiSettings: jest.fn(),
+    },
+    AiSettingsService: {
+        getApiAiSettings: jest.fn(),
+        putApiAiSettings: jest.fn(),
     },
     Fido2Service: {
         postAssertionOptions: jest.fn(),
@@ -49,6 +55,7 @@ jest.mock('../clients/UserApiClient', () => ({
 
 const mockedLoginService = LoginService as jest.Mocked<typeof LoginService>;
 const mockedUserPreferencesService = UserPreferencesService as jest.Mocked<typeof UserPreferencesService>;
+const mockedAiSettingsService = AiSettingsService as jest.Mocked<typeof AiSettingsService>;
 const mockedFido2Service = Fido2Service as jest.Mocked<typeof Fido2Service>;
 
 const mockNavigatorCredentials = {
@@ -248,6 +255,49 @@ describe('UserService', () => {
                 targetLanguage: preferences.targetLanguage,
                 disabledFeedSources: preferences.disabledFeedSources,
             });
+        });
+    });
+
+    describe('AI settings', () => {
+        it('loads current-user status without expecting a token value', async () => {
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue({ id: 1, username: 'testuser' });
+            await userService.isLoggedIn();
+            mockedAiSettingsService.getApiAiSettings.mockResolvedValue({
+                isConfigured: true,
+                hasApiKey: true,
+                modelId: 'unsloth-model',
+                endpointUrl: 'http://localhost:8000/v1/',
+            });
+
+            const result = await userService.getAiSettings();
+
+            expect(mockedAiSettingsService.getApiAiSettings).toHaveBeenCalledWith();
+            expect(result.isConfigured).toBe(true);
+            expect(result.hasApiKey).toBe(true);
+            expect(result.apiKey).toBe('');
+        });
+
+        it('submits a blank token as null so an existing token is preserved', async () => {
+            mockedLoginService.getApiLoginCurrent.mockResolvedValue({ id: 1, username: 'testuser' });
+            await userService.isLoggedIn();
+            mockedAiSettingsService.putApiAiSettings.mockResolvedValue({
+                isConfigured: true,
+                hasApiKey: true,
+                modelId: 'model',
+                endpointUrl: 'http://localhost:1234/v1/',
+            });
+
+            await userService.saveAiSettings(new AISettings(
+                false,
+                true,
+                'model',
+                'http://localhost:1234/v1/'));
+
+            expect(mockedAiSettingsService.putApiAiSettings).toHaveBeenCalledWith(expect.objectContaining({
+                modelId: 'model',
+                apiKey: null,
+                clearApiKey: false,
+            }));
         });
     });
 });

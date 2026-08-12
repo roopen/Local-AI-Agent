@@ -2,6 +2,7 @@
 using LocalAIAgent.API.Metrics;
 using LocalAIAgent.Domain;
 using LocalAIAgent.Application.News;
+using LocalAIAgent.Application.Chat;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -11,7 +12,8 @@ namespace LocalAIAgent.API.Api.Hubs
     public class NewsHub(
         IGetNewsUseCase getNewsUseCase,
         IGetUserUseCase getUserUseCase,
-        NewsMetrics newsMetrics) : Hub
+        NewsMetrics newsMetrics,
+        ILogger<NewsHub> logger) : Hub
     {
         private static readonly ConcurrentDictionary<string, string> UserConnections = new();
 
@@ -46,9 +48,38 @@ namespace LocalAIAgent.API.Api.Hubs
                 throw new HubException("User preferences are not set.");
 
             int newsCount = 0;
-            await foreach (NewsArticle? newsArticle in getNewsUseCase.GetNewsStreamAsync(user.Preferences, cancellationToken)
-                .WithCancellation(cancellationToken))
+            await using IAsyncEnumerator<NewsArticle> enumerator = getNewsUseCase
+                .GetNewsStreamAsync(user.Preferences, cancellationToken)
+                .GetAsyncEnumerator(cancellationToken);
+
+            while (true)
             {
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    newsMetrics.StopRecordingRequest();
+                    yield break;
+                }
+                catch (Exception ex)
+                {
+                    newsMetrics.StopRecordingRequest();
+                    string safeMessage = LlmErrorSanitizer.GetSafeMessage(ex);
+                    logger.LogError(
+                        "News stream failed for user {UserId}: {ErrorType}: {Message}",
+                        userId,
+                        ex.GetType().Name,
+                        safeMessage);
+                    throw new HubException($"Unable to load articles: {safeMessage}");
+                }
+
+                if (!hasNext)
+                    break;
+
+                NewsArticle newsArticle = enumerator.Current;
                 if (newsArticle is not null)
                 {
                     newsCount++;

@@ -1,4 +1,4 @@
-import { LoginService, OpenAPI, UserPreferencesService, Fido2Service, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
+import { AiSettingsService, LoginService, OpenAPI, UserPreferencesService, Fido2Service, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
 import type {
     AssertionOptions,
     AuthenticatorAssertionRawResponse,
@@ -25,38 +25,49 @@ export default class UserService implements IUserService {
 
     // eslint-disable-next-line complexity
     async getAiSettings(): Promise<AISettings> {
-        const user = this.getCurrentUser();
-        if (!user) {
+        if (!this.getCurrentUser()) {
             throw new Error("User must be logged in to get AI settings.");
         }
-        const aiSettings = await UserPreferencesService.postApiUserPreferencesApiGetAiSettings(parseInt(user.id, 10));
-
-        if (!aiSettings) {
-            return new AISettings();
-        }
+        const aiSettings = await AiSettingsService.getApiAiSettings();
         
         return new AISettings(
-            aiSettings.modelId || undefined,
-            aiSettings.apiKey || undefined,
-            aiSettings.endpointUrl || undefined,
-            aiSettings.temperature || undefined,
-            aiSettings.topP || undefined,
-            aiSettings.frequencyPenalty || undefined,
-            aiSettings.presencePenalty || undefined
+            aiSettings.isConfigured ?? false,
+            aiSettings.hasApiKey ?? false,
+            aiSettings.modelId ?? undefined,
+            aiSettings.endpointUrl ?? undefined,
+            aiSettings.temperature ?? undefined,
+            aiSettings.topP ?? undefined,
+            aiSettings.frequencyPenalty ?? undefined,
+            aiSettings.presencePenalty ?? undefined,
         );
     }
 
-    async saveAiSettings(settings: AISettings): Promise<void> {
-        await UserPreferencesService.postApiSaveAiSettings({
-            userId: parseInt(this.getCurrentUser()!.id, 10),
+    async saveAiSettings(settings: AISettings, clearApiKey: boolean = false): Promise<AISettings> {
+        if (!this.getCurrentUser()) {
+            throw new Error("User must be logged in to save AI settings.");
+        }
+
+        const saved = await AiSettingsService.putApiAiSettings({
             modelId: settings.modelId,
-            apiKey: settings.apikey,
+            apiKey: settings.apiKey.trim().length > 0 ? settings.apiKey : null,
+            clearApiKey,
             endpointUrl: settings.endpointUrl,
             temperature: settings.temperature,
             topP: settings.topP,
             frequencyPenalty: settings.frequencyPenalty,
             presencePenalty: settings.presencePenalty
         });
+
+        return new AISettings(
+            saved.isConfigured ?? false,
+            saved.hasApiKey ?? false,
+            saved.modelId ?? undefined,
+            saved.endpointUrl ?? undefined,
+            saved.temperature ?? undefined,
+            saved.topP ?? undefined,
+            saved.frequencyPenalty ?? undefined,
+            saved.presencePenalty ?? undefined,
+        );
     }
 
     async getCredentials(): Promise<CredentialInfo[]> {
