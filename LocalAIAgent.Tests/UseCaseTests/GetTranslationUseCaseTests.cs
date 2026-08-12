@@ -297,6 +297,66 @@ public class GetTranslationUseCaseTests
     }
 
     [Fact]
+    public async Task TranslateArticleAsync_CompleteUnindexedArray_UsesArrayOrderWithoutRetry()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+        chat.EnqueueStreamingText("""
+            [
+                {"title":"Uno","summary":"Uno summary"},
+                {"title":"Dos","summary":"Dos summary"}
+            ]
+            """);
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        List<NewsArticle> articles =
+        [
+            Article("one", "one summary", "https://taiwan.example/a", "taiwan.example"),
+            Article("two", "two summary", "https://taiwan.example/b", "taiwan.example"),
+        ];
+
+        await sut.TranslateArticleAsync(articles, "Spanish");
+
+        Assert.Equal(["Uno", "Dos"], articles.Select(article => article.Title));
+        Assert.Single(chat.Calls);
+    }
+
+    [Fact]
+    public async Task TranslateArticleAsync_SingleObjectResponse_AcceptsUnambiguousTranslation()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+        chat.EnqueueStreamingText("""{"title":"Hola","summary":"Mundo"}""");
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        NewsArticle article = Article(
+            "foreign",
+            "foreign summary",
+            "https://taiwan.example/a",
+            "taiwan.example");
+
+        await sut.TranslateArticleAsync([article], "Spanish");
+
+        Assert.Equal("Hola", article.Title);
+        Assert.Equal("Mundo", article.Summary);
+        Assert.Single(chat.Calls);
+    }
+
+    [Fact]
     public async Task TranslateArticleAsync_RequestFailure_PropagatesToCaller()
     {
         FakeChatClient chat = new();

@@ -92,8 +92,26 @@ public class SanitizeJsonResponseTests
     [Fact]
     public void Sanitize_TolerantOfSpacesBeforeStructuralChar()
     {
-        // The lookahead skips spaces, so " : and " , are also valid terminators.
+        // The lookahead skips whitespace, so " : and " , are also valid terminators.
         const string json = """{"title":"value"   ,"x":"y"}""";
+
+        string sanitized = GetTranslationUseCase.SanitizeJsonResponse(json);
+
+        Assert.Equal(json, sanitized);
+    }
+
+    [Fact]
+    public void Sanitize_TolerantOfLineBreaksBeforeStructuralChar()
+    {
+        const string json = """
+            [
+              {
+                "index": 0,
+                "title": "value",
+                "summary": "formatted value"
+              }
+            ]
+            """;
 
         string sanitized = GetTranslationUseCase.SanitizeJsonResponse(json);
 

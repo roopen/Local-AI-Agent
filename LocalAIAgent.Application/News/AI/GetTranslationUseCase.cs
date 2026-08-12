@@ -94,6 +94,10 @@ namespace LocalAIAgent.Application.News.AI
             [property: JsonPropertyName("title")] string Title,
             [property: JsonPropertyName("summary")] string Summary);
 
+        private sealed record UnindexedTranslationDto(
+            [property: JsonPropertyName("title")] string Title,
+            [property: JsonPropertyName("summary")] string Summary);
+
         private sealed record TranslationAttemptResult(
             int TranslatedCount,
             List<NewsArticle> UnresolvedArticles);
@@ -220,7 +224,7 @@ namespace LocalAIAgent.Application.News.AI
             }
 
             string result = resultBuilder.ToString();
-            List<TranslationDto>? translatedArticles = DeserializeTranslations(result);
+            List<TranslationDto>? translatedArticles = DeserializeTranslations(result, batch.Count);
             if (translatedArticles is null)
             {
                 logger.LogWarning(
@@ -277,20 +281,82 @@ namespace LocalAIAgent.Application.News.AI
             return new TranslationAttemptResult(translatedBatch.Count, unresolvedArticles);
         }
 
-        private static List<TranslationDto>? DeserializeTranslations(string result)
+        private static List<TranslationDto>? DeserializeTranslations(string result, int expectedCount)
         {
             result = StripResponseDecorations(result);
+            string jsonArray = ExtractJsonArray(result);
+
+            // Preserve valid JSON exactly as the provider emitted it. Sanitization is deliberately
+            // a fallback because heuristic quote repair can otherwise damage valid formatted JSON.
+            if (TryDeserializeTranslations(jsonArray, expectedCount, out List<TranslationDto>? translations))
+                return translations;
+
+            string sanitized = SanitizeJsonResponse(jsonArray);
+            return sanitized != jsonArray
+                && TryDeserializeTranslations(sanitized, expectedCount, out translations)
+                    ? translations
+                    : null;
+        }
+
+        private static bool TryDeserializeTranslations(
+            string jsonArray,
+            int expectedCount,
+            out List<TranslationDto>? translations)
+        {
+            translations = null;
 
             try
             {
-                string jsonArray = SanitizeJsonResponse(ExtractJsonArray(result));
-                return JsonSerializer.Deserialize<List<TranslationDto>>(jsonArray, s_jsonSerializerOptions);
+                using JsonDocument document = JsonDocument.Parse(jsonArray);
+                if (document.RootElement.ValueKind == JsonValueKind.Object && expectedCount == 1)
+                {
+                    string singletonArray = $"[{document.RootElement.GetRawText()}]";
+                    return TryDeserializeTranslations(singletonArray, expectedCount, out translations);
+                }
+
+                if (document.RootElement.ValueKind != JsonValueKind.Array)
+                    return false;
+
+                JsonElement[] elements = [.. document.RootElement.EnumerateArray()];
+                bool allIndexed = elements.All(HasIndexProperty);
+                if (allIndexed)
+                {
+                    translations = JsonSerializer.Deserialize<List<TranslationDto>>(
+                        jsonArray,
+                        s_jsonSerializerOptions);
+                    return translations is not null;
+                }
+
+                // Models occasionally omit every index while preserving array order. Accept that
+                // shape only when the complete batch is present, so partial responses can never be
+                // assigned to the wrong articles.
+                bool noneIndexed = elements.All(element => !HasIndexProperty(element));
+                if (!noneIndexed || elements.Length != expectedCount)
+                    return false;
+
+                List<UnindexedTranslationDto>? unindexed =
+                    JsonSerializer.Deserialize<List<UnindexedTranslationDto>>(
+                        jsonArray,
+                        s_jsonSerializerOptions);
+                if (unindexed is null)
+                    return false;
+
+                translations = unindexed
+                    .Select((translation, index) =>
+                        new TranslationDto(index, translation.Title, translation.Summary))
+                    .ToList();
+                return true;
             }
             catch (JsonException)
             {
-                return null;
+                return false;
             }
         }
+
+        private static bool HasIndexProperty(JsonElement element) =>
+            element.ValueKind == JsonValueKind.Object
+            && element.EnumerateObject().Any(property =>
+                property.Name.Equals("index", StringComparison.OrdinalIgnoreCase));
 
         private static string StripResponseDecorations(string result)
         {
@@ -350,7 +416,7 @@ namespace LocalAIAgent.Application.News.AI
             json = json.Replace("\\'", "'");
 
             // Fix unescaped double quotes inside string values using a state machine.
-            // Heuristic: a '"' that is followed (ignoring spaces) by ':', ',', '}', ']', or EOF
+            // Heuristic: a '"' that is followed (ignoring whitespace) by ':', ',', '}', ']', or EOF
             // is treated as a string delimiter; anything else is an embedded quote and gets escaped.
             StringBuilder sb = new System.Text.StringBuilder(json.Length);
             bool inString = false;
@@ -385,7 +451,7 @@ namespace LocalAIAgent.Application.News.AI
 
                     // Look ahead past whitespace to decide if this closes the string.
                     int j = i + 1;
-                    while (j < json.Length && json[j] == ' ') j++;
+                    while (j < json.Length && char.IsWhiteSpace(json[j])) j++;
                     char next = j < json.Length ? json[j] : '\0';
 
                     if (next is ':' or ',' or '}' or ']' or '\0')
