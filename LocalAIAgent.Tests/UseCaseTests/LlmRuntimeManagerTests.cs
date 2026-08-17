@@ -1,3 +1,4 @@
+using System.ClientModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -7,6 +8,59 @@ namespace LocalAIAgent.Tests.UseCaseTests;
 
 public class LlmRuntimeManagerTests
 {
+    [Fact]
+    public void SanitizerExplainsWrappedDnsFailures()
+    {
+        HttpRequestException dnsFailure = new(
+            HttpRequestError.NameResolutionError,
+            "The remote name could not be resolved.");
+        ClientResultException clientFailure = new("Request failed", null!, dnsFailure);
+
+        string message = LlmErrorSanitizer.GetSafeMessage(clientFailure);
+
+        Assert.Equal(
+            "The AI service host could not be resolved. Check the endpoint URL and restart any temporary tunnel.",
+            message);
+    }
+
+    [Fact]
+    public void SanitizerExplainsWrappedConnectionFailures()
+    {
+        HttpRequestException connectionFailure = new(
+            HttpRequestError.ConnectionError,
+            "The target machine refused the connection.");
+        ClientResultException clientFailure = new("Request failed", null!, connectionFailure);
+
+        string message = LlmErrorSanitizer.GetSafeMessage(clientFailure);
+
+        Assert.Equal(
+            "A connection to the AI service could not be established. Check that the service or tunnel is running.",
+            message);
+    }
+
+    [Fact]
+    public void ConnectionFailureClassifierRecognizesWrappedTransportErrors()
+    {
+        HttpRequestException transportFailure = new(
+            HttpRequestError.ConnectionError,
+            "The target machine refused the connection.");
+        ClientResultException clientFailure = new("Request failed", null!, transportFailure);
+        InvalidOperationException wrapper = new("News stream failed", clientFailure);
+
+        Assert.True(LlmErrorSanitizer.IsLlmConnectionFailure(wrapper));
+    }
+
+    [Fact]
+    public void ConnectionFailureClassifierIgnoresNonLlmProcessingErrors()
+    {
+        FormatException processingFailure = new("The model response was malformed.");
+
+        Assert.False(LlmErrorSanitizer.IsLlmConnectionFailure(processingFailure));
+        Assert.False(LlmErrorSanitizer.IsLlmConnectionFailure(new HttpRequestException(
+            HttpRequestError.ConnectionError,
+            "A non-LLM HTTP dependency failed.")));
+    }
+
     [Fact]
     public async Task WarmupUsesChatEndpointAndBearerAuthorizationHeader()
     {

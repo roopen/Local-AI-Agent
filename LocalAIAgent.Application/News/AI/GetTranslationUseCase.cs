@@ -12,7 +12,10 @@ namespace LocalAIAgent.Application.News.AI
 {
     public interface IGetTranslationUseCase
     {
-        Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage);
+        Task<List<NewsArticle>> TranslateArticleAsync(
+            List<NewsArticle> articles,
+            string targetLanguage,
+            CancellationToken cancellationToken = default);
         string GetSystemPrompt(string targetLanguage);
     }
 
@@ -38,8 +41,12 @@ namespace LocalAIAgent.Application.News.AI
                 schemaName: "translations",
                 schemaDescription: "An array of translations keyed by their unchanged input index.");
 
-        public async Task<List<NewsArticle>> TranslateArticleAsync(List<NewsArticle> articles, string targetLanguage)
+        public async Task<List<NewsArticle>> TranslateArticleAsync(
+            List<NewsArticle> articles,
+            string targetLanguage,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Stopwatch stopwatch = Stopwatch.StartNew();
 
             // Translate any article whose source language differs from the user's target.
@@ -53,7 +60,10 @@ namespace LocalAIAgent.Application.News.AI
 
             // Check cache first — apply cached translations and filter out already-translated articles
             Dictionary<string, CachedTranslation> cache = await translationRepository
-                .GetCachedTranslationsAsync(articlesToTranslate.Select(a => a.Link), targetLanguage);
+                .GetCachedTranslationsAsync(
+                    articlesToTranslate.Select(a => a.Link),
+                    targetLanguage,
+                    cancellationToken);
 
             List<NewsArticle> uncachedArticles = [];
             foreach (NewsArticle article in articlesToTranslate)
@@ -78,8 +88,13 @@ namespace LocalAIAgent.Application.News.AI
             int translatedCount = 0;
             for (int i = 0; i < uncachedArticles.Count; i += TranslationBatchSize)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 List<NewsArticle> batch = uncachedArticles.Skip(i).Take(TranslationBatchSize).ToList();
-                translatedCount += await TranslateBatchWithFallbackAsync(batch, targetLanguage, runtime);
+                translatedCount += await TranslateBatchWithFallbackAsync(
+                    batch,
+                    targetLanguage,
+                    runtime,
+                    cancellationToken);
             }
 
             stopwatch.Stop();
@@ -117,12 +132,18 @@ namespace LocalAIAgent.Application.News.AI
         private async Task<int> TranslateBatchWithFallbackAsync(
             List<NewsArticle> batch,
             string targetLanguage,
-            LlmRuntimeSnapshot runtime)
+            LlmRuntimeSnapshot runtime,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (batch.Count == 0)
                 return 0;
 
-            TranslationAttemptResult attempt = await TryTranslateBatchAsync(batch, targetLanguage, runtime);
+            TranslationAttemptResult attempt = await TryTranslateBatchAsync(
+                batch,
+                targetLanguage,
+                runtime,
+                cancellationToken);
             if (attempt.UnresolvedArticles.Count == 0)
                 return attempt.TranslatedCount;
 
@@ -132,7 +153,11 @@ namespace LocalAIAgent.Application.News.AI
                 for (int retry = 1; retry < SingleArticleMaxAttempts; retry++)
                 {
                     TranslationAttemptResult retryResult =
-                        await TryTranslateBatchAsync(attempt.UnresolvedArticles, targetLanguage, runtime);
+                        await TryTranslateBatchAsync(
+                            attempt.UnresolvedArticles,
+                            targetLanguage,
+                            runtime,
+                            cancellationToken);
                     translatedCount += retryResult.TranslatedCount;
                     if (retryResult.UnresolvedArticles.Count == 0)
                         return translatedCount;
@@ -152,7 +177,11 @@ namespace LocalAIAgent.Application.News.AI
                     attempt.UnresolvedArticles.Count);
 
                 return attempt.TranslatedCount
-                    + await TranslateBatchWithFallbackAsync(attempt.UnresolvedArticles, targetLanguage, runtime);
+                    + await TranslateBatchWithFallbackAsync(
+                        attempt.UnresolvedArticles,
+                        targetLanguage,
+                        runtime,
+                        cancellationToken);
             }
 
             int splitIndex = (batch.Count + 1) / 2;
@@ -164,14 +193,23 @@ namespace LocalAIAgent.Application.News.AI
 
             List<NewsArticle> firstBatch = batch.GetRange(0, splitIndex);
             List<NewsArticle> secondBatch = batch.GetRange(splitIndex, batch.Count - splitIndex);
-            return await TranslateBatchWithFallbackAsync(firstBatch, targetLanguage, runtime)
-                + await TranslateBatchWithFallbackAsync(secondBatch, targetLanguage, runtime);
+            return await TranslateBatchWithFallbackAsync(
+                    firstBatch,
+                    targetLanguage,
+                    runtime,
+                    cancellationToken)
+                + await TranslateBatchWithFallbackAsync(
+                    secondBatch,
+                    targetLanguage,
+                    runtime,
+                    cancellationToken);
         }
 
         private async Task<TranslationAttemptResult> TryTranslateBatchAsync(
             List<NewsArticle> batch,
             string targetLanguage,
-            LlmRuntimeSnapshot runtime)
+            LlmRuntimeSnapshot runtime,
+            CancellationToken cancellationToken)
         {
             IChatClient chatClient = runtime.ChatClient;
             AIOptions options = runtime.Options;
@@ -203,7 +241,10 @@ namespace LocalAIAgent.Application.News.AI
 
             try
             {
-                await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(messages, chatOptions)
+                await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(
+                                    messages,
+                                    chatOptions,
+                                    cancellationToken)
                                     .ConfigureAwait(false))
                 {
                     if (!string.IsNullOrEmpty(update.Text))
@@ -275,7 +316,8 @@ namespace LocalAIAgent.Application.News.AI
                 await translationRepository.SaveTranslationsAsync(
                     translatedBatch,
                     translatedOriginals,
-                    targetLanguage);
+                    targetLanguage,
+                    cancellationToken);
             }
 
             return new TranslationAttemptResult(translatedBatch.Count, unresolvedArticles);

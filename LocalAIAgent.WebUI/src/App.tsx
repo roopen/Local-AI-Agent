@@ -10,11 +10,15 @@ import SetupComponent from './components/SetupComponent'
 
 const userService = UserService.getInstance();
 
-const MainApp = () => {
+interface MainAppProps {
+    onLlmConnectionFailure: (message: string) => void;
+}
+
+const MainApp = ({ onLlmConnectionFailure }: MainAppProps) => {
     return (
         <MainLayout>
             <>
-                <NewsComponent />
+                <NewsComponent onLlmConnectionFailure={onLlmConnectionFailure} />
             </>
         </MainLayout>
     );
@@ -23,6 +27,7 @@ const MainApp = () => {
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isSetupComplete, setIsSetupComplete] = useState(false);
+    const [llmConnectionError, setLlmConnectionError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const checkLoginStatus = useCallback(async () => {
@@ -53,8 +58,14 @@ function App() {
     }, [checkLoginStatus]);
 
     const handleLogin = async () => {
+        setLlmConnectionError(null);
         await checkLoginStatus();
     };
+
+    const handleLlmConnectionFailure = useCallback((message: string) => {
+        setLlmConnectionError(message);
+        setIsSetupComplete(false);
+    }, []);
 
     if (isLoading) {
         return <div>Loading...</div>;
@@ -66,18 +77,18 @@ function App() {
                 <Route path="/" element={
                     <ProtectedRoute condition={isLoggedIn && !isLoading} redirectTo="/login">
                         <ProtectedRoute condition={isSetupComplete} redirectTo="/setup">
-                            <MainApp />
+                            <MainApp onLlmConnectionFailure={handleLlmConnectionFailure} />
                         </ProtectedRoute>
                     </ProtectedRoute>}
                 />
                 <Route path="/news" element={
                     <ProtectedRoute condition={isSetupComplete && !isLoading} redirectTo="/setup">
-                        <MainApp />
+                        <MainApp onLlmConnectionFailure={handleLlmConnectionFailure} />
                     </ProtectedRoute>
                 } />
                 <Route path="/setup" element={
                     <ProtectedRoute condition={(isLoggedIn && !isSetupComplete && !isLoading)} redirectTo="/login">
-                        <SetupComponent />
+                        <SetupComponent llmConnectionError={llmConnectionError} />
                     </ProtectedRoute>
                 } />
                 <Route

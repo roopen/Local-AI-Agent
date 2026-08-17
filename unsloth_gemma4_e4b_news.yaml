@@ -1,0 +1,43 @@
+# Unsloth Desktop / Studio training-settings import.
+# Select unsloth/gemma-4-E4B-it and both datasets manually in the UI.
+
+training:
+  max_seq_length: 4096
+  num_epochs: 2
+  learning_rate: 5.0e-5
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  warmup_steps: 12
+  max_steps: 0
+  save_steps: 100
+  eval_steps: 0.1
+  weight_decay: 0.001
+  random_seed: 3407
+  # Studio currently miscounts packed sequences as dropped samples when
+  # completion-only masking is enabled, so keep packing disabled.
+  packing: false
+  train_on_completions: true
+  gradient_checkpointing: "unsloth"
+  optim: "adamw_8bit"
+  lr_scheduler_type: "cosine"
+
+lora:
+  lora_r: 32
+  lora_alpha: 32
+  lora_dropout: 0.0
+  target_modules:
+    - "all-linear"
+  use_rslora: false
+  use_loftq: false
+  use_dora: false
+  finetune_vision_layers: false
+  finetune_language_layers: true
+  finetune_attention_modules: true
+  finetune_mlp_modules: true
+
+logging:
+  enable_wandb: false
+  wandb_project: "local-ai-news"
+  enable_tensorboard: false
+  tensorboard_dir: "runs"
+  log_frequency: 10

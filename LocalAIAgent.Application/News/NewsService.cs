@@ -11,14 +11,16 @@ namespace LocalAIAgent.Application.News
 
     public interface INewsService
     {
-        Task<List<NewsItem>> GetNewsAsync();
+        Task<List<NewsItem>> GetNewsAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Returns the cached news filtered by the user's preferences:
         /// drops articles older than 24h, articles matching the user's dislikes,
         /// and articles from feeds the user has disabled.
         /// </summary>
-        Task<List<NewsItem>> GetNewsAsync(UserPreferences preferences);
+        Task<List<NewsItem>> GetNewsAsync(
+            UserPreferences preferences,
+            CancellationToken cancellationToken = default);
         FeedKeywordEvaluationResult EvaluateFeedKeywords(NewsItem[] articles, UserPreferences userPreferences, bool includeReasoning);
     }
 
@@ -30,16 +32,18 @@ namespace LocalAIAgent.Application.News
     {
         private List<NewsItem> newsCache = [];
 
-        public async Task<List<NewsItem>> GetNewsAsync()
+        public async Task<List<NewsItem>> GetNewsAsync(CancellationToken cancellationToken = default)
         {
-            if (newsCache.Count is 0) await LoadAllNews();
+            if (newsCache.Count is 0) await LoadAllNews(cancellationToken);
 
             return newsCache;
         }
 
-        public async Task<List<NewsItem>> GetNewsAsync(UserPreferences preferences)
+        public async Task<List<NewsItem>> GetNewsAsync(
+            UserPreferences preferences,
+            CancellationToken cancellationToken = default)
         {
-            if (newsCache.Count is 0) await LoadAllNews();
+            if (newsCache.Count is 0) await LoadAllNews(cancellationToken);
 
             DateTimeOffset cutoff = timeProvider.GetUtcNow().AddDays(-1);
             HashSet<string> disabledSources = new(preferences.DisabledFeedSources, StringComparer.OrdinalIgnoreCase);
@@ -51,7 +55,7 @@ namespace LocalAIAgent.Application.News
             return filteredNews;
         }
 
-        internal async Task<int> LoadAllNews()
+        internal async Task<int> LoadAllNews(CancellationToken cancellationToken = default)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -61,7 +65,8 @@ namespace LocalAIAgent.Application.News
                 .SelectMany(settings =>
                 {
                     HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
-                    return settings.GetNewsUrls().Select(async url => (settings, await GetNews(httpClient, url)));
+                    return settings.GetNewsUrls().Select(async url =>
+                        (settings, await GetNews(httpClient, url, cancellationToken)));
                 })
                 .ToList();
 
@@ -94,15 +99,22 @@ namespace LocalAIAgent.Application.News
             }
         }
 
-        private async Task<SyndicationFeed> GetNews(HttpClient newsClient, string url)
+        private async Task<SyndicationFeed> GetNews(
+            HttpClient newsClient,
+            string url,
+            CancellationToken cancellationToken)
         {
             logger.LogDebug("NewsService: fetching {Url}", newsClient.BaseAddress + url);
             try
             {
-                using Stream stream = await newsClient.GetStreamAsync(url);
+                using Stream stream = await newsClient.GetStreamAsync(url, cancellationToken);
                 using XmlReader reader = XmlReader.Create(stream);
                 SyndicationFeed feed = SyndicationFeed.Load(reader);
                 return feed;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

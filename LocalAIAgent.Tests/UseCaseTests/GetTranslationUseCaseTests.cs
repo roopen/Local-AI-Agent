@@ -402,4 +402,29 @@ public class GetTranslationUseCaseTests
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task TranslateArticleAsync_PreCanceledRequestDoesNotCallLlmOrRepository()
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new(MockBehavior.Strict);
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(), chat),
+            NullLogger<GetTranslationUseCase>.Instance);
+        NewsArticle article = Article(
+            "foreign",
+            "summary",
+            "https://taiwan.example/a",
+            "taiwan.example");
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.TranslateArticleAsync([article], "Spanish", cancellation.Token));
+
+        Assert.Empty(chat.Calls);
+        repo.VerifyNoOtherCalls();
+    }
 }

@@ -5,14 +5,15 @@ import UserService from '../users/UserService';
 
 interface LlmSettingsProps {
     onSave?: () => Promise<void>;
+    initialError?: string | null;
 }
 
-const LlmSettingsComponent: React.FC<LlmSettingsProps> = ({ onSave }) => {
+const LlmSettingsComponent: React.FC<LlmSettingsProps> = ({ onSave, initialError }) => {
     const [settings, setSettings] = useState<AISettings>(new AISettings());
     const [clearApiKey, setClearApiKey] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(initialError ?? null);
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
     const userService = UserService.getInstance();
 

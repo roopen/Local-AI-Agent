@@ -79,15 +79,17 @@ public class GetNewsUseCaseTests
         evaluateNewsUseCase.Setup(e => e.EvaluateArticlesV2(
                 It.Is<List<NewsItem>>(items => items.SequenceEqual(new[] { unresolvedItem })),
                 TestPrefs,
-                It.IsAny<bool>()))
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EvaluatedNewsArticles { NewsArticles = [llmArticle] });
 
         Mock<IGetTranslationUseCase> translationUseCase = new(MockBehavior.Strict);
         translationUseCase.Setup(t => t.TranslateArticleAsync(
                 It.Is<List<NewsArticle>>(articles =>
                     articles.Select(a => a.Link).SequenceEqual(new[] { llmArticle.Link })),
-                "en"))
-            .ReturnsAsync((List<NewsArticle> articles, string _) => articles);
+                "en",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<NewsArticle> articles, string _, CancellationToken _) => articles);
 
         GetNewsUseCase sut = new(
             newsService.Object,
@@ -104,6 +106,7 @@ public class GetNewsUseCaseTests
         evaluateNewsUseCase.Verify(e => e.EvaluateArticlesV2(
             It.Is<List<NewsItem>>(items => items.SequenceEqual(new[] { unresolvedItem })),
             TestPrefs,
-            It.IsAny<bool>()), Times.Once);
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

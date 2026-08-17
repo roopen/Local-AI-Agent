@@ -10,6 +10,24 @@ type CompletionCallback = () => void;
 type ErrorCallback = (error: Error) => void;
 type LoadingChangeCallback = (isLoading: boolean) => void;
 
+export const LLM_CONNECTION_FAILURE_CODE = "LLM_CONNECTION_FAILED:";
+
+export class LlmConnectionError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'LlmConnectionError';
+    }
+}
+
+export function extractLlmConnectionFailureMessage(error: unknown): string | null {
+    const message = error instanceof Error ? error.message : String(error);
+    const markerIndex = message.indexOf(LLM_CONNECTION_FAILURE_CODE);
+    if (markerIndex < 0) return null;
+
+    const detail = message.slice(markerIndex + LLM_CONNECTION_FAILURE_CODE.length).trim();
+    return detail.length > 0 ? detail : 'The AI service could not be reached.';
+}
+
 function mapRelevancy(relevancy: RelevancyDto): Relevancy {
     switch (relevancy) {
         case RelevancyDto._0:
@@ -67,6 +85,8 @@ export class NewsStreamClient {
     private _articleCount = 0;
     private _loadStartTime: Date | null = null;
     private _loadEndTime: Date | null = null;
+    private _streamSubscription: signalR.ISubscription<NewsDto> | null = null;
+    private _lifecycleVersion = 0;
 
     public get isLoading(): boolean {
         return this._isLoading;
@@ -113,6 +133,8 @@ export class NewsStreamClient {
             return;
         }
 
+        const lifecycleVersion = ++this._lifecycleVersion;
+
         const currentUser = this.userService.getCurrentUser();
         if (!currentUser) {
             const error = new Error("User not logged in. Cannot start news stream.");
@@ -128,16 +150,29 @@ export class NewsStreamClient {
             this._loadEndTime = null;
             onLoadingChange(true);
             await this.connection.start();
+
+            // stop() may have been called while the connection was still starting.
+            // In that case, never create a server stream after the component is gone.
+            if (lifecycleVersion !== this._lifecycleVersion) {
+                if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
+                    await this.connection.stop();
+                }
+                return;
+            }
+
             console.log("✅ Connected to SignalR hub.");
 
             const stream = this.connection.stream("GetNewsStream", parseInt(currentUser.id, 10));
 
-            stream.subscribe({
+            this._streamSubscription = stream.subscribe({
                 next: (item: NewsDto) => {
+                    if (lifecycleVersion !== this._lifecycleVersion) return;
                     this._articleCount++;
                     onArticleReceived(mapNewsDto(item));
                 },
                 complete: () => {
+                    if (lifecycleVersion !== this._lifecycleVersion) return;
+                    this._streamSubscription = null;
                     this._isLoading = false;
                     this._loadEndTime = new Date();
                     onLoadingChange(false);
@@ -145,14 +180,21 @@ export class NewsStreamClient {
                     onComplete();
                 },
                 error: (err) => {
+                    if (lifecycleVersion !== this._lifecycleVersion) return;
+                    this._streamSubscription = null;
                     this._isLoading = false;
                     this._loadEndTime = new Date();
                     onLoadingChange(false);
                     console.error("❌ News stream error:", err);
-                    onError(err instanceof Error ? err : new Error(String(err)));
+                    const error = err instanceof Error ? err : new Error(String(err));
+                    const llmConnectionMessage = extractLlmConnectionFailureMessage(error);
+                    onError(llmConnectionMessage
+                        ? new LlmConnectionError(llmConnectionMessage)
+                        : error);
                 }
             });
         } catch (err) {
+            if (lifecycleVersion !== this._lifecycleVersion) return;
             this._isLoading = false;
             this._loadEndTime = new Date();
             onLoadingChange(false);
@@ -163,12 +205,15 @@ export class NewsStreamClient {
     }
 
     async stop(): Promise<void> {
-        if (this.connection.state !== signalR.HubConnectionState.Connected) {
-            return;
-        }
+        ++this._lifecycleVersion;
+        this._streamSubscription?.dispose();
+        this._streamSubscription = null;
+        this._isLoading = false;
+        this._loadEndTime = new Date();
+
+        if (this.connection.state === signalR.HubConnectionState.Disconnected) return;
 
         try {
-            this._isLoading = false;
             await this.connection.stop();
             console.log("🛑 Disconnected from SignalR hub.");
         } catch (err) {

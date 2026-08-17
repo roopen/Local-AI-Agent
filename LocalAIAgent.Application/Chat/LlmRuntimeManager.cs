@@ -1,4 +1,6 @@
 using System.ClientModel;
+using System.Net.Sockets;
+using System.Security.Authentication;
 using Microsoft.Extensions.AI;
 using OpenAI;
 
@@ -20,6 +22,29 @@ public sealed class LlmConnectionException(string message, Exception? innerExcep
 
 public static class LlmErrorSanitizer
 {
+    public const string ConnectionFailureCode = "LLM_CONNECTION_FAILED:";
+
+    public static bool IsLlmConnectionFailure(Exception exception)
+    {
+        if (exception is AggregateException aggregateException)
+            return aggregateException.Flatten().InnerExceptions.Any(IsLlmConnectionFailure);
+
+        if (exception is LlmConnectionException
+            or ClientResultException)
+        {
+            return true;
+        }
+
+        if (exception is InvalidOperationException
+            && exception.Message.StartsWith("LLM API settings are required", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return exception.InnerException is not null
+            && IsLlmConnectionFailure(exception.InnerException);
+    }
+
     public static string GetSafeMessage(Exception exception)
     {
         if (exception is AggregateException aggregateException)
@@ -28,12 +53,12 @@ public static class LlmErrorSanitizer
         if (exception is LlmConnectionException connectionException)
             return connectionException.Message;
 
-        if (exception is OperationCanceledException)
+        if (FindException<OperationCanceledException>(exception) is not null)
             return "The AI service request timed out or was cancelled.";
 
-        if (exception is ClientResultException clientException)
+        if (FindException<ClientResultException>(exception) is { } clientException)
         {
-            return clientException.Status switch
+            string? responseMessage = clientException.Status switch
             {
                 401 or 403 => "The AI service rejected the API token.",
                 404 => "The AI endpoint or model was not found.",
@@ -41,12 +66,19 @@ public static class LlmErrorSanitizer
                 429 => "The AI service rate limit was reached.",
                 >= 500 => $"The AI service is unavailable (HTTP {clientException.Status}).",
                 > 0 => $"The AI service rejected the request (HTTP {clientException.Status}).",
-                _ => "The AI service request failed before a response was received.",
+                _ => null,
             };
+
+            return responseMessage
+                ?? GetTransportMessage(clientException)
+                ?? "The AI service request failed before a response was received.";
         }
 
-        if (exception is HttpRequestException or TimeoutException)
-            return "The AI service could not be reached.";
+        if (FindException<TimeoutException>(exception) is not null)
+            return "The AI service request timed out.";
+
+        if (GetTransportMessage(exception) is { } transportMessage)
+            return transportMessage;
 
         if (exception is InvalidOperationException
             && exception.Message.StartsWith("LLM API settings are required", StringComparison.Ordinal))
@@ -55,6 +87,50 @@ public static class LlmErrorSanitizer
         }
 
         return "The AI service request failed.";
+    }
+
+    private static string? GetTransportMessage(Exception exception)
+    {
+        if (FindException<HttpRequestException>(exception) is { } requestException)
+        {
+            return requestException.HttpRequestError switch
+            {
+                HttpRequestError.NameResolutionError =>
+                    "The AI service host could not be resolved. Check the endpoint URL and restart any temporary tunnel.",
+                HttpRequestError.ConnectionError =>
+                    "A connection to the AI service could not be established. Check that the service or tunnel is running.",
+                HttpRequestError.SecureConnectionError =>
+                    "A secure connection to the AI service could not be established. Check its HTTPS certificate.",
+                _ => "The AI service could not be reached.",
+            };
+        }
+
+        if (FindException<SocketException>(exception) is { } socketException)
+        {
+            return socketException.SocketErrorCode switch
+            {
+                SocketError.HostNotFound or SocketError.NoData or SocketError.TryAgain =>
+                    "The AI service host could not be resolved. Check the endpoint URL and restart any temporary tunnel.",
+                _ => "A connection to the AI service could not be established. Check that the service or tunnel is running.",
+            };
+        }
+
+        if (FindException<AuthenticationException>(exception) is not null)
+            return "A secure connection to the AI service could not be established. Check its HTTPS certificate.";
+
+        return null;
+    }
+
+    private static TException? FindException<TException>(Exception exception)
+        where TException : Exception
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TException match)
+                return match;
+        }
+
+        return null;
     }
 }
 

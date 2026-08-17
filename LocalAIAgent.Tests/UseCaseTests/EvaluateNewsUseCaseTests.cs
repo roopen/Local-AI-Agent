@@ -13,6 +13,36 @@ namespace LocalAIAgent.Tests.UseCaseTests;
 
 public class EvaluateNewsUseCaseTests
 {
+    private sealed class BlockingChatClient : IChatClient
+    {
+        public TaskCompletionSource Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int StreamingCallCount { get; private set; }
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            [System.Runtime.CompilerServices.EnumeratorCancellation]
+            CancellationToken cancellationToken = default)
+        {
+            StreamingCallCount++;
+            Started.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            yield break;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose() { }
+    }
+
     private static readonly UserPreferences TestPrefs = new()
     {
         Id = 7,
@@ -210,5 +240,40 @@ public class EvaluateNewsUseCaseTests
         NewsArticle only = Assert.Single(result.NewsArticles);
         Assert.Equal(42, only.InputTokens);
         Assert.Equal(13, only.OutputTokens);
+    }
+
+    [Fact]
+    public async Task EvaluateArticlesV2_CancellationStopsActiveLlmStreamWithoutRetrying()
+    {
+        NewsItem item = MakeItem("Title", "Summary", "https://x.com/a");
+        BlockingChatClient chat = new();
+        Mock<INewsDatasetRepository> repo = new(MockBehavior.Strict);
+        repo.Setup(r => r.GetCachedEvaluationsAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>());
+
+        EvaluateNewsUseCase sut = new(
+            new FakeLlmRuntimeManager(TestOptions, chat),
+            new MemoryCache(new MemoryCacheOptions()),
+            repo.Object,
+            NullLogger<EvaluateNewsUseCase>.Instance);
+        using CancellationTokenSource cancellation = new();
+
+        Task<EvaluatedNewsArticles> evaluation = sut.EvaluateArticlesV2(
+            [item],
+            TestPrefs,
+            cancellationToken: cancellation.Token);
+        await chat.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => evaluation);
+        Assert.Equal(1, chat.StreamingCallCount);
+        repo.Verify(r => r.SaveAsync(
+            It.IsAny<List<NewsArticle>>(),
+            It.IsAny<int>(),
+            It.IsAny<bool>(),
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 }

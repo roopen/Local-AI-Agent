@@ -20,7 +20,8 @@ namespace LocalAIAgent.Application.News
             UserPreferences preferences,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences);
+            cancellationToken.ThrowIfCancellationRequested();
+            List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences, cancellationToken);
 
             // Fetch the user's enabled custom feeds and merge into the stream.
             List<CustomFeedDescriptor> customFeeds = await customFeedRepository.GetForUserAsync(preferences.Id, cancellationToken);
@@ -39,6 +40,7 @@ namespace LocalAIAgent.Application.News
 #endif
             foreach (NewsItem[] newsBatch in newsItems.Chunk(5))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 FeedKeywordEvaluationResult keywordEvaluation = newsService.EvaluateFeedKeywords(
                     newsBatch,
                     preferences,
@@ -50,16 +52,21 @@ namespace LocalAIAgent.Application.News
                     EvaluatedNewsArticles llmEvaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(
                         keywordEvaluation.UnresolvedArticles.ToList(),
                         preferences,
-                        includeReasoning: saveDataset);
+                        includeReasoning: saveDataset,
+                        cancellationToken);
                     evaluatedNewsArticles.AddRange(llmEvaluatedArticles.NewsArticles);
                 }
 
                 evaluatedNewsArticles = [.. evaluatedNewsArticles.Where(a => a.Relevancy is Relevancy.High)];
                 string targetLanguage = string.IsNullOrEmpty(preferences.TargetLanguage) ? "en" : preferences.TargetLanguage;
-                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(evaluatedNewsArticles, targetLanguage);
+                List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(
+                    evaluatedNewsArticles,
+                    targetLanguage,
+                    cancellationToken);
 
                 foreach (NewsArticle article in newsArticles)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     yield return article;
                 }
             }

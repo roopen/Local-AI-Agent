@@ -2,7 +2,11 @@ import React, { useState } from "react";
 import SettingsComponent from "./SettingsComponent";
 import UserService from "../users/UserService";
 
-const SetupComponent: React.FC = () => {
+interface SetupComponentProps {
+  llmConnectionError?: string | null;
+}
+
+const SetupComponent: React.FC<SetupComponentProps> = ({ llmConnectionError }) => {
   const [settingsCompleted, setSettingsCompleted] = useState(false);
   const userService = UserService.getInstance();
 
@@ -25,7 +29,11 @@ const SetupComponent: React.FC = () => {
       <h2>👋 Welcome!</h2>
       <p>Set your news preferences and connect an LLM API to continue.</p>
 
-      <SettingsComponent onSave={handleSettingsSaved} />
+      <SettingsComponent
+        onSave={handleSettingsSaved}
+        initialTab={llmConnectionError ? 'llm' : 'prompt'}
+        initialLlmError={llmConnectionError}
+      />
 
       {!settingsCompleted && (
         <div style={{ marginTop: "1rem", color: "gray" }}>

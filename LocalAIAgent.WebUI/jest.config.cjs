@@ -11,6 +11,6 @@ module.exports = {
     "node_modules/(?!(react-markdown|remark-gfm|micromark|bail|trough|vfile|unist-util-stringify-position|vfile-message|unist-util-visit|unist-util-is|github-slugger|decode-named-character-reference|character-entities|ccount|mdast-util-to-string|longest-streak)/)"
   ],
   moduleNameMapper: {
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy"
+    "\\.(css|less|scss|sass)$": "<rootDir>/src/test/styleMock.cjs"
   }
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { NewsStreamClient } from '../clients/NewsStreamingClient';
+import { LlmConnectionError, NewsStreamClient } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import FeedbackModal from './FeedbackModal';
 import { Chip } from '@progress/kendo-react-buttons';
@@ -38,7 +38,11 @@ function ArticleStatusMessage({ isLoading, filteredCount, error, dots }: { isLoa
     return null;
 }
 
-const NewsComponent: React.FC = () => {
+interface NewsComponentProps {
+    onLlmConnectionFailure?: (message: string) => void;
+}
+
+const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure }) => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -107,6 +111,13 @@ const NewsComponent: React.FC = () => {
         };
 
         const handleError = (err: Error) => {
+            if (err instanceof LlmConnectionError && onLlmConnectionFailure) {
+                setError(null);
+                setIsLoading(false);
+                onLlmConnectionFailure(err.message);
+                return;
+            }
+
             setError(`Error loading articles: ${err.message}`);
             console.error(err);
             setIsLoading(newsStreamClient.isLoading);
@@ -119,12 +130,18 @@ const NewsComponent: React.FC = () => {
         console.log('Starting news stream...');
         newsStreamClient.start(handleNewArticle, handleStreamEnd, handleError, handleLoadingChange);
 
+        const handlePageHide = () => {
+            void newsStreamClient.stop();
+        };
+        window.addEventListener('pagehide', handlePageHide);
+
         return () => {
+            window.removeEventListener('pagehide', handlePageHide);
             console.log('Stopping news stream...');
-            newsStreamClient.stop();
+            void newsStreamClient.stop();
             setIsLoading(false);
         };
-    }, []);
+    }, [onLlmConnectionFailure]);
 
     const sources = useMemo(() => {
         const set = new Set<string>();

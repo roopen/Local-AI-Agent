@@ -6,44 +6,48 @@ import LlmSettingsComponent from './LlmSettingsComponent';
 
 interface SettingsComponentProps {
     onSave?: () => Promise<void>;
+    initialTab?: SettingsTab;
+    initialLlmError?: string | null;
 }
 
-type SettingsTab = 'prompt' | 'llm' | 'feeds' | 'auth';
+export type SettingsTab = 'prompt' | 'llm' | 'feeds' | 'auth';
 
-const SettingsComponent: React.FC<SettingsComponentProps> = ({ onSave }) => {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('prompt');
+const settingsTabs: { id: SettingsTab; label: string }[] = [
+    { id: 'llm', label: 'LLM API' },
+    { id: 'prompt', label: 'Prompts' },
+    { id: 'feeds', label: 'Feeds' },
+    { id: 'auth', label: 'Authentication' },
+];
+
+const SettingsComponent: React.FC<SettingsComponentProps> = ({
+    onSave,
+    initialTab = 'prompt',
+    initialLlmError,
+}) => {
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+    const tabContent: Record<SettingsTab, React.ReactNode> = {
+        prompt: <PromptSettingsComponent onSave={onSave} />,
+        llm: <LlmSettingsComponent onSave={onSave} initialError={initialLlmError} />,
+        feeds: <FeedSettingsComponent />,
+        auth: <AuthenticationSettingsComponent />,
+    };
 
     return (
         <div style={{ backgroundColor: '#121214', color: 'var(--foreground)', padding: '20px', borderRadius: 8 }}>
             <h1 className="settings-page-title">Settings</h1>
 
             <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 0 }}>
-                <button
-                    className={`settings-tab${activeTab === 'llm' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('llm')}>
-                    LLM API
-                </button>
-                <button
-                    className={`settings-tab${activeTab === 'prompt' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('prompt')}>
-                    Prompts
-                </button>
-                <button
-                    className={`settings-tab${activeTab === 'feeds' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('feeds')}>
-                    Feeds
-                </button>
-                <button
-                    className={`settings-tab${activeTab === 'auth' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('auth')}>
-                    Authentication
-                </button>
+                {settingsTabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`settings-tab${activeTab === tab.id ? ' active' : ''}`}
+                        onClick={() => setActiveTab(tab.id)}>
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
-            {activeTab === 'prompt' && <PromptSettingsComponent onSave={onSave} />}
-            {activeTab === 'llm' && <LlmSettingsComponent onSave={onSave} />}
-            {activeTab === 'feeds' && <FeedSettingsComponent />}
-            {activeTab === 'auth' && <AuthenticationSettingsComponent />}
+            {tabContent[activeTab]}
         </div>
     );
 };

@@ -14,7 +14,11 @@ namespace LocalAIAgent.Application.News.AI
 {
     public interface IEvaluateNewsUseCase
     {
-        Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences, bool includeReasoning = false);
+        Task<EvaluatedNewsArticles> EvaluateArticlesV2(
+            List<NewsItem> articles,
+            UserPreferences userPreferences,
+            bool includeReasoning = false,
+            CancellationToken cancellationToken = default);
     }
 
     public class EvaluateNewsUseCase(
@@ -24,9 +28,17 @@ namespace LocalAIAgent.Application.News.AI
         ILogger<EvaluateNewsUseCase> logger) : IEvaluateNewsUseCase
     {
 
-        public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(List<NewsItem> articles, UserPreferences userPreferences, bool includeReasoning = false)
+        public async Task<EvaluatedNewsArticles> EvaluateArticlesV2(
+            List<NewsItem> articles,
+            UserPreferences userPreferences,
+            bool includeReasoning = false,
+            CancellationToken cancellationToken = default)
         {
-            List<NewsArticle> result = await EvaluateCoreAsync(articles, userPreferences, includeReasoning);
+            List<NewsArticle> result = await EvaluateCoreAsync(
+                articles,
+                userPreferences,
+                includeReasoning,
+                cancellationToken);
 
             double filterPercentage = 100 - (result.Count / (double)articles.Count * 100);
             NewsLogging.LogNewsFiltered(logger, articles.Count, result.Count, filterPercentage, null);
@@ -37,9 +49,12 @@ namespace LocalAIAgent.Application.News.AI
         private async Task<List<NewsArticle>> EvaluateCoreAsync(
             List<NewsItem> articles,
             UserPreferences userPreferences,
-            bool includeReasoning = false)
+            bool includeReasoning,
+            CancellationToken cancellationToken)
         {
             const int BatchSize = 3;
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
             IChatClient chatClient = runtime.ChatClient;
@@ -56,8 +71,10 @@ namespace LocalAIAgent.Application.News.AI
 
             foreach (NewsItem[] batch in articleBatches)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 IEnumerable<string> batchLinks = batch.Select(a => a.Link ?? string.Empty).Where(l => l.Length > 0);
-                Dictionary<string, CachedNewsEvaluation> cached = await newsDatasetRepository.GetCachedEvaluationsAsync(batchLinks, CancellationToken.None);
+                Dictionary<string, CachedNewsEvaluation> cached = await newsDatasetRepository
+                    .GetCachedEvaluationsAsync(batchLinks, cancellationToken);
 
                 foreach (NewsItem item in batch.Where(a => a.Link != null && cached.ContainsKey(a.Link)))
                 {
@@ -89,13 +106,17 @@ namespace LocalAIAgent.Application.News.AI
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     uncachedBatch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
-                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
+                using CancellationTokenSource cts = CancellationTokenSource
+                    .CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromMinutes(5));
                 List<ChatMessage> messages =
                 [
                     new ChatMessage(ChatRole.System, systemPrompt),
                     new ChatMessage(ChatRole.User, batchContent),
                 ];
                 List<ChatResponseUpdate> stream = await GetStreamWithRetryAsync(chatClient, messages, chatOptions, cts.Token).ConfigureAwait(false);
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 StringBuilder jsonBuilder = new();
                 UsageDetails? totalUsage = null;
@@ -143,7 +164,12 @@ namespace LocalAIAgent.Application.News.AI
                 }
             }
 
-            await newsDatasetRepository.SaveAsync(result, userPreferences.Id, options.UseResultsForDataset, options.ModelId, CancellationToken.None);
+            await newsDatasetRepository.SaveAsync(
+                result,
+                userPreferences.Id,
+                options.UseResultsForDataset,
+                options.ModelId,
+                cancellationToken);
 
             return result;
         }

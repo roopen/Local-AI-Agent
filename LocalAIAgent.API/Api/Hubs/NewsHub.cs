@@ -68,12 +68,15 @@ namespace LocalAIAgent.API.Api.Hubs
                 {
                     newsMetrics.StopRecordingRequest();
                     string safeMessage = LlmErrorSanitizer.GetSafeMessage(ex);
+                    bool isLlmConnectionFailure = LlmErrorSanitizer.IsLlmConnectionFailure(ex);
                     logger.LogError(
                         "News stream failed for user {UserId}: {ErrorType}: {Message}",
                         userId,
                         ex.GetType().Name,
                         safeMessage);
-                    throw new HubException($"Unable to load articles: {safeMessage}");
+                    throw new HubException(isLlmConnectionFailure
+                        ? $"{LlmErrorSanitizer.ConnectionFailureCode}{safeMessage}"
+                        : $"Unable to load articles: {safeMessage}");
                 }
 
                 if (!hasNext)
