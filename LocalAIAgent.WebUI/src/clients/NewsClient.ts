@@ -1,10 +1,7 @@
-﻿import axios from "axios";
-import { NewsService } from "./UserApiClient/services/NewsService";
-import type { ExpandedNewsResult } from "./UserApiClient/models/ExpandedNewsResult";
-import { OpenAPI } from "./UserApiClient/core/OpenAPI";
+import { NewsService } from './UserApiClient/services/NewsService';
+import type { ExpandedNewsResult } from './UserApiClient/models/ExpandedNewsResult';
 
 export interface NewsFeedbackDto {
-    userId: number;
     articleLink: string;
     articleTitle: string;
     articleSummary: string;
@@ -27,23 +24,10 @@ export class NewsClient {
     }
 
     async getExpandedNews(article: string): Promise<ExpandedNewsResult> {
-        return new Promise<ExpandedNewsResult>((resolve, reject) => {
-            NewsService.postApiNewsGetExpandedNews(article)
-                .then((result: ExpandedNewsResult) => {
-                    resolve(result);
-                })
-                .catch((err: Error) => {
-                    console.error("❌ Error getting expanded news:", err);
-                    reject(err);
-                });
-        });
+        return await NewsService.postApiNewsGetExpandedNews(article);
     }
 
     async submitFeedback(feedback: NewsFeedbackDto): Promise<void> {
-        await axios.post(
-            `${OpenAPI.BASE}/api/News/Feedback`,
-            feedback,
-            { withCredentials: true }
-        );
+        await NewsService.postApiNewsFeedback(feedback);
     }
 }

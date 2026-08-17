@@ -7,7 +7,6 @@ using LocalAIAgent.Application;
 using LocalAIAgent.Application.Chat;
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Application.News.AI;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -33,6 +32,8 @@ namespace LocalAIAgent.API
 
                 builder.AddServiceDefaults();
 
+                Uri publicOrigin = builder.ConfigurePublicOriginAndProxy();
+
                 builder.WebHost.ConfigureKestrel(serverOptions =>
                 {
                     serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
@@ -40,13 +41,16 @@ namespace LocalAIAgent.API
 
                 string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 string localAppFolder = Path.Combine(localAppData, "LocalAIAgent");
-                Directory.CreateDirectory(localAppFolder);
-                string dataProtectionKeysPath = builder.Configuration["DATA_PROTECTION_KEYS_PATH"]
+                string? configuredKeysPath = builder.Configuration["DATA_PROTECTION_KEYS_PATH"];
+                if (string.IsNullOrWhiteSpace(configuredKeysPath))
+                    Directory.CreateDirectory(localAppFolder);
+                string dataProtectionKeysPath = configuredKeysPath
                     ?? Path.Combine(localAppFolder, "DataProtectionKeys");
                 builder.Services.AddDataProtection()
                     .SetApplicationName("LocalAIAgent")
                     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
                 builder.Services.AddSingleton<IAiSettingsSecretProtector, AiSettingsSecretProtector>();
+                builder.Services.AddSingleton<BootstrapAccessPolicy>();
                 builder.Services.AddScoped<AiSettingsStartupService>();
 
                 string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");
@@ -64,6 +68,7 @@ namespace LocalAIAgent.API
                     }
                     else
                     {
+                        Directory.CreateDirectory(localAppFolder);
                         connectionString = Path.Combine(localAppFolder, "ainews.db");
                     }
                 }
@@ -73,6 +78,7 @@ namespace LocalAIAgent.API
                     options.UseSqlite(sqldatasource));
 
                 builder.Services.AddControllers();
+                builder.AddRequestSecurity();
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();
                 builder.Services.AddSignalR();
@@ -87,50 +93,21 @@ namespace LocalAIAgent.API
                 builder.Services.AddMemoryCache();
                 builder.Services.AddDistributedMemoryCache();
 
-                builder.Services.AddFido2(options =>
+                builder.AddPasskeys(publicOrigin);
+
+                if (builder.Environment.IsDevelopment())
                 {
-                    options.ServerDomain = "ainews.dev.localhost";
-                    options.ServerName = "AI News";
-                    options.Origins = new HashSet<string>
+                    builder.Services.AddCors(options =>
                     {
-                    "https://ainews.dev.localhost:8888",
-                    "https://ainews.dev.localhost:7276",
-                    "https://apiainews.dev.localhost:7276",
-                    "https://localhost:7276"
-                    };
-                })
-                    .AddCachedMetadataService(config =>
-                    {
-                        config.AddFidoMetadataRepository();
+                        options.AddPolicy("AllowWebUI", policy =>
+                        {
+                            policy.WithOrigins("https://ainews.dev.localhost:8888")
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials();
+                        });
                     });
-
-                builder.Services.AddCors(options =>
-                {
-                    options.AddPolicy("AllowWebUI", policy =>
-                    {
-                        policy.WithOrigins(
-                            "https://ainews.dev.localhost:8888",
-                            "https://apiainews.dev.localhost:7276",
-                            "https://localhost",
-                            "https://ainews.dev.localhost:7276",
-                            "https://localhost:7276")
-                            .AllowAnyHeader()
-                            .AllowAnyMethod()
-                            .AllowCredentials();
-                    });
-                });
-
-                builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                    .AddCookie(options =>
-                    {
-                        options.Cookie.HttpOnly = true;
-                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                        options.Cookie.SameSite = SameSiteMode.Strict;
-                        options.ExpireTimeSpan = TimeSpan.FromMinutes(3600);
-                        options.LoginPath = "/api/Login/login";
-                        options.AccessDeniedPath = "/";
-                    });
-
+                }
 
                 WebApplication app = builder.Build();
 
@@ -151,6 +128,11 @@ namespace LocalAIAgent.API
 
                 // Configure the HTTP request pipeline.
                 if (app.Environment.IsDevelopment())
+                    app.UseCors("AllowWebUI");
+
+                app.UseRequestSecurity();
+
+                if (app.Environment.IsDevelopment())
                 {
                     app.UseSwagger();
                     app.UseSwaggerUI();
@@ -162,19 +144,13 @@ namespace LocalAIAgent.API
                     });
                 }
 
-                app.UseHttpsRedirection();
-
                 app.UseDefaultFiles();
                 app.UseStaticFiles();
-
-                app.UseCors("AllowWebUI");
-
-                app.UseAuthentication();
-                app.UseAuthorization();
 
                 app.MapDefaultEndpoints();
                 app.MapControllers();
                 app.MapHub<NewsHub>("/newsHub");
+                app.MapFallbackToFile("index.html");
 
                 // Run initial news fetch on startup
                 if (!isIntegrationTests && !isSwaggerGen)
@@ -215,6 +191,9 @@ namespace LocalAIAgent.API
 
         private static void OpenBrowser(WebApplication app)
         {
+            if (!app.Environment.IsDevelopment())
+                return;
+
             try
             {
                 string? url = app.Urls.FirstOrDefault(static u => u.StartsWith("https", StringComparison.InvariantCultureIgnoreCase)) ?? app.Urls.FirstOrDefault();

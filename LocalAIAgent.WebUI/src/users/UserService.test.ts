@@ -20,12 +20,12 @@ jest.mock('../clients/UserApiClient', () => ({
     LoginService: {
         postApiLoginLogin: jest.fn(),
         postApiLoginRegister: jest.fn(),
-        postApiLoginLogout: jest.fn(),
-        getApiLoginCurrent: jest.fn(),
+        postApiAuthLogout: jest.fn(),
+        getApiAuthCurrent: jest.fn(),
     },
     UserPreferencesService: {
         getApiUserPreferences: jest.fn(),
-        postApiSavePreferences: jest.fn(),
+        putApiUserPreferences: jest.fn(),
         postApiSaveAiSettings: jest.fn(),
         getApiAiSettings: jest.fn(),
     },
@@ -34,10 +34,14 @@ jest.mock('../clients/UserApiClient', () => ({
         putApiAiSettings: jest.fn(),
     },
     Fido2Service: {
-        postAssertionOptions: jest.fn(),
-        postMakeAssertion: jest.fn(),
-        postMakeCredentialOptions: jest.fn(),
-        postMakeCredential: jest.fn(),
+        postApiAuthLoginOptions: jest.fn(),
+        postApiAuthLoginComplete: jest.fn(),
+        postApiAuthRegisterOptions: jest.fn(),
+        postApiAuthRegisterComplete: jest.fn(),
+        getApiAuthRegistrationStatus: jest.fn(),
+    },
+    HostingSecurityService: {
+        getApiAuthCsrf: jest.fn().mockResolvedValue(undefined),
     },
     OpenAPI: {
         BASE: ''
@@ -93,7 +97,7 @@ describe('UserService', () => {
                 allowCredentials: [],
                 userVerification: UserVerificationRequirement.PREFERRED
             };
-            mockedFido2Service.postAssertionOptions.mockResolvedValue(assertionOptions);
+            mockedFido2Service.postApiAuthLoginOptions.mockResolvedValue(assertionOptions);
 
             const credentialMock = {
                 id: 'AAAA',
@@ -109,13 +113,13 @@ describe('UserService', () => {
             mockNavigatorCredentials.get.mockResolvedValue(credentialMock);
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mockedFido2Service.postMakeAssertion.mockResolvedValue({ status: 'ok', errorMessage: '' } as any);
+            mockedFido2Service.postApiAuthLoginComplete.mockResolvedValue({ status: 'ok', errorMessage: '' } as any);
 
             const result = await userService.login();
 
-            expect(mockedFido2Service.postAssertionOptions).toHaveBeenCalled();
+            expect(mockedFido2Service.postApiAuthLoginOptions).toHaveBeenCalled();
             expect(mockNavigatorCredentials.get).toHaveBeenCalled();
-            expect(mockedFido2Service.postMakeAssertion).toHaveBeenCalledWith(expect.objectContaining({
+            expect(mockedFido2Service.postApiAuthLoginComplete).toHaveBeenCalledWith(expect.objectContaining({
                 id: 'AAAA'
             }));
             expect(result).toBeNull();
@@ -133,7 +137,7 @@ describe('UserService', () => {
                 timeout: 60000,
                 attestation: AttestationConveyancePreference.NONE
             };
-            mockedFido2Service.postMakeCredentialOptions.mockResolvedValue(credentialCreateOptions);
+            mockedFido2Service.postApiAuthRegisterOptions.mockResolvedValue(credentialCreateOptions);
 
             const credentialMock = {
                 id: 'AAAA',
@@ -149,13 +153,13 @@ describe('UserService', () => {
             mockNavigatorCredentials.create.mockResolvedValue(credentialMock);
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mockedFido2Service.postMakeCredential.mockResolvedValue({ id: 1, user: { id: 1, name: 'testuser' } } as any);
+            mockedFido2Service.postApiAuthRegisterComplete.mockResolvedValue({ id: 1, user: { id: 1, name: 'testuser' } } as any);
 
             const result = await userService.register(username);
 
-            expect(mockedFido2Service.postMakeCredentialOptions).toHaveBeenCalledWith(username);
+            expect(mockedFido2Service.postApiAuthRegisterOptions).toHaveBeenCalledWith({ username, inviteToken: null });
             expect(mockNavigatorCredentials.create).toHaveBeenCalled();
-            expect(mockedFido2Service.postMakeCredential).toHaveBeenCalledWith(expect.objectContaining({
+            expect(mockedFido2Service.postApiAuthRegisterComplete).toHaveBeenCalledWith(expect.objectContaining({
                 attestation: expect.objectContaining({
                     id: 'AAAA'
                 })
@@ -166,11 +170,11 @@ describe('UserService', () => {
 
     describe('logout', () => {
         it('should log out the user', async () => {
-            mockedLoginService.postApiLoginLogout.mockResolvedValue(undefined);
+            mockedLoginService.postApiAuthLogout.mockResolvedValue(undefined);
             
             await userService.logout();
 
-            expect(mockedLoginService.postApiLoginLogout).toHaveBeenCalled();
+            expect(mockedLoginService.postApiAuthLogout).toHaveBeenCalled();
             expect(userService.getCurrentUser()).toBeNull();
         });
     });
@@ -178,23 +182,24 @@ describe('UserService', () => {
     describe('isLoggedIn and getCurrentUser', () => {
         it('should return false and null when no user is logged in', async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as any);
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue(null as any);
             expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
 
         it('should return true and the user when a user is logged in', async () => {
-            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser' };
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser', role: 'Owner' };
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue(loggedInUserFromApi);
             expect(await userService.isLoggedIn()).toBe(true);
             expect(userService.getCurrentUser()).toEqual({
                 id: '1',
                 name: 'testuser',
+                role: 'Owner',
             });
         });
 
         it('should return false when the api call fails', async () => {
-            mockedLoginService.getApiLoginCurrent.mockRejectedValue(new Error('Network error'));
+            mockedLoginService.getApiAuthCurrent.mockRejectedValue(new Error('Network error'));
             expect(await userService.isLoggedIn()).toBe(false);
             expect(userService.getCurrentUser()).toBeNull();
         });
@@ -202,7 +207,6 @@ describe('UserService', () => {
 
     describe('getUserPreferences', () => {
         it('should return user settings if found', async () => {
-            const userId = '1';
             const preferencesFromApi: UserPreferenceDto = {
                 interests: ['coding', 'testing'],
                 dislikes: ['bugs'],
@@ -211,9 +215,9 @@ describe('UserService', () => {
 
             mockedUserPreferencesService.getApiUserPreferences.mockResolvedValue(preferencesFromApi);
 
-            const result = await userService.getUserPreferences(userId);
+            const result = await userService.getUserPreferences();
 
-            expect(mockedUserPreferencesService.getApiUserPreferences).toHaveBeenCalledWith(1);
+            expect(mockedUserPreferencesService.getApiUserPreferences).toHaveBeenCalledWith();
             expect(result).toBeInstanceOf(UserSettings);
             expect(result?.likes).toStrictEqual(preferencesFromApi.interests);
             expect(result?.dislikes).toStrictEqual(preferencesFromApi.dislikes);
@@ -221,10 +225,9 @@ describe('UserService', () => {
         });
 
         it('should return null if user preferences are not found', async () => {
-            const userId = '1';
             mockedUserPreferencesService.getApiUserPreferences.mockResolvedValue(null as unknown as UserPreferenceDto);
 
-            const result = await userService.getUserPreferences(userId);
+            const result = await userService.getUserPreferences();
             expect(result).toBeNull();
         });
     });
@@ -232,7 +235,7 @@ describe('UserService', () => {
     describe('saveUserPreferences', () => {
         it('should throw an error if user is not logged in', async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(null as any);
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue(null as any);
             await userService.isLoggedIn();
 
             const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
@@ -240,15 +243,14 @@ describe('UserService', () => {
         });
 
         it('should save user preferences when user is logged in', async () => {
-            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser' };
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue(loggedInUserFromApi);
+            const loggedInUserFromApi: UserDto = { id: 1, username: 'testuser', role: 'Owner' };
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue(loggedInUserFromApi);
             await userService.isLoggedIn();
 
             const preferences = new UserSettings(['ai'], ['manual work'], 'be concise');
             await userService.saveUserPreferences(preferences);
 
-            expect(mockedUserPreferencesService.postApiSavePreferences).toHaveBeenCalledWith({
-                userId: 1,
+            expect(mockedUserPreferencesService.putApiUserPreferences).toHaveBeenCalledWith({
                 prompt: preferences.prompt,
                 interests: preferences.likes,
                 dislikes: preferences.dislikes,
@@ -260,7 +262,7 @@ describe('UserService', () => {
 
     describe('AI settings', () => {
         it('loads current-user status without expecting a token value', async () => {
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue({ id: 1, username: 'testuser' });
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue({ id: 1, username: 'testuser', role: 'Owner' });
             await userService.isLoggedIn();
             mockedAiSettingsService.getApiAiSettings.mockResolvedValue({
                 isConfigured: true,
@@ -278,7 +280,7 @@ describe('UserService', () => {
         });
 
         it('submits a blank token as null so an existing token is preserved', async () => {
-            mockedLoginService.getApiLoginCurrent.mockResolvedValue({ id: 1, username: 'testuser' });
+            mockedLoginService.getApiAuthCurrent.mockResolvedValue({ id: 1, username: 'testuser', role: 'Owner' });
             await userService.isLoggedIn();
             mockedAiSettingsService.putApiAiSettings.mockResolvedValue({
                 isConfigured: true,

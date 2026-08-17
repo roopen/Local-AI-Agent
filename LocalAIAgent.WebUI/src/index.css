@@ -610,6 +610,38 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.login-error {
+  color: #ff9b9b;
+  margin: 0;
+}
+
+.settings-section-stack,
+.admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-invite-result,
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.admin-invite-result input {
+  flex: 1 1 24rem;
+  min-width: 12rem;
+  padding: 0.55rem;
+}
+
+.admin-row > :nth-child(2) {
+  margin-left: auto;
+}
+
 .llm-settings-form {
   text-align: left;
 }

@@ -29,9 +29,12 @@ public class FeedsController(
             .ToList());
     }
 
-    [HttpGet("{userId}")]
-    public async Task<ActionResult<List<FeedDto>>> GetFeeds(int userId)
+    [HttpGet]
+    public async Task<ActionResult<List<FeedDto>>> GetFeeds()
     {
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
         UserPreferences? preferences = await context.UserPreferences
             .FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences is null)
@@ -70,8 +73,11 @@ public class FeedsController(
     [HttpPost("Toggle")]
     public async Task<IActionResult> Toggle([FromBody] ToggleFeedDto dto)
     {
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
         UserPreferences? preferences = await context.UserPreferences
-            .FirstOrDefaultAsync(p => p.UserId == dto.UserId);
+            .FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences is null)
             return NotFound("User preferences not found.");
 
@@ -105,8 +111,11 @@ public class FeedsController(
     [HttpPost("Custom")]
     public async Task<ActionResult<FeedDto>> AddCustom([FromBody] AddCustomFeedDto dto, CancellationToken cancellationToken)
     {
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
         UserPreferences? preferences = await context.UserPreferences
-            .FirstOrDefaultAsync(p => p.UserId == dto.UserId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
         if (preferences is null)
             return NotFound("User preferences not found.");
 
@@ -158,8 +167,11 @@ public class FeedsController(
     }
 
     [HttpDelete("Custom/{customFeedId}")]
-    public async Task<IActionResult> RemoveCustom(int customFeedId, [FromQuery] int userId)
+    public async Task<IActionResult> RemoveCustom(int customFeedId)
     {
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
         UserPreferences? preferences = await context.UserPreferences
             .FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences is null)

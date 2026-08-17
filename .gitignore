@@ -377,3 +377,7 @@ FodyWeavers.xsd
 *.db-shm
 /LocalAIAgent.API/wwwroot
 LocalAIAgent.SemanticKernel/UserPrompt.txt
+
+# Local production configuration and backup artifacts
+/deploy/quadlet/ainews.env
+/backups/

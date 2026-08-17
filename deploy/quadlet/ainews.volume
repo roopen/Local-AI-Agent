@@ -1,0 +1,6 @@
+[Unit]
+Description=Persistent AI News application data
+
+[Volume]
+VolumeName=ainews-data
+Label=app=ainews

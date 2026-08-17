@@ -19,6 +19,12 @@ export default defineConfig({
                 changeOrigin: true,
                 secure: false, // Set to false if using self-signed certs
                 ws: true,
+            },
+            '/newsHub': {
+                target: 'https://apiainews.dev.localhost:7276',
+                changeOrigin: true,
+                secure: false,
+                ws: true,
             }
         }
     }

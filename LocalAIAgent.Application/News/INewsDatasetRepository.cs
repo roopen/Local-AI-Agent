@@ -7,6 +7,9 @@ namespace LocalAIAgent.Application.News
     public interface INewsDatasetRepository
     {
         Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, bool useInDataset, string? modelUsed, CancellationToken cancellationToken);
-        Task<Dictionary<string, CachedNewsEvaluation>> GetCachedEvaluationsAsync(IEnumerable<string> links, CancellationToken cancellationToken);
+        Task<Dictionary<string, CachedNewsEvaluation>> GetCachedEvaluationsAsync(
+            IEnumerable<string> links,
+            int userPreferencesId,
+            CancellationToken cancellationToken);
     }
 }

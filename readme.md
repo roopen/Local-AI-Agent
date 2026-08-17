@@ -18,13 +18,17 @@ NOTE: Currently very much a Proof of Concept.
 - Internet access (application will not work if blocked by Firewall)
 - NodeJS 20
 
-## Installation
+## Private server
 
-- Download newest version
-- Unzip the archive
-- Create UserPrompt.txt file in the root directory with your custom prompt
-- Ensure LMStudio is running (ideally with `gemma-3-27b-it-qat`) — you can customize `appsettings.json` to use different models
-- Run the application
+The web application supports an invite-only, same-origin Linux deployment. The
+first account must be created from a configured trusted network and becomes the
+owner. All later accounts require an owner-generated, seven-day, single-use
+invitation. The owner manages the shared OpenAI-compatible endpoint while each
+member's news preferences, feeds, feedback, evaluations, and passkeys remain
+private.
+
+See [docs/linux-server.md](docs/linux-server.md) for the rootless Podman Quadlet,
+reverse-proxy, backup, upgrade, restore, and rollback runbook.
 
 ## License
 

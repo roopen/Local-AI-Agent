@@ -9,6 +9,8 @@
                 Id = user.Id,
                 Fido2Id = user.Fido2Id,
                 Username = user.Username,
+                Role = Enum.Parse<Domain.UserRole>(user.Role.ToString()),
+                IsDisabled = user.IsDisabled,
                 Preferences = user.Preferences?.MapToDomainUserPreferences()
             };
         }

@@ -8,19 +8,13 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class UserPreferencesService {
     /**
-     * @param userId
      * @returns UserPreferenceDto OK
      * @throws ApiError
      */
-    public static getApiUserPreferences(
-        userId: number,
-    ): CancelablePromise<UserPreferenceDto> {
+    public static getApiUserPreferences(): CancelablePromise<UserPreferenceDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/UserPreferences/{userId}',
-            path: {
-                'userId': userId,
-            },
+            url: '/api/user-preferences',
         });
     }
     /**
@@ -28,12 +22,12 @@ export class UserPreferencesService {
      * @returns any OK
      * @throws ApiError
      */
-    public static postApiSavePreferences(
+    public static putApiUserPreferences(
         requestBody?: UserPreferenceDto,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/SavePreferences',
+            method: 'PUT',
+            url: '/api/user-preferences',
             body: requestBody,
             mediaType: 'application/json',
         });

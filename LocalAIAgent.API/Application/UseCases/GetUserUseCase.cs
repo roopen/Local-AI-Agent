@@ -30,7 +30,7 @@ namespace LocalAIAgent.API.Application.UseCases
         {
             User? user = await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            if (user == null || !passwordHashUseCase.Verify(user.PasswordHash, request.Password))
+            if (user == null || user.IsDisabled || !passwordHashUseCase.Verify(user.PasswordHash, request.Password))
             {
                 return null;
             }
@@ -40,7 +40,9 @@ namespace LocalAIAgent.API.Application.UseCases
 
         public async Task<Domain.User?> GetUserById(int userId)
         {
-            User? user = await context.Users.AsNoTracking().Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == userId);
+            User? user = await context.Users.AsNoTracking()
+                .Include(u => u.Preferences)
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDisabled);
 
             if (user?.Preferences != null)
             {
@@ -58,7 +60,9 @@ namespace LocalAIAgent.API.Application.UseCases
 
         public Task<Domain.User?> GetUserByName(string username)
         {
-            User? user = context.Users.AsNoTracking().Include(u => u.Preferences).FirstOrDefault(u => u.Username == username);
+            User? user = context.Users.AsNoTracking()
+                .Include(u => u.Preferences)
+                .FirstOrDefault(u => u.Username == username && !u.IsDisabled);
 
             return Task.FromResult(user?.MapToDomainUser());
         }

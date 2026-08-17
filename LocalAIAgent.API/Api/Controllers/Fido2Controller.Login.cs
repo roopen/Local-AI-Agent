@@ -12,8 +12,9 @@ namespace LocalAIAgent.API.Api.Controllers
     public partial class Fido2Controller
     {
         [HttpPost]
-        [Route("/assertionOptions")]
+        [Route("/api/auth/login/options")]
         [AllowAnonymous]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("authentication")]
         public async Task<AssertionOptions> AssertionOptionsPostAsync()
         {
             var exts = new AuthenticationExtensionsClientInputs()
@@ -36,9 +37,12 @@ namespace LocalAIAgent.API.Api.Controllers
         }
 
         [HttpPost]
-        [Route("/makeAssertion")]
+        [Route("/api/auth/login/complete")]
         [AllowAnonymous]
-        public async Task<AttestationResult> MakeAssertion([FromBody] AuthenticatorAssertionRawResponse clientResponse, CancellationToken cancellationToken)
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("authentication")]
+        public async Task<ActionResult<AttestationResult>> MakeAssertion(
+            [FromBody] AuthenticatorAssertionRawResponse clientResponse,
+            CancellationToken cancellationToken)
         {
             var clientData = CollectedClientData.FromRawAttestation(clientResponse.Response.ClientDataJson);
             var options = memoryCache
@@ -78,6 +82,9 @@ namespace LocalAIAgent.API.Api.Controllers
                 .FirstOrDefaultAsync(cancellationToken);
             var user = await userContext.Users.Where(u => u.Fido2Id == userId).FirstOrDefaultAsync(cancellationToken)
                 ?? throw new InvalidDataException("User not found");
+
+            if (user.IsDisabled)
+                return Unauthorized("User is disabled.");
 
             await LogIn(user);
 

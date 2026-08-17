@@ -11,7 +11,7 @@ namespace LocalAIAgent.API.Api.Controllers
 {
     [ApiController]
     [Authorize]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class LoginController(
         IGetUserUseCase getUserUseCase) : ControllerBase
     {
@@ -42,7 +42,15 @@ namespace LocalAIAgent.API.Api.Controllers
             if (domainUser is null)
                 return NotFound("User not found.");
 
-            return Ok(new UserDto { Id = domainUser.Id, Username = domainUser.Username });
+            if (domainUser.IsDisabled)
+                return Unauthorized("User is disabled.");
+
+            return Ok(new UserDto
+            {
+                Id = domainUser.Id,
+                Username = domainUser.Username,
+                Role = domainUser.Role.ToString(),
+            });
         }
     }
 }

@@ -3,6 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LocalAIAgent.API.Infrastructure.Models;
 
+public enum UserRole
+{
+    Member,
+    Owner,
+}
+
 public class User
 {
     [Key]
@@ -11,6 +17,9 @@ public class User
     public required byte[] Fido2Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    public UserRole Role { get; set; } = UserRole.Member;
+    public bool IsDisabled { get; set; }
     public UserPreferences? Preferences { get; set; }
     public List<Fido2Credential> Fido2Credentials { get; set; } = [];
+    public List<Invitation> CreatedInvitations { get; set; } = [];
 }

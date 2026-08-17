@@ -11,20 +11,20 @@ export class LoginService {
      * @returns any OK
      * @throws ApiError
      */
-    public static postApiLoginLogout(): CancelablePromise<any> {
+    public static postApiAuthLogout(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/Login/logout',
+            url: '/api/auth/logout',
         });
     }
     /**
      * @returns UserDto OK
      * @throws ApiError
      */
-    public static getApiLoginCurrent(): CancelablePromise<UserDto> {
+    public static getApiAuthCurrent(): CancelablePromise<UserDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/Login/current',
+            url: '/api/auth/current',
         });
     }
 }

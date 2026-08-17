@@ -11,9 +11,8 @@ const SetupComponent: React.FC<SetupComponentProps> = ({ llmConnectionError }) =
   const userService = UserService.getInstance();
 
   const handleSettingsSaved = async () => {
-    const user = userService.getCurrentUser();
     const [preferences, aiSettings] = await Promise.all([
-      userService.getUserPreferences(user!.id),
+      userService.getUserPreferences(),
       userService.getAiSettings(),
     ]);
 
@@ -27,7 +26,11 @@ const SetupComponent: React.FC<SetupComponentProps> = ({ llmConnectionError }) =
   return (
     <div style={{ margin: "0 auto" }}>
       <h2>👋 Welcome!</h2>
-      <p>Set your news preferences and connect an LLM API to continue.</p>
+      <p>
+        {userService.getCurrentUser()?.role === 'Owner'
+          ? 'Set your news preferences and connect the shared LLM API to continue.'
+          : 'Set your news preferences. The owner manages the shared LLM connection.'}
+      </p>
 
       <SettingsComponent
         onSave={handleSettingsSaved}

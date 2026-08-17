@@ -14,7 +14,7 @@ namespace LocalAIAgent.API.Api.Controllers
     {
         [Authorize]
         [HttpPost]
-        [Route("/makeCredentialOptionsExistingUser")]
+        [Route("/api/auth/passkeys/options")]
         public async Task<CredentialCreateOptions> MakeCredentialOptionsForExistingUserAsync()
         {
             string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -66,13 +66,14 @@ namespace LocalAIAgent.API.Api.Controllers
             string challenge = Base64Url.EncodeToString(options.Challenge);
 
             memoryCache.Set($"{_credentialOptionsCacheKey}.{challenge}", options, TimeSpan.FromMinutes(5));
+            memoryCache.Set($"{_existingUserCacheKey}.{challenge}", userId, TimeSpan.FromMinutes(5));
 
             return options;
         }
 
         [Authorize]
         [HttpPost]
-        [Route("/addCredentialExistingUser")]
+        [Route("/api/auth/passkeys")]
         public async Task<RegisteredPublicKeyCredential> AddCredentialToExistingUser(
             [FromBody] CredentialRegistrationRequest attestationRequest,
             CancellationToken cancellationToken)
@@ -87,6 +88,10 @@ namespace LocalAIAgent.API.Api.Controllers
             {
                 throw new UnauthorizedAccessException("User ID not found in claims.");
             }
+            int challengedUserId = memoryCache.Get<int>($"{_existingUserCacheKey}.{clientData.Challenge}");
+            if (challengedUserId == 0 || challengedUserId != userId)
+                throw new UnauthorizedAccessException("Credential challenge does not belong to this user.");
+
             var user = await getUserUseCase.GetUserById(userId) ?? throw new InvalidOperationException("User not found");
 
             var fido2User = new Fido2User
@@ -138,14 +143,14 @@ namespace LocalAIAgent.API.Api.Controllers
             await userContext.SaveChangesAsync(cancellationToken);
 
             memoryCache.Remove($"{_credentialOptionsCacheKey}.{clientData.Challenge}");
-            memoryCache.Remove($"{_userCacheKey}.{clientData.Challenge}");
+            memoryCache.Remove($"{_existingUserCacheKey}.{clientData.Challenge}");
 
             return credential;
         }
 
         [Authorize]
         [HttpPost]
-        [Route("/removeCredential")]
+        [Route("/api/auth/passkeys/remove")]
         public async Task<IActionResult> RemoveCredential([FromBody] byte[] credentialId, CancellationToken cancellationToken)
         {
             string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -170,7 +175,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("/listCredentials")]
+        [Route("/api/auth/passkeys")]
         public async Task<List<CredentialInfo>> ListCredentials(CancellationToken cancellationToken)
         {
             string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

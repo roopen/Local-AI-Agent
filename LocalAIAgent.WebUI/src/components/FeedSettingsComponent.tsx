@@ -50,13 +50,13 @@ const FeedSettingsComponent: React.FC = () => {
             if (!user) return;
             try {
                 const [list, languages] = await Promise.all([
-                    FeedsService.getApiFeeds(parseInt(user.id, 10)),
+                    FeedsService.getApiFeeds(),
                     FeedsService.getApiFeedsLanguages(),
                 ]);
                 if (cancelled) return;
                 setFeeds(list);
                 setAllLanguages(languages);
-                const prefs = await userService.getUserPreferences(user.id);
+                const prefs = await userService.getUserPreferences();
                 if (cancelled) return;
                 if (prefs) setSettings(prefs);
             } catch (e) {
@@ -86,7 +86,6 @@ const FeedSettingsComponent: React.FC = () => {
 
         try {
             await FeedsService.postApiFeedsToggle({
-                userId: parseInt(user.id, 10),
                 clientName,
                 enabled,
             });
@@ -171,7 +170,6 @@ const FeedSettingsComponent: React.FC = () => {
 
         try {
             const created = await FeedsService.postApiFeedsCustom({
-                userId: parseInt(user.id, 10),
                 urls: trimmedUrls,
                 displayName: trimmedName,
                 language: newLanguage,
@@ -201,7 +199,7 @@ const FeedSettingsComponent: React.FC = () => {
         setFeeds(prev => prev.filter(f => f.customFeedId !== customFeedId));
 
         try {
-            await FeedsService.deleteApiFeedsCustom(customFeedId, parseInt(user.id, 10));
+            await FeedsService.deleteApiFeedsCustom(customFeedId);
         } catch (e) {
             setFeeds(previous);
             setError(e instanceof Error ? e.message : 'Failed to delete feed');

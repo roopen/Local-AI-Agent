@@ -62,6 +62,7 @@ public class NewsDatasetRepositoryTests : InMemoryDbTestBase
 
         Dictionary<string, CachedNewsEvaluation> result = await _sut.GetCachedEvaluationsAsync(
             ["https://x.com/a", "https://x.com/missing"],
+            prefs.Id,
             TestContext.Current.CancellationToken);
 
         CachedNewsEvaluation entry = Assert.Single(result.Values);
@@ -74,10 +75,11 @@ public class NewsDatasetRepositoryTests : InMemoryDbTestBase
     [Fact]
     public async Task GetCachedEvaluationsAsync_NoMatches_ReturnsEmpty()
     {
-        await SeedPreferencesAsync();
+        InfraModels.UserPreferences prefs = await SeedPreferencesAsync();
 
         Dictionary<string, CachedNewsEvaluation> result = await _sut.GetCachedEvaluationsAsync(
             ["https://x.com/missing"],
+            prefs.Id,
             TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
@@ -100,6 +102,7 @@ public class NewsDatasetRepositoryTests : InMemoryDbTestBase
 
         Dictionary<string, CachedNewsEvaluation> result = await _sut.GetCachedEvaluationsAsync(
             ["https://x.com/a"],
+            prefs.Id,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(Relevancy.Low, result["https://x.com/a"].Relevancy);
@@ -168,5 +171,47 @@ public class NewsDatasetRepositoryTests : InMemoryDbTestBase
         await _sut.SaveAsync([], prefs.Id, useInDataset: false, modelUsed: "m", TestContext.Current.CancellationToken);
 
         Assert.Empty(await Db.NewsEvaluationEntries.ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Evaluations_ForSameArticleRemainIsolatedByPreferences()
+    {
+        InfraModels.UserPreferences alice = await SeedPreferencesAsync();
+        InfraModels.User bobUser = new()
+        {
+            Username = "bob",
+            PasswordHash = "h",
+            Fido2Id = [2],
+            Preferences = new InfraModels.UserPreferences { Prompt = "different", Interests = [], Dislikes = [] },
+        };
+        Db.Users.Add(bobUser);
+        await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await _sut.SaveAsync(
+            [Article("https://x.com/shared", Relevancy.High)],
+            alice.Id,
+            useInDataset: false,
+            modelUsed: "model-a",
+            TestContext.Current.CancellationToken);
+        await _sut.SaveAsync(
+            [Article("https://x.com/shared", Relevancy.Low)],
+            bobUser.Preferences!.Id,
+            useInDataset: false,
+            modelUsed: "model-b",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, await Db.NewsEvaluationEntries.CountAsync(TestContext.Current.CancellationToken));
+        Dictionary<string, CachedNewsEvaluation> aliceCache = await _sut.GetCachedEvaluationsAsync(
+            ["https://x.com/shared"],
+            alice.Id,
+            TestContext.Current.CancellationToken);
+        Dictionary<string, CachedNewsEvaluation> bobCache = await _sut.GetCachedEvaluationsAsync(
+            ["https://x.com/shared"],
+            bobUser.Preferences.Id,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(Relevancy.High, aliceCache["https://x.com/shared"].Relevancy);
+        Assert.Equal("model-a", aliceCache["https://x.com/shared"].ModelUsed);
+        Assert.Equal(Relevancy.Low, bobCache["https://x.com/shared"].Relevancy);
+        Assert.Equal("model-b", bobCache["https://x.com/shared"].ModelUsed);
     }
 }

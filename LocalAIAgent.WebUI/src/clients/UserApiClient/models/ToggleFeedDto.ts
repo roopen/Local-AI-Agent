@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ToggleFeedDto = {
-    userId: number;
     clientName: string | null;
     enabled: boolean;
 };

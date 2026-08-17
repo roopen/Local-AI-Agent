@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type NewsFeedbackDto = {
-    userId: number;
     articleLink: string | null;
     articleTitle: string | null;
     articleSummary: string | null;

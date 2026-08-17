@@ -5,10 +5,12 @@ using LocalAIAgent.API.Metrics;
 using LocalAIAgent.Application.News.AI;
 using LocalAIAgent.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Diagnostics.Metrics;
+using System.Security.Claims;
 using InfraModels = LocalAIAgent.API.Infrastructure.Models;
 
 namespace LocalAIAgent.Tests.UnitTests;
@@ -51,9 +53,8 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
         return user.Preferences!;
     }
 
-    private static NewsFeedbackDto MakeDto(int userId, string link, bool liked = true, string? reason = "I like AI") => new()
+    private static NewsFeedbackDto MakeDto(string link, bool liked = true, string? reason = "I like AI") => new()
     {
-        UserId = userId,
         ArticleLink = link,
         ArticleTitle = "AI breakthrough",
         ArticleSummary = "summary",
@@ -62,11 +63,21 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
         Reason = reason,
     };
 
+    private void AuthenticateAs(int userId)
+    {
+        ClaimsIdentity identity = new([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "Test");
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) },
+        };
+    }
+
     [Fact]
     public async Task SubmitFeedback_NoPreferencesForUser_ReturnsNotFound()
     {
         // Empty DB — no user, no preferences.
-        IActionResult result = await _sut.SubmitFeedback(MakeDto(userId: 1, link: "https://x.com/a"));
+        AuthenticateAs(1);
+        IActionResult result = await _sut.SubmitFeedback(MakeDto("https://x.com/a"));
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
@@ -75,8 +86,9 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
     public async Task SubmitFeedback_FirstFeedbackForArticle_CreatesNewEntry()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync("alice");
+        AuthenticateAs(prefs.UserId);
 
-        IActionResult result = await _sut.SubmitFeedback(MakeDto(prefs.UserId, "https://x.com/a", liked: true));
+        IActionResult result = await _sut.SubmitFeedback(MakeDto("https://x.com/a", liked: true));
 
         Assert.IsType<OkResult>(result);
         InfraModels.NewsEvaluationEntry entry = await Db.NewsEvaluationEntries.SingleAsync(TestContext.Current.CancellationToken);
@@ -89,6 +101,7 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
     public async Task SubmitFeedback_ExistingEntryForArticle_UpdatesRelevancyAndReason()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync("alice");
+        AuthenticateAs(prefs.UserId);
         Db.NewsEvaluationEntries.Add(new InfraModels.NewsEvaluationEntry
         {
             ArticleTitle = "old",
@@ -102,7 +115,7 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Flip the verdict to liked.
-        await _sut.SubmitFeedback(MakeDto(prefs.UserId, "https://x.com/a", liked: true, reason: "changed my mind"));
+        await _sut.SubmitFeedback(MakeDto("https://x.com/a", liked: true, reason: "changed my mind"));
 
         // No second row added — the existing entry was updated in place.
         InfraModels.NewsEvaluationEntry entry = await Db.NewsEvaluationEntries.SingleAsync(TestContext.Current.CancellationToken);
@@ -114,8 +127,9 @@ public class NewsControllerFeedbackTests : InMemoryDbTestBase
     public async Task SubmitFeedback_IsLikedFalse_StoresLowRelevancy()
     {
         InfraModels.UserPreferences prefs = await SeedUserAsync("alice");
+        AuthenticateAs(prefs.UserId);
 
-        await _sut.SubmitFeedback(MakeDto(prefs.UserId, "https://x.com/a", liked: false));
+        await _sut.SubmitFeedback(MakeDto("https://x.com/a", liked: false));
 
         InfraModels.NewsEvaluationEntry entry = await Db.NewsEvaluationEntries.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal("Low", entry.Relevancy);

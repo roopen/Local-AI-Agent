@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace LocalAIAgent.API.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = LocalAIAgent.API.Infrastructure.AuthRoles.Owner)]
 [Route("api/[controller]")]
 public class AIController(
     IGetLMStudioModelsUseCase getLMStudioModelsUseCase,

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace LocalAIAgent.Tests.UnitTests;
 
@@ -40,8 +41,6 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
                 ModelId = model,
                 EndpointUrl = "http://localhost:1234/v1/",
                 ApiKeyCiphertext = _protector.Protect(token),
-                UserPreferencesId = user.Preferences!.Id,
-                UserPreferences = user.Preferences,
             });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -52,7 +51,8 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
     private AiSettingsController CreateController(
         int? userId,
         FakeLlmRuntimeManager? runtime = null,
-        IAiSettingsSecretProtector? protector = null)
+        IAiSettingsSecretProtector? protector = null,
+        string role = AuthRoles.Owner)
     {
         FakeChatClient chat = new();
         chat.EnqueueResponseText("hello");
@@ -61,10 +61,14 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
             ModelId = "test-model",
             EndpointUrl = "http://localhost:1234/v1/",
         }, chat) { IsConfigured = false };
-        AiSettingsController controller = new(Db, protector ?? _protector, runtime);
-        ClaimsIdentity identity = new();
+        IConfiguration configuration = new ConfigurationBuilder().Build();
+        AiSettingsController controller = new(Db, protector ?? _protector, runtime, configuration);
+        ClaimsIdentity identity = new(authenticationType: "Test");
         if (userId is not null)
+        {
             identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, userId.Value.ToString()));
+            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+        }
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) },
@@ -103,9 +107,28 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
     }
 
     [Fact]
-    public async Task Put_WarmsUpEncryptsPersistsAndActivatesForCurrentUserOnly()
+    public async Task Get_ForMemberReturnsOnlySafeConfiguredStatus()
     {
-        User alice = await SeedUserAsync("alice");
+        User user = await SeedUserAsync("member", "super-secret");
+        AiSettingsController controller = CreateController(user.Id, role: AuthRoles.Member);
+
+        ActionResult<AiSettingsResponse> result = await controller.Get(TestContext.Current.CancellationToken);
+
+        AiSettingsResponse response = Assert.IsType<AiSettingsResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.True(response.IsConfigured);
+        Assert.False(response.HasApiKey);
+        Assert.Empty(response.ModelId);
+        Assert.Empty(response.EndpointUrl);
+        Assert.Equal(0, response.Temperature);
+        Assert.Equal(0, response.TopP);
+        Assert.Equal(0, response.FrequencyPenalty);
+        Assert.Equal(0, response.PresencePenalty);
+    }
+
+    [Fact]
+    public async Task Put_WarmsUpEncryptsPersistsAndActivatesSharedSettings()
+    {
+        await SeedUserAsync("alice");
         User bob = await SeedUserAsync("bob");
         FakeChatClient chat = new();
         chat.EnqueueResponseText("hello");
@@ -126,8 +149,6 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
         Assert.Equal("new-model", runtime.GetRequiredSnapshot().Options.ModelId);
 
         AiSettings saved = await Db.AiSettings.SingleAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(bob.Preferences!.Id, saved.UserPreferencesId);
-        Assert.NotEqual(alice.Preferences!.Id, saved.UserPreferencesId);
         Assert.StartsWith("dp:v1:", saved.ApiKeyCiphertext);
         Assert.DoesNotContain("unsloth-token", saved.ApiKeyCiphertext);
         Assert.Equal("unsloth-token", _protector.Unprotect(saved.ApiKeyCiphertext));

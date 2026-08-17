@@ -4,11 +4,13 @@ using LocalAIAgent.Domain;
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Application.Chat;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace LocalAIAgent.API.Api.Hubs
 {
+    [Authorize]
     public class NewsHub(
         IGetNewsUseCase getNewsUseCase,
         IGetUserUseCase getUserUseCase,
@@ -36,10 +38,12 @@ namespace LocalAIAgent.API.Api.Hubs
         }
 
         public async IAsyncEnumerable<NewsArticle> GetNewsStream(
-            int userId,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             newsMetrics.StartRecordingRequest();
+
+            if (!int.TryParse(Context.UserIdentifier, out int userId))
+                throw new HubException("User is not authenticated.");
 
             User? user = await getUserUseCase.GetUserById(userId)
                 ?? throw new HubException($"User with ID {userId} not found.");

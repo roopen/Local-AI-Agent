@@ -9,11 +9,12 @@ public class NewsDatasetRepository(UserContext context) : INewsDatasetRepository
 {
     public async Task<Dictionary<string, CachedNewsEvaluation>> GetCachedEvaluationsAsync(
         IEnumerable<string> links,
+        int userPreferencesId,
         CancellationToken cancellationToken)
     {
         List<string> linkList = links.ToList();
         return await context.NewsEvaluationEntries
-            .Where(e => linkList.Contains(e.ArticleLink))
+            .Where(e => e.UserPreferencesId == userPreferencesId && linkList.Contains(e.ArticleLink))
             .ToDictionaryAsync(
                 e => e.ArticleLink,
                 e => new CachedNewsEvaluation(
@@ -27,7 +28,8 @@ public class NewsDatasetRepository(UserContext context) : INewsDatasetRepository
     public async Task SaveAsync(List<NewsArticle> articles, int userPreferencesId, bool useInDataset, string? modelUsed, CancellationToken cancellationToken)
     {
         HashSet<string> existingLinks = await context.NewsEvaluationEntries
-            .Where(e => articles.Select(a => a.Link).Contains(e.ArticleLink))
+            .Where(e => e.UserPreferencesId == userPreferencesId
+                && articles.Select(a => a.Link).Contains(e.ArticleLink))
             .Select(e => e.ArticleLink)
             .ToHashSetAsync(cancellationToken);
 

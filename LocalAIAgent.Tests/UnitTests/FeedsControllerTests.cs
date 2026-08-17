@@ -4,13 +4,16 @@ using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using InfraModels = LocalAIAgent.API.Infrastructure.Models;
 
 namespace LocalAIAgent.Tests.UnitTests;
 
 public class FeedsControllerTests : InMemoryDbTestBase
 {
+    private int _currentUserId;
     private sealed class StubFeedCatalog(params FeedDescriptor[] feeds) : IFeedCatalog
     {
         public IReadOnlyList<FeedDescriptor> GetAllFeeds() => feeds;
@@ -30,8 +33,21 @@ public class FeedsControllerTests : InMemoryDbTestBase
             Task.FromResult(urls.Select(u => new FeedUrlValidationResult(u, false, error)).ToList());
     }
 
-    private FeedsController BuildController(IFeedCatalog catalog, IFeedValidator? validator = null) =>
-        new(Db, catalog, new CustomFeedRepository(Db), validator ?? new AlwaysValid());
+    private FeedsController BuildController(
+        IFeedCatalog catalog,
+        IFeedValidator? validator = null,
+        int? userId = null)
+    {
+        FeedsController controller = new(Db, catalog, new CustomFeedRepository(Db), validator ?? new AlwaysValid());
+        ClaimsIdentity identity = new(
+            [new Claim(ClaimTypes.NameIdentifier, (userId ?? _currentUserId).ToString())],
+            "Test");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) },
+        };
+        return controller;
+    }
 
     private async Task<InfraModels.UserPreferences> SeedUserAsync(List<string>? disabled = null)
     {
@@ -50,6 +66,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         };
         Db.Users.Add(user);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _currentUserId = user.Id;
         return user.Preferences!;
     }
 
@@ -63,7 +80,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         FeedsController sut = BuildController(catalog);
 
-        ActionResult<List<FeedDto>> result = await sut.GetFeeds(prefs.UserId);
+        ActionResult<List<FeedDto>> result = await sut.GetFeeds();
 
         OkObjectResult ok = Assert.IsType<OkObjectResult>(result.Result);
         List<FeedDto> feeds = Assert.IsAssignableFrom<List<FeedDto>>(ok.Value);
@@ -81,9 +98,9 @@ public class FeedsControllerTests : InMemoryDbTestBase
     [Fact]
     public async Task GetFeeds_UnknownUser_ReturnsNotFound()
     {
-        FeedsController sut = BuildController(new StubFeedCatalog());
+        FeedsController sut = BuildController(new StubFeedCatalog(), userId: 9999);
 
-        ActionResult<List<FeedDto>> result = await sut.GetFeeds(userId: 9999);
+        ActionResult<List<FeedDto>> result = await sut.GetFeeds();
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
     }
@@ -97,7 +114,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
-            UserId = prefs.UserId,
             ClientName = "BloombergClient",
             Enabled = false,
         });
@@ -116,7 +132,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         await sut.Toggle(new ToggleFeedDto
         {
-            UserId = prefs.UserId,
             ClientName = "BloombergClient",
             Enabled = true,
         });
@@ -134,7 +149,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
-            UserId = prefs.UserId,
             ClientName = "NotARealClient",
             Enabled = false,
         });
@@ -146,11 +160,10 @@ public class FeedsControllerTests : InMemoryDbTestBase
     public async Task Toggle_UnknownUser_ReturnsNotFound()
     {
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
-        FeedsController sut = BuildController(catalog);
+        FeedsController sut = BuildController(catalog, userId: 9999);
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
-            UserId = 9999,
             ClientName = "BloombergClient",
             Enabled = false,
         });
@@ -177,7 +190,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
         StubFeedCatalog catalog = new(new FeedDescriptor("BloombergClient", "Bloomberg", "en"));
         FeedsController sut = BuildController(catalog);
 
-        ActionResult<List<FeedDto>> result = await sut.GetFeeds(prefs.UserId);
+        ActionResult<List<FeedDto>> result = await sut.GetFeeds();
 
         OkObjectResult ok = Assert.IsType<OkObjectResult>(result.Result);
         List<FeedDto> feeds = Assert.IsAssignableFrom<List<FeedDto>>(ok.Value);
@@ -199,7 +212,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
-            UserId = prefs.UserId,
             Urls = ["https://example.com/rss", "https://example.com/rss2"],
             DisplayName = "My Blog",
             Language = "ja",
@@ -223,7 +235,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
-            UserId = prefs.UserId,
             Urls = ["https://example.com/rss"],
             DisplayName = "Bad",
             Language = "en",
@@ -245,7 +256,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
         // Definitively invalid code — not a real ISO 639 entry.
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
-            UserId = prefs.UserId,
             Urls = ["https://example.com/rss"],
             DisplayName = "Garbage",
             Language = "zz-totally-fake",
@@ -262,7 +272,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         ActionResult<FeedDto> result = await sut.AddCustom(new AddCustomFeedDto
         {
-            UserId = prefs.UserId,
             Urls = [],
             DisplayName = "Empty",
             Language = "en",
@@ -288,7 +297,7 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         FeedsController sut = BuildController(new StubFeedCatalog());
 
-        IActionResult result = await sut.RemoveCustom(feed.Id, prefs.UserId);
+        IActionResult result = await sut.RemoveCustom(feed.Id);
 
         Assert.IsType<OkResult>(result);
         Assert.Empty(await Db.CustomFeeds.ToListAsync(TestContext.Current.CancellationToken));
@@ -313,7 +322,6 @@ public class FeedsControllerTests : InMemoryDbTestBase
 
         IActionResult result = await sut.Toggle(new ToggleFeedDto
         {
-            UserId = prefs.UserId,
             ClientName = "custom:" + feed.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
             Enabled = false,
         });

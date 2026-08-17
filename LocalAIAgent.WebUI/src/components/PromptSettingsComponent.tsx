@@ -23,7 +23,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
     useEffect(() => {
         const user = userService.getCurrentUser();
         if (!user) return;
-        userService.getUserPreferences(user.id).then(loaded => {
+        userService.getUserPreferences().then(loaded => {
             if (loaded) {
                 setSettings(loaded);
                 lastSavedPromptRef.current = loaded.prompt || '';

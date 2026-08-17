@@ -15,7 +15,7 @@ namespace LocalAIAgent.API.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.AiSettings", b =>
                 {
@@ -47,13 +47,7 @@ namespace LocalAIAgent.API.Migrations
                     b.Property<decimal>("TopP")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("UserPreferencesId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserPreferencesId")
-                        .IsUnique();
 
                     b.ToTable("AiSettings");
                 });
@@ -195,6 +189,46 @@ namespace LocalAIAgent.API.Migrations
                     b.ToTable("Fido2Credentials");
                 });
 
+            modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.Invitation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("RedeemedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RedeemedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RedeemedByUserId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("Invitations");
+                });
+
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.NewsEvaluationEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -242,10 +276,8 @@ namespace LocalAIAgent.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ArticleLink")
+                    b.HasIndex("UserPreferencesId", "ArticleLink")
                         .IsUnique();
-
-                    b.HasIndex("UserPreferencesId");
 
                     b.ToTable("NewsEvaluationEntries");
                 });
@@ -260,7 +292,14 @@ namespace LocalAIAgent.API.Migrations
                         .IsRequired()
                         .HasColumnType("BLOB");
 
+                    b.Property<bool>("IsDisabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -313,17 +352,6 @@ namespace LocalAIAgent.API.Migrations
                     b.ToTable("UserPreferences");
                 });
 
-            modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.AiSettings", b =>
-                {
-                    b.HasOne("LocalAIAgent.API.Infrastructure.Models.UserPreferences", "UserPreferences")
-                        .WithOne()
-                        .HasForeignKey("LocalAIAgent.API.Infrastructure.Models.AiSettings", "UserPreferencesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserPreferences");
-                });
-
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.CustomFeed", b =>
                 {
                     b.HasOne("LocalAIAgent.API.Infrastructure.Models.UserPreferences", "UserPreferences")
@@ -344,6 +372,24 @@ namespace LocalAIAgent.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.Invitation", b =>
+                {
+                    b.HasOne("LocalAIAgent.API.Infrastructure.Models.User", "CreatedByUser")
+                        .WithMany("CreatedInvitations")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LocalAIAgent.API.Infrastructure.Models.User", "RedeemedByUser")
+                        .WithMany()
+                        .HasForeignKey("RedeemedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("RedeemedByUser");
                 });
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.NewsEvaluationEntry", b =>
@@ -370,6 +416,8 @@ namespace LocalAIAgent.API.Migrations
 
             modelBuilder.Entity("LocalAIAgent.API.Infrastructure.Models.User", b =>
                 {
+                    b.Navigation("CreatedInvitations");
+
                     b.Navigation("Fido2Credentials");
 
                     b.Navigation("Preferences");

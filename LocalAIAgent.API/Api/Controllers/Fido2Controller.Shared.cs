@@ -11,14 +11,18 @@ namespace LocalAIAgent.API.Api.Controllers
         private const string _credentialOptionsCacheKey = "fido2.credentialOptions";
         private const string _assertionOptionsCacheKey = "fido2.assertionOptions";
         private const string _userCacheKey = "fido2.user";
+        private const string _existingUserCacheKey = "fido2.existingUser";
 
         private async Task LogIn(User user)
         {
+            if (user.IsDisabled)
+                throw new UnauthorizedAccessException("User is disabled.");
+
             List<Claim> claims =
             [
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString(CultureInfo.InvariantCulture)),
-                new Claim(ClaimTypes.Role, "User"),
+                new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("amr", "mfa"),
                 new Claim("amr", "passwordless")
             ];

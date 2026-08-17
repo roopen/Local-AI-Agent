@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type AddCustomFeedDto = {
-    userId: number;
     urls: Array<string> | null;
     displayName: string | null;
     language: string | null;

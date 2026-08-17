@@ -117,8 +117,6 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
             ModelId = model,
             EndpointUrl = "http://localhost:1234/v1/",
             ApiKeyCiphertext = protect ? _protector.Protect(token) : token,
-            UserPreferencesId = user.Preferences!.Id,
-            UserPreferences = user.Preferences,
         };
         Db.AiSettings.Add(settings);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);

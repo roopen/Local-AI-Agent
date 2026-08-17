@@ -5,6 +5,174 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/admin/invitations": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitationDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitationDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitationDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvitationDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvitationDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvitationDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/invitations/{invitationId}": {
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ManagedUserDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ManagedUserDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ManagedUserDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagedUserDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagedUserDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagedUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/AI/models": {
       "get": {
         "tags": [
@@ -187,21 +355,10 @@
         }
       }
     },
-    "/api/Feeds/{userId}": {
+    "/api/Feeds": {
       "get": {
         "tags": [
           "Feeds"
-        ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
         ],
         "responses": {
           "200": {
@@ -329,14 +486,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
           }
         ],
         "responses": {
@@ -346,7 +495,7 @@
         }
       }
     },
-    "/assertionOptions": {
+    "/api/auth/login/options": {
       "post": {
         "tags": [
           "Fido2"
@@ -375,7 +524,7 @@
         }
       }
     },
-    "/makeAssertion": {
+    "/api/auth/login/complete": {
       "post": {
         "tags": [
           "Fido2"
@@ -423,7 +572,7 @@
         }
       }
     },
-    "/makeCredentialOptionsExistingUser": {
+    "/api/auth/passkeys/options": {
       "post": {
         "tags": [
           "Fido2"
@@ -452,7 +601,7 @@
         }
       }
     },
-    "/addCredentialExistingUser": {
+    "/api/auth/passkeys": {
       "post": {
         "tags": [
           "Fido2"
@@ -498,43 +647,7 @@
             }
           }
         }
-      }
-    },
-    "/removeCredential": {
-      "post": {
-        "tags": [
-          "Fido2"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "string",
-                "format": "byte"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "type": "string",
-                "format": "byte"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "type": "string",
-                "format": "byte"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/listCredentials": {
+      },
       "get": {
         "tags": [
           "Fido2"
@@ -572,20 +685,93 @@
         }
       }
     },
-    "/makeCredentialOptions": {
+    "/api/auth/passkeys/remove": {
       "post": {
         "tags": [
           "Fido2"
         ],
-        "parameters": [
-          {
-            "name": "username",
-            "in": "query",
-            "schema": {
-              "type": "string"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/registration-status": {
+      "get": {
+        "tags": [
+          "Fido2"
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationStatusDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationStatusDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationStatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/options": {
+      "post": {
+        "tags": [
+          "Fido2"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationOptionsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationOptionsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationOptionsRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -610,7 +796,7 @@
         }
       }
     },
-    "/makeCredential": {
+    "/api/auth/register/complete": {
       "post": {
         "tags": [
           "Fido2"
@@ -658,7 +844,19 @@
         }
       }
     },
-    "/api/Login/logout": {
+    "/api/auth/csrf": {
+      "get": {
+        "tags": [
+          "HostingSecurity"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
       "post": {
         "tags": [
           "Login"
@@ -670,7 +868,7 @@
         }
       }
     },
-    "/api/Login/current": {
+    "/api/auth/current": {
       "get": {
         "tags": [
           "Login"
@@ -790,21 +988,10 @@
         }
       }
     },
-    "/api/UserPreferences/{userId}": {
+    "/api/user-preferences": {
       "get": {
         "tags": [
           "UserPreferences"
-        ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
         ],
         "responses": {
           "200": {
@@ -828,10 +1015,8 @@
             }
           }
         }
-      }
-    },
-    "/api/SavePreferences": {
-      "post": {
+      },
+      "put": {
         "tags": [
           "UserPreferences"
         ],
@@ -868,15 +1053,10 @@
         "required": [
           "displayName",
           "language",
-          "urls",
-          "userId"
+          "urls"
         ],
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "urls": {
             "type": "array",
             "items": {
@@ -1345,6 +1525,24 @@
         ],
         "type": "string"
       },
+      "CreatedInvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inviteUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
       "CredentialCreateOptions": {
         "required": [
           "challenge",
@@ -1586,6 +1784,38 @@
         },
         "additionalProperties": false
       },
+      "InvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "redeemedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "redeemedByUsername": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "LMStudioCapabilities": {
         "type": "object",
         "properties": {
@@ -1689,21 +1919,37 @@
         ],
         "type": "string"
       },
+      "ManagedUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDisabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewsFeedbackDto": {
         "required": [
           "articleLink",
           "articleSummary",
           "articleTitle",
           "articleTopic",
-          "isLiked",
-          "userId"
+          "isLiked"
         ],
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "articleLink": {
             "type": "string",
             "nullable": true
@@ -1867,6 +2113,33 @@
         },
         "additionalProperties": false
       },
+      "RegistrationOptionsRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "inviteToken": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegistrationStatusDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "nullable": true
+          },
+          "bootstrapAllowed": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "ResidentKeyRequirement": {
         "enum": [
           "required",
@@ -1913,15 +2186,10 @@
       "ToggleFeedDto": {
         "required": [
           "clientName",
-          "enabled",
-          "userId"
+          "enabled"
         ],
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "clientName": {
             "type": "string",
             "nullable": true
@@ -1981,6 +2249,15 @@
         },
         "additionalProperties": false
       },
+      "UpdateManagedUserDto": {
+        "type": "object",
+        "properties": {
+          "isDisabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "User": {
         "required": [
           "fido2Id",
@@ -1999,6 +2276,12 @@
             "type": "string",
             "nullable": true
           },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "isDisabled": {
+            "type": "boolean"
+          },
           "preferences": {
             "$ref": "#/components/schemas/UserPreferences"
           }
@@ -2006,6 +2289,9 @@
         "additionalProperties": false
       },
       "UserDto": {
+        "required": [
+          "role"
+        ],
         "type": "object",
         "properties": {
           "id": {
@@ -2013,6 +2299,10 @@
             "format": "int32"
           },
           "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
             "type": "string",
             "nullable": true
           }
@@ -2033,10 +2323,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "userId": {
             "type": "integer",
             "format": "int32"
           },
@@ -2116,6 +2402,14 @@
         },
         "additionalProperties": false
       },
+      "UserRole": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
       "UserVerificationRequirement": {
         "enum": [
           "required",
@@ -2146,6 +2440,9 @@
   },
   "tags": [
     {
+      "name": "Admin"
+    },
+    {
       "name": "AI"
     },
     {
@@ -2156,6 +2453,9 @@
     },
     {
       "name": "Fido2"
+    },
+    {
+      "name": "HostingSecurity"
     },
     {
       "name": "Login"

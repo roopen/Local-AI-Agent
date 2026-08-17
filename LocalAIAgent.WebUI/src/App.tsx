@@ -24,6 +24,8 @@ const MainApp = ({ onLlmConnectionFailure }: MainAppProps) => {
     );
 };
 
+// Routing intentionally keeps all authentication and setup gates in one place.
+// eslint-disable-next-line complexity
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isSetupComplete, setIsSetupComplete] = useState(false);
@@ -35,9 +37,8 @@ function App() {
             const loginStatus = await userService.isLoggedIn();
             setIsLoggedIn(loginStatus);
             if (loginStatus) {
-                const currentUser = userService.getCurrentUser();
                 const [userPreferences, aiSettings] = await Promise.all([
-                    userService.getUserPreferences(currentUser!.id),
+                    userService.getUserPreferences(),
                     userService.getAiSettings(),
                 ]);
 
@@ -93,6 +94,14 @@ function App() {
                 } />
                 <Route
                     path="/login"
+                    element={
+                        isLoggedIn
+                            ? <Navigate to="/" replace />
+                            : <LoginComponent userService={userService} onLogin={handleLogin} />
+                    }
+                />
+                <Route
+                    path="/register"
                     element={
                         isLoggedIn
                             ? <Navigate to="/" replace />

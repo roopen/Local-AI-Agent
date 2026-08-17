@@ -74,7 +74,7 @@ namespace LocalAIAgent.Application.News.AI
                 cancellationToken.ThrowIfCancellationRequested();
                 IEnumerable<string> batchLinks = batch.Select(a => a.Link ?? string.Empty).Where(l => l.Length > 0);
                 Dictionary<string, CachedNewsEvaluation> cached = await newsDatasetRepository
-                    .GetCachedEvaluationsAsync(batchLinks, cancellationToken);
+                    .GetCachedEvaluationsAsync(batchLinks, userPreferences.Id, cancellationToken);
 
                 foreach (NewsItem item in batch.Where(a => a.Link != null && cached.ContainsKey(a.Link)))
                 {

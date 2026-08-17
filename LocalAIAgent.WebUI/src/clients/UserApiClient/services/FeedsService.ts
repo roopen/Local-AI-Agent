@@ -21,19 +21,13 @@ export class FeedsService {
         });
     }
     /**
-     * @param userId
      * @returns FeedDto OK
      * @throws ApiError
      */
-    public static getApiFeeds(
-        userId: number,
-    ): CancelablePromise<Array<FeedDto>> {
+    public static getApiFeeds(): CancelablePromise<Array<FeedDto>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/Feeds/{userId}',
-            path: {
-                'userId': userId,
-            },
+            url: '/api/Feeds',
         });
     }
     /**
@@ -68,22 +62,17 @@ export class FeedsService {
     }
     /**
      * @param customFeedId
-     * @param userId
      * @returns any OK
      * @throws ApiError
      */
     public static deleteApiFeedsCustom(
         customFeedId: number,
-        userId?: number,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/Feeds/Custom/{customFeedId}',
             path: {
                 'customFeedId': customFeedId,
-            },
-            query: {
-                'userId': userId,
             },
         });
     }

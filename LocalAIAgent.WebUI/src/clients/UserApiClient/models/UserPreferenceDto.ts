@@ -4,7 +4,6 @@
 /* eslint-disable */
 export type UserPreferenceDto = {
     id?: number;
-    userId?: number;
     prompt?: string | null;
     interests?: Array<string> | null;
     dislikes?: Array<string> | null;

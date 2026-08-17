@@ -70,7 +70,6 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
 
         try {
             await newsClient.submitFeedback({
-                userId: parseInt(user.id, 10),
                 articleLink: article.Link,
                 articleTitle: article.Title,
                 articleSummary: article.Summary,

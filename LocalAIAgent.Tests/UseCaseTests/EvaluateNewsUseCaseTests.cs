@@ -77,7 +77,7 @@ public class EvaluateNewsUseCaseTests
         FakeChatClient chat = new();
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         Mock<INewsDatasetRepository> repo = new(MockBehavior.Strict);
-        repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+        repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>());
         repo.Setup(r => r.SaveAsync(It.IsAny<List<NewsArticle>>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -100,7 +100,7 @@ public class EvaluateNewsUseCaseTests
 
         (EvaluateNewsUseCase sut, FakeChatClient chat, _) = BuildSut(repo =>
         {
-            repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>
                 {
                     ["https://x.com/a"] = new(Relevancy.High, "Tech", null, "test-model"),
@@ -139,7 +139,7 @@ public class EvaluateNewsUseCaseTests
 
         (EvaluateNewsUseCase sut, FakeChatClient chat, _) = BuildSut(repo =>
         {
-            repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            repo.Setup(r => r.GetCachedEvaluationsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>
                 {
                     ["https://x.com/cached"] = new(Relevancy.High, "Tech", null, "test-model"),
@@ -250,6 +250,7 @@ public class EvaluateNewsUseCaseTests
         Mock<INewsDatasetRepository> repo = new(MockBehavior.Strict);
         repo.Setup(r => r.GetCachedEvaluationsAsync(
                 It.IsAny<IEnumerable<string>>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>());
 

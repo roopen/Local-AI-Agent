@@ -1,6 +1,7 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Button } from '@progress/kendo-react-buttons';
 import { Input } from '@progress/kendo-react-inputs';
+import type { RegistrationStatusDto } from '../clients/UserApiClient';
 import type { IUserService } from '../users/IUserService';
 
 interface LoginComponentProps {
@@ -8,17 +9,56 @@ interface LoginComponentProps {
     onLogin: () => void;
 }
 
+const readInviteToken = (): string | undefined => {
+    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+    return new URLSearchParams(hash).get('invite') ?? undefined;
+};
+
+// The conditional copy and controls represent the bootstrap, invite, and login states.
+// eslint-disable-next-line complexity
 const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
     const [username, setUsername] = useState('');
-    const [isRegister, setIsRegister] = useState(false);
+    const [inviteToken] = useState(readInviteToken);
+    const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatusDto | null>(null);
+    const [isRegister, setIsRegister] = useState(Boolean(inviteToken));
+    const [isWorking, setIsWorking] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (window.location.hash) {
+            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        }
+
+        userService.getRegistrationStatus()
+            .then(status => {
+                setRegistrationStatus(status);
+                if (!inviteToken && status.mode === 'OwnerBootstrap' && status.bootstrapAllowed) {
+                    setIsRegister(true);
+                }
+            })
+            .catch(() => setRegistrationStatus({ mode: 'InviteRequired', bootstrapAllowed: false }));
+    }, [inviteToken, userService]);
+
+    const canRegister = useMemo(
+        () => Boolean(inviteToken || registrationStatus?.bootstrapAllowed),
+        [inviteToken, registrationStatus],
+    );
 
     const handleAuth = async () => {
-        if (isRegister) {
-            await userService.register(username);
-        } else {
-            await userService.login();
+        setError(null);
+        setIsWorking(true);
+        try {
+            if (isRegister) {
+                await userService.register(username.trim(), inviteToken);
+            } else {
+                await userService.login();
+            }
+            onLogin();
+        } catch (failure) {
+            setError(failure instanceof Error ? failure.message : 'Authentication failed.');
+        } finally {
+            setIsWorking(false);
         }
-        onLogin();
     };
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -26,12 +66,7 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
         void handleAuth();
     };
 
-    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            void handleAuth();
-        }
-    };
+    const registrationKind = inviteToken ? 'invited account' : 'owner account';
 
     return (
         <main className="login-page">
@@ -42,8 +77,8 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                     <h1 id="login-title">AI Curated News</h1>
                     <p className="login-intro">
                         {isRegister
-                            ? 'Create your profile to start shaping a news stream around your interests.'
-                            : 'Sign in to continue to the stories selected and summarized for you.'}
+                            ? `Create your ${registrationKind} and secure it with a passkey.`
+                            : 'Sign in with your saved passkey to continue.'}
                     </p>
                 </header>
 
@@ -58,9 +93,8 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                                 autoComplete="username"
                                 value={username}
                                 onChange={(event) => setUsername(event.value)}
-                                onKeyDown={handleKeyDown}
                             />
-                            <span className="login-field-hint">This name will identify your curated feed.</span>
+                            <span className="login-field-hint">This name identifies your private curated feed.</span>
                         </div>
                     )}
 
@@ -71,31 +105,42 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                         </div>
                     )}
 
+                    {error && <p role="alert" className="login-error">{error}</p>}
+
                     <Button
                         className="login-primary-action"
                         type="submit"
                         themeColor="primary"
-                        disabled={isRegister && username.trim().length === 0}
+                        disabled={isWorking || (isRegister && username.trim().length === 0)}
                         size="large"
                     >
-                        {isRegister ? 'Create account' : 'Login'}
+                        {isWorking ? 'Please wait…' : isRegister ? 'Create account' : 'Login'}
                     </Button>
                 </form>
 
-                <div className="login-divider" aria-hidden="true" />
+                {canRegister && (
+                    <>
+                        <div className="login-divider" aria-hidden="true" />
+                        <p className="login-switch">
+                            {isRegister ? 'Already have an account?' : 'Have an invitation or setting up the owner?'}{' '}
+                            <Button
+                                className="login-switch-action"
+                                fillMode="flat"
+                                size="large"
+                                onClick={() => {
+                                    setError(null);
+                                    setIsRegister(current => !current);
+                                }}
+                            >
+                                {isRegister ? 'Login' : 'Register'}
+                            </Button>
+                        </p>
+                    </>
+                )}
 
-                <p className="login-switch">
-                    {isRegister ? 'Already have an account?' : 'New to AI Curated News?'}
-                    {' '}
-                    <Button
-                        className="login-switch-action"
-                        fillMode="flat"
-                        size="large"
-                        onClick={() => setIsRegister((current) => !current)}
-                    >
-                        {isRegister ? 'Login' : 'Register'}
-                    </Button>
-                </p>
+                {!canRegister && registrationStatus?.mode === 'InviteRequired' && (
+                    <p className="login-field-hint">New accounts require an invitation from the owner.</p>
+                )}
             </section>
         </main>
     );

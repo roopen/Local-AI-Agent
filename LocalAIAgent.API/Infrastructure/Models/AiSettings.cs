@@ -10,8 +10,5 @@
         public decimal TopP { get; set; } = 1.0m;
         public decimal FrequencyPenalty { get; set; } = 1.0m;
         public decimal PresencePenalty { get; set; } = 1.0m;
-        public int UserPreferencesId { get; set; }
-
-        public required virtual UserPreferences UserPreferences { get; set; }
     }
 }

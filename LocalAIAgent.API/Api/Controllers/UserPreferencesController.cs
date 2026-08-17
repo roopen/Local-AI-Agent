@@ -9,12 +9,15 @@ namespace LocalAIAgent.API.Api.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("api/[controller]")]
+[Route("api/user-preferences")]
 public class UserPreferencesController(UserContext context) : ControllerBase
 {
-    [HttpGet("{userId}")]
-    public async Task<ActionResult<UserPreferenceDto>> GetPreferences(int userId)
+    [HttpGet]
+    public async Task<ActionResult<UserPreferenceDto>> GetPreferences()
     {
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
         UserPreferences? preferences = await context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
         if (preferences == null)
             return NotFound();
@@ -22,7 +25,6 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         return Ok(new UserPreferenceDto
         {
             Id = preferences.Id,
-            UserId = preferences.UserId,
             Prompt = preferences.Prompt,
             Interests = preferences.Interests,
             Dislikes = preferences.Dislikes,
@@ -31,10 +33,13 @@ public class UserPreferencesController(UserContext context) : ControllerBase
         });
     }
 
-    [HttpPost("/api/SavePreferences")]
+    [HttpPut]
     public async Task<IActionResult> SavePreferences([FromBody] UserPreferenceDto preferences)
     {
-        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == preferences.UserId);
+        if (!User.TryGetUserId(out int userId))
+            return Unauthorized();
+
+        User? user = await context.Users.Include(u => u.Preferences).FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
             return NotFound();
 

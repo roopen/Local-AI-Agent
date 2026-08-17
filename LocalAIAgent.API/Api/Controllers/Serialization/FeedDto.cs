@@ -23,14 +23,12 @@ namespace LocalAIAgent.API.Api.Controllers.Serialization
 
     public sealed record ToggleFeedDto
     {
-        public required int UserId { get; init; }
         public required string ClientName { get; init; }
         public required bool Enabled { get; init; }
     }
 
     public sealed record AddCustomFeedDto
     {
-        public required int UserId { get; init; }
         public required IReadOnlyList<string> Urls { get; init; }
         public required string DisplayName { get; init; }
         public required string Language { get; init; }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Buffers.Text;
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -23,32 +24,102 @@ namespace LocalAIAgent.API.Api.Controllers
         IMemoryCache memoryCache,
         UserContext userContext,
         IGetUserUseCase getUserUseCase,
-        IMetadataService mds) : ControllerBase
+        IMetadataService mds,
+        BootstrapAccessPolicy bootstrapAccessPolicy,
+        TimeProvider timeProvider) : ControllerBase
     {
-        [HttpPost]
-        [Route("/makeCredentialOptions")]
+        [HttpGet]
+        [Route("/api/auth/registration-status")]
         [AllowAnonymous]
-        public async Task<CredentialCreateOptions> MakeCredentialOptionsAsync(string username)
+        public async Task<RegistrationStatusDto> GetRegistrationStatus(CancellationToken cancellationToken)
         {
-            return await GetOptionsForNewUserCreation(username);
+            bool hasUsers = await userContext.Users.AsNoTracking().AnyAsync(cancellationToken);
+            bool bootstrapAllowed = !hasUsers && bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress);
+            return new RegistrationStatusDto(hasUsers ? "InviteRequired" : "OwnerBootstrap", bootstrapAllowed);
         }
 
         [HttpPost]
-        [Route("/makeCredential")]
+        [Route("/api/auth/register/options")]
         [AllowAnonymous]
-        public async Task<RegisteredPublicKeyCredential> MakeCredential(
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("authentication")]
+        public async Task<ActionResult<CredentialCreateOptions>> MakeCredentialOptionsAsync(
+            [FromBody] RegistrationOptionsRequest request,
+            CancellationToken cancellationToken)
+        {
+            string username = request.Username.Trim();
+            if (username.Length is < 1 or > 64 || username.Any(char.IsControl))
+                return BadRequest("Username must be between 1 and 64 characters.");
+            if (await userContext.Users.AsNoTracking().AnyAsync(u => u.Username == username, cancellationToken))
+                return Conflict("Unable to create this account.");
+
+            bool hasUsers = await userContext.Users.AsNoTracking().AnyAsync(cancellationToken);
+            PendingRegistration pending;
+            if (!hasUsers)
+            {
+                if (!bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress))
+                    return StatusCode(StatusCodes.Status403Forbidden, "Owner registration is restricted to a trusted network.");
+
+                pending = new PendingRegistration(
+                    new User { Fido2Id = GenerateCredentialId(), Username = username, Preferences = new(), Role = UserRole.Owner },
+                    IsBootstrap: true,
+                    InvitationId: null,
+                    InvitationTokenHash: null);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(request.InviteToken))
+                    return StatusCode(StatusCodes.Status403Forbidden, "A valid invitation is required.");
+
+                if (!InvitationTokens.TryHash(request.InviteToken, out string tokenHash))
+                    return StatusCode(StatusCodes.Status403Forbidden, "A valid invitation is required.");
+                DateTimeOffset now = timeProvider.GetUtcNow();
+                Invitation? invitation = await userContext.Invitations.AsNoTracking().FirstOrDefaultAsync(
+                    i => i.TokenHash == tokenHash
+                        && i.RedeemedAt == null
+                        && i.RevokedAt == null,
+                    cancellationToken);
+                if (invitation is null || invitation.ExpiresAt <= now)
+                    return StatusCode(StatusCodes.Status403Forbidden, "A valid invitation is required.");
+
+                pending = new PendingRegistration(
+                    new User { Fido2Id = GenerateCredentialId(), Username = username, Preferences = new(), Role = UserRole.Member },
+                    IsBootstrap: false,
+                    invitation.Id,
+                    tokenHash);
+            }
+
+            return Ok(GetOptionsForNewUserCreation(pending));
+        }
+
+        [HttpPost]
+        [Route("/api/auth/register/complete")]
+        [AllowAnonymous]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("authentication")]
+        public async Task<ActionResult<RegisteredPublicKeyCredential>> MakeCredential(
             [FromBody] CredentialRegistrationRequest attestationResponse,
             CancellationToken cancellationToken)
         {
-            return await CreateCredentialForNewUser(attestationResponse.Attestation, attestationResponse.CredentialName, cancellationToken);
+            try
+            {
+                RegisteredPublicKeyCredential credential = await CreateCredentialForNewUser(
+                    attestationResponse.Attestation,
+                    attestationResponse.CredentialName,
+                    cancellationToken);
+                return Ok(credential);
+            }
+            catch (RegistrationGrantException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict("Unable to create this account.");
+            }
         }
 
-        private async Task<CredentialCreateOptions> GetOptionsForNewUserCreation(string username)
+        private CredentialCreateOptions GetOptionsForNewUserCreation(PendingRegistration pending)
         {
-            if (string.IsNullOrEmpty(username))
-                throw new ArgumentNullException(nameof(username));
-
-            User user = new() { Fido2Id = GenerateCredentialId(), Username = username, Preferences = new() };
+            User user = pending.User;
             var fido2User = new Fido2User
             {
                 DisplayName = user.Username,
@@ -81,7 +152,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
             string challenge = Base64Url.EncodeToString(options.Challenge);
             memoryCache.Set($"{_credentialOptionsCacheKey}.{challenge}", options, TimeSpan.FromMinutes(5));
-            memoryCache.Set($"{_userCacheKey}.{challenge}", user, TimeSpan.FromMinutes(5));
+            memoryCache.Set($"{_userCacheKey}.{challenge}", pending, TimeSpan.FromMinutes(5));
 
             return options;
         }
@@ -95,8 +166,9 @@ namespace LocalAIAgent.API.Api.Controllers
             var options = memoryCache
                 .Get<CredentialCreateOptions>($"{_credentialOptionsCacheKey}.{clientData.Challenge}")
                 ?? throw new InvalidOperationException("Credential options not found for this user");
-            var user = memoryCache.Get<User>($"{_userCacheKey}.{clientData.Challenge}")
-                ?? throw new InvalidOperationException("User not found for this credential creation");
+            PendingRegistration pending = memoryCache.Get<PendingRegistration>($"{_userCacheKey}.{clientData.Challenge}")
+                ?? throw new RegistrationGrantException("Registration attempt expired.");
+            User user = pending.User;
             var fido2User = new Fido2User
             {
                 DisplayName = user.Username,
@@ -124,7 +196,7 @@ namespace LocalAIAgent.API.Api.Controllers
 
             var authenticator = await VerifyAuthenticator(credential, cancellationToken);
 
-            user.Fido2Credentials.Add(new Fido2Credential
+            Fido2Credential storedCredential = new()
             {
                 Id = credential.Id,
                 PublicKey = credential.PublicKey,
@@ -141,9 +213,48 @@ namespace LocalAIAgent.API.Api.Controllers
                 AttestationFormat = credential.AttestationFormat,
                 AttestationClientDataJson = credential.AttestationClientDataJson,
                 AttestationObject = credential.AttestationObject,
-            });
+            };
+            user.Fido2Credentials.Add(storedCredential);
+
+            await using var transaction = await userContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable,
+                cancellationToken);
+
+            if (await userContext.Users.AnyAsync(u => u.Username == user.Username, cancellationToken))
+                throw new RegistrationGrantException("Unable to create this account.");
+
+            Invitation? invitation = null;
+            if (pending.IsBootstrap)
+            {
+                if (await userContext.Users.AnyAsync(cancellationToken))
+                    throw new RegistrationGrantException("Owner registration is already complete.");
+                if (!bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress))
+                    throw new RegistrationGrantException("Owner registration is restricted to a trusted network.");
+            }
+            else
+            {
+                DateTimeOffset now = timeProvider.GetUtcNow();
+                invitation = await userContext.Invitations.FirstOrDefaultAsync(
+                    i => i.Id == pending.InvitationId
+                        && i.TokenHash == pending.InvitationTokenHash
+                        && i.RedeemedAt == null
+                        && i.RevokedAt == null,
+                    cancellationToken);
+                if (invitation is null || invitation.ExpiresAt <= now)
+                    throw new RegistrationGrantException("Invitation is invalid, expired, or already used.");
+            }
+
             userContext.Users.Add(user);
             await userContext.SaveChangesAsync(cancellationToken);
+
+            if (invitation is not null)
+            {
+                invitation.RedeemedAt = timeProvider.GetUtcNow();
+                invitation.RedeemedByUserId = user.Id;
+                await userContext.SaveChangesAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
 
             memoryCache.Remove($"{_credentialOptionsCacheKey}.{clientData.Challenge}");
             memoryCache.Remove($"{_userCacheKey}.{clientData.Challenge}");
@@ -216,4 +327,13 @@ namespace LocalAIAgent.API.Api.Controllers
         public required AuthenticatorAttestationRawResponse Attestation { get; set; }
         public required string CredentialName { get; set; }
     }
+
+    public sealed record RegistrationStatusDto(string Mode, bool BootstrapAllowed);
+    public sealed record RegistrationOptionsRequest(string Username, string? InviteToken);
+    internal sealed record PendingRegistration(
+        User User,
+        bool IsBootstrap,
+        int? InvitationId,
+        string? InvitationTokenHash);
+    internal sealed class RegistrationGrantException(string message) : Exception(message);
 }

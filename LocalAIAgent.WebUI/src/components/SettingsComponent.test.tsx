@@ -1,6 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import SettingsComponent from './SettingsComponent';
 
+jest.mock('../users/UserService', () => ({
+    __esModule: true,
+    default: {
+        getInstance: () => ({
+            getCurrentUser: () => ({ id: '1', name: 'owner', role: 'Owner' }),
+        }),
+    },
+}));
+
 jest.mock('./PromptSettingsComponent', () => ({
     __esModule: true,
     default: () => <div>Prompt settings</div>,

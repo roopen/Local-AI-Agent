@@ -12,12 +12,17 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
     public required DbSet<NewsEvaluationEntry> NewsEvaluationEntries { get; set; }
     public required DbSet<ArticleTranslation> ArticleTranslations { get; set; }
     public required DbSet<CustomFeed> CustomFeeds { get; set; }
+    public required DbSet<Invitation> Invitations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Role)
+            .HasConversion<string>();
 
         modelBuilder.Entity<User>()
             .HasOne(u => u.Preferences)
@@ -29,10 +34,21 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .WithMany(u => u.Fido2Credentials)
             .HasForeignKey(c => c.UserId);
 
-        modelBuilder.Entity<AiSettings>()
-            .HasOne(s => s.UserPreferences)
-            .WithOne()
-            .HasForeignKey<AiSettings>(s => s.UserPreferencesId);
+        modelBuilder.Entity<Invitation>()
+            .HasIndex(i => i.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<Invitation>()
+            .HasOne(i => i.CreatedByUser)
+            .WithMany(u => u.CreatedInvitations)
+            .HasForeignKey(i => i.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Invitation>()
+            .HasOne(i => i.RedeemedByUser)
+            .WithMany()
+            .HasForeignKey(i => i.RedeemedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<NewsEvaluationEntry>()
             .HasOne(e => e.UserPreferences)
@@ -40,7 +56,7 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .HasForeignKey(e => e.UserPreferencesId);
 
         modelBuilder.Entity<NewsEvaluationEntry>()
-            .HasIndex(e => new { e.ArticleLink })
+            .HasIndex(e => new { e.UserPreferencesId, e.ArticleLink })
             .IsUnique();
 
         modelBuilder.Entity<ArticleTranslation>()

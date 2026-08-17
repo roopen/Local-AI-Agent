@@ -16,7 +16,8 @@ namespace LocalAIAgent.API.Api.Controllers;
 public sealed class AiSettingsController(
     UserContext context,
     IAiSettingsSecretProtector secretProtector,
-    ILlmRuntimeManager runtimeManager) : ControllerBase
+    ILlmRuntimeManager runtimeManager,
+    IConfiguration configuration) : ControllerBase
 {
     private const string DefaultModelId = "gemma-3-27b-it-qat";
     private const string DefaultEndpointUrl = "http://localhost:1234/v1/";
@@ -24,35 +25,44 @@ public sealed class AiSettingsController(
     [HttpGet]
     public async Task<ActionResult<AiSettingsResponse>> Get(CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out int userId))
+        if (!User.TryGetUserId(out _))
             return Unauthorized();
 
         AiSettings? settings = await context.AiSettings
             .AsNoTracking()
-            .Include(a => a.UserPreferences)
-            .FirstOrDefaultAsync(a => a.UserPreferences.UserId == userId, cancellationToken);
+            .OrderBy(a => a.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return Ok(settings is null ? CreateDefaults() : ToResponse(settings));
+        AiSettingsResponse response = settings is null ? CreateDefaults() : ToResponse(settings);
+        if (!User.IsInRole(AuthRoles.Owner))
+        {
+            response = response with
+            {
+                HasApiKey = false,
+                ModelId = string.Empty,
+                EndpointUrl = string.Empty,
+                Temperature = 0,
+                TopP = 0,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+            };
+        }
+
+        return Ok(response);
     }
 
     [HttpPut]
+    [Authorize(Roles = AuthRoles.Owner)]
     public async Task<ActionResult<AiSettingsResponse>> Put(
         [FromBody] UpdateAiSettingsRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out int userId))
+        if (!User.TryGetUserId(out _))
             return Unauthorized();
 
-        User? user = await context.Users
-            .Include(u => u.Preferences)
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (user is null)
-            return NotFound();
-        if (user.Preferences is null)
-            return BadRequest("User preferences must be created before LLM settings.");
-
         AiSettings? existing = await context.AiSettings
-            .FirstOrDefaultAsync(a => a.UserPreferencesId == user.Preferences.Id, cancellationToken);
+            .OrderBy(a => a.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
         string apiKey;
         LlmRuntimeSnapshot? candidate = null;
@@ -85,8 +95,6 @@ public sealed class AiSettingsController(
         AIOptions normalized = candidate.Options;
         AiSettings persisted = existing ?? new AiSettings
         {
-            UserPreferencesId = user.Preferences.Id,
-            UserPreferences = user.Preferences,
             ModelId = normalized.ModelId,
             EndpointUrl = normalized.EndpointUrl,
         };
@@ -151,21 +159,16 @@ public sealed class AiSettingsController(
         };
     }
 
-    private static AiSettingsResponse CreateDefaults() => new()
+    private AiSettingsResponse CreateDefaults() => new()
     {
         IsConfigured = false,
         HasApiKey = false,
-        ModelId = DefaultModelId,
-        EndpointUrl = DefaultEndpointUrl,
+        ModelId = configuration["AI_DEFAULT_MODEL"] ?? DefaultModelId,
+        EndpointUrl = configuration["AI_DEFAULT_ENDPOINT"] ?? DefaultEndpointUrl,
         Temperature = 0.2m,
         TopP = 1m,
         FrequencyPenalty = 1m,
         PresencePenalty = 1m,
     };
 
-    private bool TryGetCurrentUserId(out int userId)
-    {
-        string? claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(claimValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out userId);
-    }
 }

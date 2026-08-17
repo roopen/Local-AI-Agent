@@ -6,6 +6,7 @@ describe('LoginComponent', () => {
     const mockUserService: IUserService = {
         login: jest.fn(),
         register: jest.fn(),
+        getRegistrationStatus: jest.fn().mockResolvedValue({ mode: 'OwnerBootstrap', bootstrapAllowed: true }),
         logout: jest.fn(),
         getCurrentUser: jest.fn(),
         isLoggedIn: jest.fn(),
@@ -22,6 +23,10 @@ describe('LoginComponent', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        (mockUserService.getRegistrationStatus as jest.Mock).mockResolvedValue({
+            mode: 'InviteRequired',
+            bootstrapAllowed: false,
+        });
     });
 
     it('should call login when Login button is clicked', async () => {
@@ -34,18 +39,18 @@ describe('LoginComponent', () => {
         await waitFor(() => expect(mockOnLogin).toHaveBeenCalled());
     });
 
-    it('should call register when in register mode and Enter is pressed', async () => {
+    it('should bootstrap the owner when registration is allowed', async () => {
+        (mockUserService.getRegistrationStatus as jest.Mock).mockResolvedValue({
+            mode: 'OwnerBootstrap',
+            bootstrapAllowed: true,
+        });
         render(<LoginComponent userService={mockUserService} onLogin={mockOnLogin} />);
 
-        // Toggle to register mode
-        const registerToggle = screen.getByText('Register');
-        fireEvent.click(registerToggle);
-
-        const usernameInput = screen.getByLabelText('Username');
+        const usernameInput = await screen.findByLabelText('Username');
         fireEvent.change(usernameInput, { target: { value: 'newuser' } });
-        fireEvent.keyDown(usernameInput, { key: 'Enter', code: 'Enter', charCode: 13 });
+        fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
         
-        expect(mockUserService.register).toHaveBeenCalledWith('newuser');
+        expect(mockUserService.register).toHaveBeenCalledWith('newuser', undefined);
         await waitFor(() => expect(mockOnLogin).toHaveBeenCalled());
     });
 });

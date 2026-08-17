@@ -1,4 +1,4 @@
-import { AiSettingsService, LoginService, OpenAPI, UserPreferencesService, Fido2Service, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
+import { AiSettingsService, LoginService, OpenAPI, UserPreferencesService, Fido2Service, HostingSecurityService, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
 import type {
     AssertionOptions,
     AuthenticatorAssertionRawResponse,
@@ -7,12 +7,13 @@ import type {
     CredentialRegistrationRequest,
     RegisteredPublicKeyCredential
 } from "../clients/UserApiClient";
+import type { RegistrationStatusDto } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
 import AISettings from "../domain/AISettings";
 
-OpenAPI.BASE = "https://apiainews.dev.localhost:7276";
+OpenAPI.BASE = "";
 OpenAPI.CREDENTIALS = "include";
 OpenAPI.WITH_CREDENTIALS = true;
 
@@ -42,6 +43,8 @@ export default class UserService implements IUserService {
         );
     }
 
+    // Mapping optional API defaults into the domain model accounts for each nullable field.
+    // eslint-disable-next-line complexity
     async saveAiSettings(settings: AISettings, clearApiKey: boolean = false): Promise<AISettings> {
         if (!this.getCurrentUser()) {
             throw new Error("User must be logged in to save AI settings.");
@@ -71,11 +74,11 @@ export default class UserService implements IUserService {
     }
 
     async getCredentials(): Promise<CredentialInfo[]> {
-        return await Fido2Service.getListCredentials();
+        return await Fido2Service.getApiAuthPasskeys();
     }
     
     async removeCredential(id: string): Promise<void> {
-        await Fido2Service.postRemoveCredential(id);
+        await Fido2Service.postApiAuthPasskeysRemove(id);
     }
 
      
@@ -84,7 +87,7 @@ export default class UserService implements IUserService {
             throw new Error("User must be logged in to add a credential.");
         }
 
-        const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptionsExistingUser();
+        const options: CredentialCreateOptions = await Fido2Service.postApiAuthPasskeysOptions();
 
         const credential = await this.getCredentialFromUser(options);
 
@@ -95,7 +98,7 @@ export default class UserService implements IUserService {
             credentialName: `${this._currentUser.name} additional credential`
         };
 
-        await Fido2Service.postAddCredentialExistingUser(requestBody);
+        await Fido2Service.postApiAuthPasskeys(requestBody);
     }
 
     public static getInstance(): UserService {
@@ -106,7 +109,7 @@ export default class UserService implements IUserService {
     }
 
     async login(): Promise<User | null> {
-        const options: AssertionOptions = await Fido2Service.postAssertionOptions();
+        const options: AssertionOptions = await Fido2Service.postApiAuthLoginOptions();
 
         console.log('assertion options: ', options);
 
@@ -147,23 +150,26 @@ export default class UserService implements IUserService {
             clientExtensionResults: UserService.mapClientExtensionResults(credential.getClientExtensionResults())
         };
 
-        const assertion = await Fido2Service.postMakeAssertion(data);
+        const assertion = await Fido2Service.postApiAuthLoginComplete(data);
 
         console.log('assertion result: ', assertion);
 
         return null;
     }
 
-    async register(username: string): Promise<User | null> {
+    async register(username: string, inviteToken?: string): Promise<User | null> {
         if (!username) throw new Error("Username is required");
 
-        const options: CredentialCreateOptions = await Fido2Service.postMakeCredentialOptions(username);
+        const options: CredentialCreateOptions = await Fido2Service.postApiAuthRegisterOptions({
+            username,
+            inviteToken: inviteToken ?? null,
+        });
 
         const credential = await this.getCredentialFromUser(options);
 
         const authAttestationRawResponse = this.getAttestationRawResponse(credential, username);
 
-        const registrationResult: RegisteredPublicKeyCredential = await Fido2Service.postMakeCredential(authAttestationRawResponse);
+        const registrationResult: RegisteredPublicKeyCredential = await Fido2Service.postApiAuthRegisterComplete(authAttestationRawResponse);
 
         if (registrationResult.user) {
             console.log('registration successful for user: ', registrationResult.user);
@@ -172,8 +178,12 @@ export default class UserService implements IUserService {
         return null;
     }
 
+    async getRegistrationStatus(): Promise<RegistrationStatusDto> {
+        return await Fido2Service.getApiAuthRegistrationStatus();
+    }
+
     async logout(): Promise<void> {
-        await LoginService.postApiLoginLogout();
+        await LoginService.postApiAuthLogout();
         this._currentUser = null;
     }
 
@@ -183,12 +193,14 @@ export default class UserService implements IUserService {
 
     async isLoggedIn(): Promise<boolean> {
         try {
-            const currentUser = await LoginService.getApiLoginCurrent();
+            const currentUser = await LoginService.getApiAuthCurrent();
             if (currentUser) {
                 this._currentUser = {
                     id: currentUser.id!.toString(),
-                    name: currentUser.username!
+                    name: currentUser.username!,
+                    role: currentUser.role === 'Owner' ? 'Owner' : 'Member',
                 };
+                await HostingSecurityService.getApiAuthCsrf();
                 return true;
             }
             return false;
@@ -197,8 +209,8 @@ export default class UserService implements IUserService {
         }
     }
 
-    async getUserPreferences(userId: string): Promise<UserSettings | null> {
-        const preferences = await UserPreferencesService.getApiUserPreferences(parseInt(userId, 10));
+    async getUserPreferences(): Promise<UserSettings | null> {
+        const preferences = await UserPreferencesService.getApiUserPreferences();
         if (!preferences) {
             return null;
         }
@@ -218,8 +230,7 @@ export default class UserService implements IUserService {
         if (!this._currentUser) {
             throw new Error("User not logged in");
         }
-        await UserPreferencesService.postApiSavePreferences({
-            userId: parseInt(this._currentUser.id, 10),
+        await UserPreferencesService.putApiUserPreferences({
             prompt: preferences.prompt,
             interests: preferences.likes,
             dislikes: preferences.dislikes,

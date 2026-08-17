@@ -34,8 +34,11 @@ namespace LocalAIAgent.API.Api.Controllers
         [HttpPost("Feedback")]
         public async Task<IActionResult> SubmitFeedback([FromBody] NewsFeedbackDto dto)
         {
+            if (!User.TryGetUserId(out int userId))
+                return Unauthorized();
+
             UserPreferences? preferences = await userContext.UserPreferences
-                .FirstOrDefaultAsync(p => p.UserId == dto.UserId);
+                .FirstOrDefaultAsync(p => p.UserId == userId);
 
             if (preferences is null)
                 return NotFound("User preferences not found.");
@@ -69,7 +72,7 @@ namespace LocalAIAgent.API.Api.Controllers
             return Ok();
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = AuthRoles.Owner)]
         [HttpGet("Dataset")]
         public async Task<IActionResult> GetDataset(CancellationToken cancellationToken)
         {

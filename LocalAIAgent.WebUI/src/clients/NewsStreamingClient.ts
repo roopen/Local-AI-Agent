@@ -115,7 +115,7 @@ export class NewsStreamClient {
     }
 
     private connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://apiainews.dev.localhost:7276/newsHub")
+        .withUrl(new URL('/newsHub', window.location.origin).toString())
         .withAutomaticReconnect()
         .build();
     
@@ -123,6 +123,8 @@ export class NewsStreamClient {
         return this.connection;
     }
 
+    // Connection cancellation and stream lifecycle checks are deliberately colocated.
+    // eslint-disable-next-line complexity
     async start(
         onArticleReceived: ArticleCallback,
         onComplete: CompletionCallback,
@@ -162,7 +164,7 @@ export class NewsStreamClient {
 
             console.log("✅ Connected to SignalR hub.");
 
-            const stream = this.connection.stream("GetNewsStream", parseInt(currentUser.id, 10));
+            const stream = this.connection.stream("GetNewsStream");
 
             this._streamSubscription = stream.subscribe({
                 next: (item: NewsDto) => {
