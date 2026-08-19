@@ -8,7 +8,7 @@ protection keys live together in the `ainews-data` volume.
 
 ## Prerequisites
 
-- Linux with a rootless Podman release that supports `.build` Quadlets
+- Linux with rootless Podman and Quadlet support
 - A user systemd instance and a stable checkout at
   `~/src/Local-AI-Agent`
 - A stable public HTTPS hostname and either an existing reverse proxy or
@@ -55,20 +55,22 @@ reboot (this one command is run by an administrator):
 
 ```sh
 sudo loginctl enable-linger "$USER"
+podman build --pull=newer --tag localhost/ainews:latest --file Containerfile .
 systemctl --user daemon-reload
 systemctl --user enable --now ainews.service
 ```
 
-The container unit references `ainews.build`, so systemd builds the local image
-before starting the application. EF Core applies pending migrations once during
-startup.
+The application Quadlet consumes the explicit local image name
+`localhost/ainews:latest`. The supplied `.build` unit is used by the update
+script when the installed Podman can generate it; otherwise, the script runs
+the equivalent `podman build` command directly. EF Core applies pending
+migrations once during startup.
 
 Useful commands:
 
 ```sh
 systemctl --user status ainews.service
 journalctl --user-unit ainews.service -f
-systemctl --user restart ainews-build.service
 systemctl --user restart ainews.service
 podman healthcheck run ainews
 curl --fail http://127.0.0.1:8180/alive
@@ -184,9 +186,11 @@ Store a copy off the server. Test restores periodically.
 ## Upgrade
 
 The update script requires a clean checkout at `~/src/Local-AI-Agent`. It pulls
-only fast-forward changes, refreshes the installed Quadlet definitions, asks the
-`.build` unit to create `localhost/ainews:latest`, reloads the user systemd
-manager, restarts `ainews.service`, and waits for the health endpoint:
+only fast-forward changes, refreshes the installed Quadlet definitions, creates
+`localhost/ainews:latest`, reloads the user systemd manager, restarts
+`ainews.service`, and waits for the health endpoint. It uses
+`ainews-build.service` when available and automatically falls back to
+`podman build` when that generated unit is unavailable:
 
 ```sh
 ~/.local/bin/update-ainews

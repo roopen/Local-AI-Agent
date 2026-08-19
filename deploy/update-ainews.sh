@@ -49,9 +49,18 @@ printf 'Reloading the user systemd manager\n'
 systemctl --user daemon-reload
 
 printf 'Building %s\n' "${image_name}"
-systemctl --user restart "${build_service_name}"
+if systemctl --user cat "${build_service_name}" >/dev/null 2>&1; then
+    systemctl --user restart "${build_service_name}"
+else
+    printf '%s is unavailable; building directly with Podman\n' "${build_service_name}"
+    podman build \
+        --pull=newer \
+        --tag "${image_name}" \
+        --file "${repository_dir}/Containerfile" \
+        "${repository_dir}"
+fi
 podman image exists "${image_name}" \
-    || fail "the Quadlet build completed without creating ${image_name}"
+    || fail "the build completed without creating ${image_name}"
 
 printf 'Restarting %s\n' "${service_name}"
 systemctl --user restart "${service_name}"

@@ -4,7 +4,8 @@ Wants=network-online.target
 After=network-online.target
 
 [Container]
-Image=ainews.build
+Image=localhost/ainews:latest
+Pull=never
 ContainerName=ainews
 EnvironmentFile=%h/.config/ainews/ainews.env
 PublishPort=127.0.0.1:8180:8080
