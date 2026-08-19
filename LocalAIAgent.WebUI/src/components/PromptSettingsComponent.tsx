@@ -6,6 +6,26 @@ interface PromptSettingsProps {
     onSave?: () => Promise<void>;
 }
 
+const parseJsonStringArray = (value: string): string[] => {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(value);
+    } catch {
+        throw new Error('Paste a valid JSON array of quoted strings.');
+    }
+
+    if (!Array.isArray(parsed) || !parsed.every(item => typeof item === 'string')) {
+        throw new Error('Every item in the pasted JSON array must be a string.');
+    }
+
+    const items = [...new Set(parsed.map(item => item.trim()).filter(Boolean))];
+    if (items.length === 0) {
+        throw new Error('The pasted JSON array does not contain any items.');
+    }
+
+    return items;
+};
+
 const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
     const [settings, setSettings] = useState<UserSettings>(new UserSettings());
     const [newLike, setNewLike] = useState('');
@@ -100,6 +120,16 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
         await persist(cloneWith({ dislikes: [...settings.dislikes, value] }));
     }, [newDislike, settings.dislikes, cloneWith, persist]);
 
+    const pasteLikes = useCallback(async (items: string[]) => {
+        const likes = [...new Set([...settings.likes, ...items])];
+        await persist(cloneWith({ likes }));
+    }, [settings.likes, cloneWith, persist]);
+
+    const pasteDislikes = useCallback(async (items: string[]) => {
+        const dislikes = [...new Set([...settings.dislikes, ...items])];
+        await persist(cloneWith({ dislikes }));
+    }, [settings.dislikes, cloneWith, persist]);
+
     const removeLike = useCallback((item: string) => {
         void persist(cloneWith({ likes: settings.likes.filter(l => l !== item) }));
     }, [settings.likes, cloneWith, persist]);
@@ -151,6 +181,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                     inputValue={newLike}
                     setInputValue={setNewLike}
                     onCommit={commitLike}
+                    onPasteItems={pasteLikes}
                     inputRef={likeInputRef}
                     addPlaceholder="Add a like…"
                 />
@@ -170,6 +201,7 @@ const PromptSettingsComponent: React.FC<PromptSettingsProps> = ({ onSave }) => {
                     inputValue={newDislike}
                     setInputValue={setNewDislike}
                     onCommit={commitDislike}
+                    onPasteItems={pasteDislikes}
                     inputRef={dislikeInputRef}
                     addPlaceholder="Add a dislike…"
                 />
@@ -199,14 +231,17 @@ interface TasteColumnProps {
     inputValue: string;
     setInputValue: React.Dispatch<React.SetStateAction<string>>;
     onCommit: () => void | Promise<void>;
+    onPasteItems: (items: string[]) => Promise<void>;
     inputRef: React.RefObject<HTMLInputElement | null>;
     addPlaceholder: string;
 }
 
 const TasteColumn: React.FC<TasteColumnProps> = ({
     label, items, iconClass, iconSvg, onRemove,
-    adding, setAdding, inputValue, setInputValue, onCommit, inputRef, addPlaceholder,
+    adding, setAdding, inputValue, setInputValue, onCommit, onPasteItems, inputRef, addPlaceholder,
 }) => {
+    const [pasteError, setPasteError] = useState<string | null>(null);
+
     const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -218,9 +253,28 @@ const TasteColumn: React.FC<TasteColumnProps> = ({
         }
     };
 
+    const onInputPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+        const pastedValue = event.clipboardData.getData('text');
+        if (!pastedValue.trimStart().startsWith('[')) return;
+
+        event.preventDefault();
+        try {
+            const pastedItems = parseJsonStringArray(pastedValue);
+            setPasteError(null);
+            setInputValue('');
+            setAdding(false);
+            void onPasteItems(pastedItems).catch(() => {
+                setPasteError('The pasted items could not be saved.');
+            });
+        } catch (error) {
+            setPasteError(error instanceof Error ? error.message : 'The pasted JSON array is invalid.');
+        }
+    };
+
     return (
         <div style={{ flex: '1', minWidth: 0 }}>
             <h2 className="settings-section-title">{label} ({items.length})</h2>
+            <p className="taste-paste-hint">Add one item, or paste a JSON string array.</p>
             <ul className="taste-chip-list">
                 {items.map(item => (
                     <li key={item} className="taste-chip">
@@ -249,6 +303,7 @@ const TasteColumn: React.FC<TasteColumnProps> = ({
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={onInputKeyDown}
+                            onPaste={onInputPaste}
                             onBlur={() => {
                                 setInputValue('');
                                 setAdding(false);
@@ -261,6 +316,7 @@ const TasteColumn: React.FC<TasteColumnProps> = ({
                         className="taste-chip taste-chip--ghost"
                         role="button"
                         tabIndex={0}
+                        aria-label={`Add ${label.toLowerCase()}`}
                         onClick={() => setAdding(true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -276,6 +332,7 @@ const TasteColumn: React.FC<TasteColumnProps> = ({
                     </li>
                 )}
             </ul>
+            {pasteError && <p className="taste-paste-error" role="alert">{pasteError}</p>}
         </div>
     );
 };

@@ -40,10 +40,17 @@ Edit `/etc/ainews/ainews.env` before starting. At minimum:
 
 - Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a path or trailing
   hostname alias.
-- Set `Security__TrustedProxies__0` to the reverse proxy source address seen by
-  the application. Do not enter a public/client network here. If the proxy
-  reaches the container through the Podman gateway, use that exact gateway
-  address rather than assuming `127.0.0.1`.
+- Replace `REPLACE_WITH_PODMAN_GATEWAY` in `Security__TrustedProxies__0` with
+  the rootful Podman gateway reported by this command:
+
+  ```sh
+  sudo podman network inspect podman \
+    --format '{{range .Subnets}}{{.Gateway}}{{end}}'
+  ```
+
+  This must be the source address seen by the application, not a public/client
+  network. Host-published traffic crosses Podman's bridge, so the application
+  does not normally see the host reverse proxy as `127.0.0.1`.
 - Optionally set the first AI endpoint/model shown to the owner. A model server
   on the Podman host is normally reached as
   `http://host.containers.internal:1234/v1/`.
@@ -133,15 +140,22 @@ Set these application values in `/etc/ainews/ainews.env`:
 ```ini
 PUBLIC_ORIGIN=https://news.example.com
 Security__ForwardedForHeaderName=CF-Connecting-IP
-Security__TrustedProxies__0=127.0.0.1
+Security__TrustedProxies__0=REPLACE_WITH_PODMAN_GATEWAY
 ```
 
 The trusted proxy value must be the address that the application actually sees
-for the `cloudflared` connection. Depending on the Podman network, that
-may be its gateway rather than `127.0.0.1`; if forwarded-header logs report an
-unknown proxy, replace the value with that exact address. Do not trust a broad
-client or Cloudflare address range: only the local tunnel process can reach the
-loopback-published port.
+for the `cloudflared` connection. With the supplied Quadlet, this is the Podman
+gateway rather than `127.0.0.1`. After the container starts, confirm the exact
+value with:
+
+```sh
+sudo podman inspect ainews \
+  --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'
+```
+
+If forwarded-header logs report an unknown proxy, replace the value with that
+exact address. Do not trust a broad client or Cloudflare address range: only the
+local tunnel process can reach the loopback-published port.
 
 If the observed address is unclear, temporarily add
 `Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides=Debug` to the environment
@@ -154,6 +168,14 @@ single-address header prevents a caller-supplied `X-Forwarded-For` chain from
 affecting rate limiting. Keep Cloudflare's "Remove visitor IP headers" transform
 disabled for this hostname. Enable WebSockets in the Cloudflare zone so the
 SignalR `/newsHub` connection can upgrade normally.
+
+Verify that HTTPS forwarding is active. The unauthenticated CSRF endpoint
+redirect must retain the public `https` scheme:
+
+```sh
+curl --silent --show-error --head https://news.example.com/api/auth/csrf \
+  | grep --ignore-case '^location:'
+```
 
 Install and enable `cloudflared` as a service after validating the tunnel. A
 dashboard-managed tunnel can use the same published application values:

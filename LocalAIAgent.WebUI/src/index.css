@@ -610,6 +610,18 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.taste-paste-hint {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.78em;
+}
+
+.taste-paste-error {
+  margin: 8px 0 0;
+  color: #ef4444;
+  font-size: 0.82em;
+}
+
 .login-error {
   color: #ff9b9b;
   margin: 0;
