@@ -152,13 +152,14 @@ namespace LocalAIAgent.API
                 app.MapHub<NewsHub>("/newsHub");
                 app.MapFallbackToFile("index.html");
 
-                // Run initial news fetch on startup
                 if (!isIntegrationTests && !isSwaggerGen)
                 {
                     using IServiceScope startupScope = app.Services.CreateScope();
                     startupScope.ServiceProvider.GetRequiredService<AiSettingsStartupService>()
                         .ActivateFirstAndWarmUpAsync().GetAwaiter().GetResult();
-                    InitializeNewsCache(app);
+
+                    if (app.Environment.IsDevelopment())
+                        app.Lifetime.ApplicationStarted.Register(() => OpenBrowser(app));
                 }
 
                 app.Run();
@@ -167,26 +168,6 @@ namespace LocalAIAgent.API
             {
                 Log.CloseAndFlush();
             }
-        }
-
-        private static void InitializeNewsCache(WebApplication app)
-        {
-            IServiceScopeFactory scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-            Task.Run(async () =>
-            {
-                using IServiceScope scope = scopeFactory.CreateScope();
-                INewsService newsService = scope.ServiceProvider.GetRequiredService<INewsService>();
-                await newsService.GetNewsAsync();
-
-                if (!app.Lifetime.ApplicationStarted.IsCancellationRequested)
-                {
-                    TaskCompletionSource<object> tcs = new();
-                    using CancellationTokenRegistration reg = app.Lifetime.ApplicationStarted.Register(() => tcs.SetResult(new object()));
-                    await tcs.Task;
-                }
-
-                OpenBrowser(app);
-            });
         }
 
         private static void OpenBrowser(WebApplication app)

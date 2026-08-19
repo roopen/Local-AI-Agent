@@ -1,7 +1,9 @@
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Domain;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using System.Net;
 using System.Net.Http;
 using System.ServiceModel.Syndication;
 
@@ -14,6 +16,54 @@ namespace LocalAIAgent.Tests.UnitTests;
 /// </summary>
 public class NewsServiceFilterTests
 {
+    private const string RssTemplate = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0">
+          <channel>
+            <title>Test feed</title>
+            <link>https://example.com</link>
+            <description>Test feed</description>
+            <item>
+              <title>{0}</title>
+              <link>https://example.com/{1}</link>
+              <description>Summary</description>
+              <pubDate>Wed, 19 Aug 2026 09:00:00 GMT</pubDate>
+            </item>
+          </channel>
+        </rss>
+        """;
+
+    private sealed class StubHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            string rss = string.Format(RssTemplate, $"Headline {RequestCount}", $"article-{RequestCount}");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(rss, System.Text.Encoding.UTF8, "application/xml"),
+            });
+        }
+    }
+
+    private sealed class TestNewsSettings : BaseNewsClientSettings
+    {
+        public override string ClientName => "TestNewsClient";
+        public override string BaseUrl => "https://example.com/";
+        public override string Language => "en";
+        public override List<string> GetNewsUrls() => ["feed.xml"];
+        public override void AddHttpClient(IServiceCollection services) { }
+    }
+
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
     private static NewsItem BuildItem(string title, string summary, DateTimeOffset publishDate, string? link = null, params string[] categories)
     {
         SyndicationItem item = new()
@@ -45,6 +95,34 @@ public class NewsServiceFilterTests
 
     private static NewsService BuildService() =>
         new(Mock.Of<IHttpClientFactory>(), [], TimeProvider.System, NullLogger<NewsService>.Instance);
+
+    [Fact]
+    public async Task GetNewsAsync_RefreshesFeedsAndReplacesPreviousSnapshot()
+    {
+        StubHandler handler = new();
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://example.com/") };
+        Mock<IHttpClientFactory> factory = new();
+        factory.Setup(f => f.CreateClient("TestNewsClient")).Returns(httpClient);
+        using NewsService service = new(
+            factory.Object,
+            [new TestNewsSettings()],
+            new FixedTimeProvider(),
+            NullLogger<NewsService>.Instance);
+        UserPreferences preferences = new()
+        {
+            Prompt = "Be helpful.",
+            Interests = [],
+            Dislikes = [],
+        };
+
+        List<NewsItem> first = await service.GetNewsAsync(preferences, TestContext.Current.CancellationToken);
+        List<NewsItem> second = await service.GetNewsAsync(preferences, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal("Headline 1", Assert.Single(first).Title);
+        Assert.Equal("Headline 2", Assert.Single(second).Title);
+        Assert.DoesNotContain(second, item => item.Title == "Headline 1");
+    }
 
     [Fact]
     public void FilterNews_KeepsItemsAtOrAfterCutoff()

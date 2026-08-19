@@ -11,10 +11,8 @@ namespace LocalAIAgent.Application.News
 
     public interface INewsService
     {
-        Task<List<NewsItem>> GetNewsAsync(CancellationToken cancellationToken = default);
-
         /// <summary>
-        /// Returns the cached news filtered by the user's preferences:
+        /// Refreshes the news feeds and returns the latest news filtered by the user's preferences:
         /// drops articles older than 24h, articles matching the user's dislikes,
         /// and articles from feeds the user has disabled.
         /// </summary>
@@ -28,28 +26,24 @@ namespace LocalAIAgent.Application.News
         IHttpClientFactory httpClientFactory,
         IEnumerable<BaseNewsClientSettings> newsClientSettingsList,
         TimeProvider timeProvider,
-        ILogger<NewsService> logger) : INewsService
+        ILogger<NewsService> logger) : INewsService, IDisposable
     {
         private List<NewsItem> newsCache = [];
-
-        public async Task<List<NewsItem>> GetNewsAsync(CancellationToken cancellationToken = default)
-        {
-            if (newsCache.Count is 0) await LoadAllNews(cancellationToken);
-
-            return newsCache;
-        }
+        private readonly SemaphoreSlim refreshLock = new(1, 1);
 
         public async Task<List<NewsItem>> GetNewsAsync(
             UserPreferences preferences,
             CancellationToken cancellationToken = default)
         {
-            if (newsCache.Count is 0) await LoadAllNews(cancellationToken);
+            await LoadAllNews(cancellationToken);
 
             DateTimeOffset cutoff = timeProvider.GetUtcNow().AddDays(-1);
             HashSet<string> disabledSources = new(preferences.DisabledFeedSources, StringComparer.OrdinalIgnoreCase);
             List<NewsItem> filteredNews = FilterNews(newsCache, preferences.Dislikes, cutoff, disabledSources);
 
-            double filterPercentage = 100 - (filteredNews.Count / (double)newsCache.Count * 100);
+            double filterPercentage = newsCache.Count is 0
+                ? 0
+                : 100 - (filteredNews.Count / (double)newsCache.Count * 100);
             NewsLogging.LogNewsFiltered(logger, newsCache.Count, filteredNews.Count, filterPercentage, null);
 
             return filteredNews;
@@ -57,45 +51,40 @@ namespace LocalAIAgent.Application.News
 
         internal async Task<int> LoadAllNews(CancellationToken cancellationToken = default)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            // Pair each fetch task with the originating source so we can attribute articles to their feed.
-            List<Task<(BaseNewsClientSettings Settings, SyndicationFeed Feed)>> tasks = newsClientSettingsList
-                .Distinct()
-                .SelectMany(settings =>
-                {
-                    HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
-                    return settings.GetNewsUrls().Select(async url =>
-                        (settings, await GetNews(httpClient, url, cancellationToken)));
-                })
-                .ToList();
-
-            (BaseNewsClientSettings Settings, SyndicationFeed Feed)[] results = await Task.WhenAll(tasks);
-
-            foreach ((BaseNewsClientSettings settings, SyndicationFeed feed) in results)
+            await refreshLock.WaitAsync(cancellationToken);
+            try
             {
-                CacheNewsArticles(settings, feed);
-            }
+                Stopwatch stopwatch = Stopwatch.StartNew();
 
-            stopwatch.Stop();
-            logger.LogInformation("NewsService: loaded all news in {ElapsedMs} ms", stopwatch.ElapsedMilliseconds);
+                // Pair each fetch task with the originating source so we can attribute articles to their feed.
+                List<Task<(BaseNewsClientSettings Settings, SyndicationFeed Feed)>> tasks = newsClientSettingsList
+                    .Distinct()
+                    .SelectMany(settings =>
+                    {
+                        HttpClient httpClient = httpClientFactory.CreateClient(settings.ClientName);
+                        return settings.GetNewsUrls().Select(async url =>
+                            (settings, await GetNews(httpClient, url, cancellationToken)));
+                    })
+                    .ToList();
 
-            return results.Sum(r => r.Feed.Items.Count());
-        }
-
-        private void CacheNewsArticles(BaseNewsClientSettings settings, SyndicationFeed feed)
-        {
-            List<NewsItem> newItems = feed.Items
-                .Where(item => item != null)
-                .Select(item => new NewsItem(item, settings.ClientName, settings.Language))
-                .ToList();
-
-            lock (newsCache)
-            {
-                newsCache = newsCache
-                    .Concat(newItems)
+                (BaseNewsClientSettings Settings, SyndicationFeed Feed)[] results = await Task.WhenAll(tasks);
+                List<NewsItem> refreshedNews = results
+                    .SelectMany(result => result.Feed.Items
+                        .Where(item => item != null)
+                        .Select(item => new NewsItem(item, result.Settings.ClientName, result.Settings.Language)))
                     .DistinctBy(item => item.Link)
                     .ToList();
+
+                newsCache = refreshedNews;
+
+                stopwatch.Stop();
+                logger.LogInformation("NewsService: loaded all news in {ElapsedMs} ms", stopwatch.ElapsedMilliseconds);
+
+                return refreshedNews.Count;
+            }
+            finally
+            {
+                refreshLock.Release();
             }
         }
 
@@ -264,6 +253,11 @@ namespace LocalAIAgent.Application.News
             }
 
             return true;
+        }
+
+        public void Dispose()
+        {
+            refreshLock.Dispose();
         }
     }
 }
