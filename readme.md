@@ -21,11 +21,10 @@ NOTE: Currently very much a Proof of Concept.
 ## Private server
 
 The web application supports an invite-only, same-origin Linux deployment. The
-first account must be created from a configured trusted network and becomes the
-owner. All later accounts require an owner-generated, seven-day, single-use
-invitation. The owner manages the shared OpenAI-compatible endpoint while each
-member's news preferences, feeds, feedback, evaluations, and passkeys remain
-private.
+first account registered on an empty installation becomes the owner. All later
+accounts require an owner-generated, seven-day, single-use invitation. The owner
+manages the shared OpenAI-compatible endpoint while each member's news
+preferences, feeds, feedback, evaluations, and passkeys remain private.
 
 See [docs/linux-server.md](docs/linux-server.md) for the system-wide Podman Quadlet,
 Cloudflare Tunnel and reverse-proxy ingress, backup, upgrade, restore, and

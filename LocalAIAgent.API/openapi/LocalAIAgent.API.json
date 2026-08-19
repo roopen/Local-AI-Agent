@@ -2133,9 +2133,6 @@
           "mode": {
             "type": "string",
             "nullable": true
-          },
-          "bootstrapAllowed": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false

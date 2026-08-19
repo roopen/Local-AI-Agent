@@ -6,7 +6,7 @@ describe('LoginComponent', () => {
     const mockUserService: IUserService = {
         login: jest.fn(),
         register: jest.fn(),
-        getRegistrationStatus: jest.fn().mockResolvedValue({ mode: 'OwnerBootstrap', bootstrapAllowed: true }),
+        getRegistrationStatus: jest.fn().mockResolvedValue({ mode: 'OwnerBootstrap' }),
         logout: jest.fn(),
         getCurrentUser: jest.fn(),
         isLoggedIn: jest.fn(),
@@ -25,7 +25,6 @@ describe('LoginComponent', () => {
         jest.clearAllMocks();
         (mockUserService.getRegistrationStatus as jest.Mock).mockResolvedValue({
             mode: 'InviteRequired',
-            bootstrapAllowed: false,
         });
     });
 
@@ -39,10 +38,9 @@ describe('LoginComponent', () => {
         await waitFor(() => expect(mockOnLogin).toHaveBeenCalled());
     });
 
-    it('should bootstrap the owner when registration is allowed', async () => {
+    it('should bootstrap the owner when there are no users', async () => {
         (mockUserService.getRegistrationStatus as jest.Mock).mockResolvedValue({
             mode: 'OwnerBootstrap',
-            bootstrapAllowed: true,
         });
         render(<LoginComponent userService={mockUserService} onLogin={mockOnLogin} />);
 
@@ -52,5 +50,12 @@ describe('LoginComponent', () => {
         
         expect(mockUserService.register).toHaveBeenCalledWith('newuser', undefined);
         await waitFor(() => expect(mockOnLogin).toHaveBeenCalled());
+    });
+
+    it('should require an invitation once an owner exists', async () => {
+        render(<LoginComponent userService={mockUserService} onLogin={mockOnLogin} />);
+
+        expect(await screen.findByText('New accounts require an invitation from the owner.')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Register' })).toBeNull();
     });
 });

@@ -4,6 +4,5 @@
 /* eslint-disable */
 export type RegistrationStatusDto = {
     mode?: string | null;
-    bootstrapAllowed?: boolean;
 };
 

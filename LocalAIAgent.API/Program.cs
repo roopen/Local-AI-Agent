@@ -50,7 +50,6 @@ namespace LocalAIAgent.API
                     .SetApplicationName("LocalAIAgent")
                     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
                 builder.Services.AddSingleton<IAiSettingsSecretProtector, AiSettingsSecretProtector>();
-                builder.Services.AddSingleton<BootstrapAccessPolicy>();
                 builder.Services.AddScoped<AiSettingsStartupService>();
 
                 string? httpsUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url");

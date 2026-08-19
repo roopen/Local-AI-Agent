@@ -14,8 +14,7 @@ and ASP.NET data-protection keys live together in the `ainews-data` volume.
   who performs updates
 - A stable public HTTPS hostname and either an existing reverse proxy or
   Cloudflare Tunnel
-- The proxy's exact address as observed by the container and explicit trusted
-  LAN CIDRs
+- The proxy's exact address as observed by the container
 
 WebAuthn credentials are scoped to the hostname. Choose the final public name
 before registering the first passkey; changing `PUBLIC_ORIGIN` later requires
@@ -45,8 +44,6 @@ Edit `/etc/ainews/ainews.env` before starting. At minimum:
   the application. Do not enter a public/client network here. If the proxy
   reaches the container through the Podman gateway, use that exact gateway
   address rather than assuming `127.0.0.1`.
-- Set one or more `Security__BootstrapAllowedNetworks__N` values to the LAN CIDRs
-  that may create the first account.
 - Optionally set the first AI endpoint/model shown to the owner. A model server
   on the Podman host is normally reached as
   `http://host.containers.internal:1234/v1/`.
@@ -154,16 +151,9 @@ after setting the exact proxy address.
 
 Cloudflare Tunnel reports the visitor through `CF-Connecting-IP`. Selecting that
 single-address header prevents a caller-supplied `X-Forwarded-For` chain from
-affecting bootstrap checks or rate limiting. Keep Cloudflare's "Remove visitor
-IP headers" transform disabled for this hostname. Enable WebSockets in the
-Cloudflare zone so the SignalR `/newsHub` connection can upgrade normally.
-
-The first owner request will carry the device's public egress address, not its
-private LAN address, when it travels through Cloudflare. Add that exact address
-as a `/32` (IPv4) or `/128` (IPv6) bootstrap network, or use split DNS with a
-trusted local HTTPS proxy if private LAN CIDR matching is required. After an
-owner exists, bootstrap registration is permanently closed regardless of this
-setting.
+affecting rate limiting. Keep Cloudflare's "Remove visitor IP headers" transform
+disabled for this hostname. Enable WebSockets in the Cloudflare zone so the
+SignalR `/newsHub` connection can upgrade normally.
 
 Install and enable `cloudflared` as a service after validating the tunnel. A
 dashboard-managed tunnel can use the same published application values:
@@ -190,10 +180,10 @@ host. Configure the proxy to:
 - proxy only to `http://127.0.0.1:8180`; and
 - allow HTTP/1.1 WebSocket upgrades, including `/newsHub`.
 
-After reloading the proxy, open `PUBLIC_ORIGIN` from an allowed LAN. On an empty
-database, that device can create the sole owner account. Public clients will see
-only passkey login. Once the owner exists, all new registration requires an
-invitation link created under Settings > Administration.
+After reloading the proxy, open `PUBLIC_ORIGIN`. On an empty database, the
+registration form creates the sole owner account. Once the owner exists, public
+clients see only passkey login and all new registration requires an invitation
+link created under Settings > Administration.
 
 ## Backup
 
@@ -274,9 +264,8 @@ migrations are not automatically reversed by running an older image.
 
 ## Operational checks
 
-- An uninvited public browser can only log in.
-- The bootstrap screen appears only on an empty database and an allowed client
-  network.
+- An empty installation offers owner registration to the first visitor.
+- After the owner is created, an uninvited public browser can only log in.
 - Invitations expire after seven days and can be revoked before use.
 - A disabled member loses access on its next request because sessions are
   checked against SQLite.

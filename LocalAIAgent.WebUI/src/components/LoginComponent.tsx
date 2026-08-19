@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@progress/kendo-react-buttons';
 import { Input } from '@progress/kendo-react-inputs';
 import type { RegistrationStatusDto } from '../clients/UserApiClient';
@@ -32,17 +32,14 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
         userService.getRegistrationStatus()
             .then(status => {
                 setRegistrationStatus(status);
-                if (!inviteToken && status.mode === 'OwnerBootstrap' && status.bootstrapAllowed) {
+                if (!inviteToken && status.mode === 'OwnerBootstrap') {
                     setIsRegister(true);
                 }
             })
-            .catch(() => setRegistrationStatus({ mode: 'InviteRequired', bootstrapAllowed: false }));
+            .catch(() => setRegistrationStatus({ mode: 'InviteRequired' }));
     }, [inviteToken, userService]);
 
-    const canRegister = useMemo(
-        () => Boolean(inviteToken || registrationStatus?.bootstrapAllowed),
-        [inviteToken, registrationStatus],
-    );
+    const canRegister = Boolean(inviteToken || registrationStatus?.mode === 'OwnerBootstrap');
 
     const handleAuth = async () => {
         setError(null);

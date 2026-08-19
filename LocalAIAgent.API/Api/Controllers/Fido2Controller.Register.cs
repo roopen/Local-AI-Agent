@@ -25,7 +25,6 @@ namespace LocalAIAgent.API.Api.Controllers
         UserContext userContext,
         IGetUserUseCase getUserUseCase,
         IMetadataService mds,
-        BootstrapAccessPolicy bootstrapAccessPolicy,
         TimeProvider timeProvider) : ControllerBase
     {
         [HttpGet]
@@ -34,8 +33,7 @@ namespace LocalAIAgent.API.Api.Controllers
         public async Task<RegistrationStatusDto> GetRegistrationStatus(CancellationToken cancellationToken)
         {
             bool hasUsers = await userContext.Users.AsNoTracking().AnyAsync(cancellationToken);
-            bool bootstrapAllowed = !hasUsers && bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress);
-            return new RegistrationStatusDto(hasUsers ? "InviteRequired" : "OwnerBootstrap", bootstrapAllowed);
+            return new RegistrationStatusDto(hasUsers ? "InviteRequired" : "OwnerBootstrap");
         }
 
         [HttpPost]
@@ -56,9 +54,6 @@ namespace LocalAIAgent.API.Api.Controllers
             PendingRegistration pending;
             if (!hasUsers)
             {
-                if (!bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress))
-                    return StatusCode(StatusCodes.Status403Forbidden, "Owner registration is restricted to a trusted network.");
-
                 pending = new PendingRegistration(
                     new User { Fido2Id = GenerateCredentialId(), Username = username, Preferences = new(), Role = UserRole.Owner },
                     IsBootstrap: true,
@@ -228,8 +223,6 @@ namespace LocalAIAgent.API.Api.Controllers
             {
                 if (await userContext.Users.AnyAsync(cancellationToken))
                     throw new RegistrationGrantException("Owner registration is already complete.");
-                if (!bootstrapAccessPolicy.IsAllowed(HttpContext.Connection.RemoteIpAddress))
-                    throw new RegistrationGrantException("Owner registration is restricted to a trusted network.");
             }
             else
             {
@@ -328,7 +321,7 @@ namespace LocalAIAgent.API.Api.Controllers
         public required string CredentialName { get; set; }
     }
 
-    public sealed record RegistrationStatusDto(string Mode, bool BootstrapAllowed);
+    public sealed record RegistrationStatusDto(string Mode);
     public sealed record RegistrationOptionsRequest(string Username, string? InviteToken);
     internal sealed record PendingRegistration(
         User User,
