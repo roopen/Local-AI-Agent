@@ -27,14 +27,13 @@ invitation. The owner manages the shared OpenAI-compatible endpoint while each
 member's news preferences, feeds, feedback, evaluations, and passkeys remain
 private.
 
-See [docs/linux-server.md](docs/linux-server.md) for the rootless Podman Quadlet,
+See [docs/linux-server.md](docs/linux-server.md) for the system-wide Podman Quadlet,
 Cloudflare Tunnel and reverse-proxy ingress, backup, upgrade, restore, and
 rollback runbook.
 
 After installation, `deploy/update-ainews.sh` performs a fast-forward Git pull,
-builds `localhost/ainews:latest` through the Quadlet build unit or a compatible
-direct Podman fallback, reloads user systemd, restarts the application Quadlet,
-and verifies its health endpoint.
+builds `localhost/ainews:latest` with Podman, reloads systemd, restarts the
+application Quadlet, and verifies its health endpoint.
 
 ## License
 

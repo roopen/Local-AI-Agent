@@ -1,6 +1,6 @@
 # Locally managed Cloudflare Tunnel configuration. Replace every placeholder.
 tunnel: REPLACE_WITH_TUNNEL_UUID
-credentials-file: /home/REPLACE_WITH_USER/.cloudflared/REPLACE_WITH_TUNNEL_UUID.json
+credentials-file: /etc/cloudflared/REPLACE_WITH_TUNNEL_UUID.json
 
 ingress:
   - hostname: news.example.com

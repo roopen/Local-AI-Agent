@@ -1,16 +1,17 @@
 # Linux server deployment
 
-AI News runs as one same-origin ASP.NET Core service: the .NET API serves the
-React application, API routes, and the SignalR hub. The production container is
-non-root, exposes only host loopback port 8180, and keeps its root filesystem
-read-only. SQLite, invitations, passkeys, encrypted AI tokens, and ASP.NET data
-protection keys live together in the `ainews-data` volume.
+AI News runs as one same-origin ASP.NET Core system service: the .NET API serves
+the React application, API routes, and the SignalR hub. Podman and systemd
+manage it system-wide, while the process inside the production container still
+runs as a non-root user. It exposes only host loopback port 8180 and keeps its
+root filesystem read-only. SQLite, invitations, passkeys, encrypted AI tokens,
+and ASP.NET data-protection keys live together in the `ainews-data` volume.
 
 ## Prerequisites
 
-- Linux with rootless Podman and Quadlet support
-- A user systemd instance and a stable checkout at
-  `~/src/Local-AI-Agent`
+- Linux with rootful Podman, systemd, and Quadlet support
+- A stable checkout at `~/Local-Ai-Agent`, owned by the trusted administrator
+  who performs updates
 - A stable public HTTPS hostname and either an existing reverse proxy or
   Cloudflare Tunnel
 - The proxy's exact address as observed by the container and explicit trusted
@@ -22,24 +23,27 @@ new passkeys.
 
 ## Install
 
-From the repository checkout:
+From the existing repository checkout, install the system units and
+configuration:
 
 ```sh
-mkdir -p ~/.config/containers/systemd ~/.config/ainews ~/.local/bin
-install -m 0644 deploy/quadlet/ainews.build ~/.config/containers/systemd/
-install -m 0644 deploy/quadlet/ainews.container ~/.config/containers/systemd/
-install -m 0644 deploy/quadlet/ainews.volume ~/.config/containers/systemd/
-install -m 0600 deploy/quadlet/ainews.env.example ~/.config/ainews/ainews.env
-install -m 0755 deploy/update-ainews.sh ~/.local/bin/update-ainews
+cd ~/Local-Ai-Agent
+sudo install -d -m 0755 /etc/containers/systemd /usr/local/sbin
+sudo install -d -m 0750 /etc/ainews
+sudo install -m 0644 deploy/quadlet/ainews.container /etc/containers/systemd/
+sudo install -m 0644 deploy/quadlet/ainews.volume /etc/containers/systemd/
+sudo test -f /etc/ainews/ainews.env \
+  || sudo install -m 0600 deploy/quadlet/ainews.env.example /etc/ainews/ainews.env
+sudo install -m 0755 deploy/update-ainews.sh /usr/local/sbin/update-ainews
 ```
 
-Edit `~/.config/ainews/ainews.env` before starting. At minimum:
+Edit `/etc/ainews/ainews.env` before starting. At minimum:
 
 - Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a path or trailing
   hostname alias.
 - Set `Security__TrustedProxies__0` to the reverse proxy source address seen by
   the application. Do not enter a public/client network here. If the proxy
-  reaches a rootless port through a Podman gateway, use that exact gateway
+  reaches the container through the Podman gateway, use that exact gateway
   address rather than assuming `127.0.0.1`.
 - Set one or more `Security__BootstrapAllowedNetworks__N` values to the LAN CIDRs
   that may create the first account.
@@ -50,29 +54,48 @@ Edit `~/.config/ainews/ainews.env` before starting. At minimum:
 The service refuses to start in production if `PUBLIC_ORIGIN` or the trusted
 proxy list is missing. Forwarded headers from all other sources are ignored.
 
-Enable lingering so the rootless user service survives logout and starts after
-reboot (this one command is run by an administrator):
+If a previous rootless deployment already contains accounts or settings, export
+its volume as the original service user before starting the system service:
 
 ```sh
-sudo loginctl enable-linger "$USER"
-podman build --pull=newer --tag localhost/ainews:latest --file Containerfile .
-systemctl --user daemon-reload
-systemctl --user enable --now ainews.service
+systemctl --user stop ainews.service
+umask 077
+podman volume export ainews-data > "$HOME/ainews-data-rootless.tar"
+```
+
+After installing the system Quadlets, import that archive into the separate
+rootful volume:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl start ainews-volume.service
+sudo podman volume import ainews-data "$HOME/ainews-data-rootless.tar"
+```
+
+Keep the protected archive until the system service and encrypted AI settings
+have been verified. Rootless and rootful Podman have separate image and volume
+stores, so this import is required when retaining existing data.
+
+Build the first image, reload the system manager, and enable the service:
+
+```sh
+sudo podman build --pull=newer --tag localhost/ainews:latest --file Containerfile .
+sudo systemctl daemon-reload
+sudo systemctl enable --now ainews.service
 ```
 
 The application Quadlet consumes the explicit local image name
-`localhost/ainews:latest`. The supplied `.build` unit is used by the update
-script when the installed Podman can generate it; otherwise, the script runs
-the equivalent `podman build` command directly. EF Core applies pending
-migrations once during startup.
+`localhost/ainews:latest`. The updater builds that image directly from the
+checkout before restarting the service. EF Core applies pending migrations once
+during startup.
 
 Useful commands:
 
 ```sh
-systemctl --user status ainews.service
-journalctl --user-unit ainews.service -f
-systemctl --user restart ainews.service
-podman healthcheck run ainews
+sudo systemctl status ainews.service
+sudo journalctl --unit ainews.service -f
+sudo systemctl restart ainews.service
+sudo podman healthcheck run ainews
 curl --fail http://127.0.0.1:8180/alive
 ss -ltn | grep 8180
 ```
@@ -90,17 +113,20 @@ See Cloudflare's [published-application routing](https://developers.cloudflare.c
 and [Linux service](https://developers.cloudflare.com/tunnel/advanced/local-management/as-a-service/linux/)
 documentation for tunnel creation and installation.
 
-Copy `deploy/cloudflare/config.yml.example` to the configuration used by your
-locally managed tunnel, replace the tunnel UUID, credentials path, and both
-hostname placeholders, then validate it:
+Copy `deploy/cloudflare/config.yml.example` to `/etc/cloudflared/config.yml`,
+copy the tunnel credentials JSON to the path named there, replace the tunnel
+UUID and both hostname placeholders, then validate it:
 
 ```sh
-cloudflared tunnel ingress validate
+sudo install -d -m 0700 /etc/cloudflared
+sudo install -m 0600 deploy/cloudflare/config.yml.example /etc/cloudflared/config.yml
+sudo install -m 0600 ~/.cloudflared/REPLACE_WITH_TUNNEL_UUID.json /etc/cloudflared/
+sudo cloudflared tunnel --config /etc/cloudflared/config.yml ingress validate
 cloudflared tunnel route dns REPLACE_WITH_TUNNEL_UUID news.example.com
 curl --fail http://127.0.0.1:8180/alive
 ```
 
-Set these application values in `~/.config/ainews/ainews.env`:
+Set these application values in `/etc/ainews/ainews.env`:
 
 ```ini
 PUBLIC_ORIGIN=https://news.example.com
@@ -109,7 +135,7 @@ Security__TrustedProxies__0=127.0.0.1
 ```
 
 The trusted proxy value must be the address that the application actually sees
-for the `cloudflared` connection. Depending on the rootless Podman network, that
+for the `cloudflared` connection. Depending on the Podman network, that
 may be its gateway rather than `127.0.0.1`; if forwarded-header logs report an
 unknown proxy, replace the value with that exact address. Do not trust a broad
 client or Cloudflare address range: only the local tunnel process can reach the
@@ -118,7 +144,7 @@ loopback-published port.
 If the observed address is unclear, temporarily add
 `Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides=Debug` to the environment
 file, restart `ainews.service`, make one request through the public hostname,
-and inspect `journalctl --user-unit ainews.service`. Remove the logging override
+and inspect `sudo journalctl --unit ainews.service`. Remove the logging override
 after setting the exact proxy address.
 
 Cloudflare Tunnel reports the visitor through `CF-Connecting-IP`. Selecting that
@@ -139,10 +165,10 @@ dashboard-managed tunnel can use the same published application values:
 hostname `news.example.com`, service `http://127.0.0.1:8180`, and HTTP Host
 Header `news.example.com`.
 
-For a locally managed tunnel whose configuration is in the service user's home:
+For the locally managed system tunnel:
 
 ```sh
-sudo cloudflared --config "$HOME/.cloudflared/config.yml" service install
+sudo cloudflared --config /etc/cloudflared/config.yml service install
 sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared
 ```
@@ -172,38 +198,50 @@ be decrypted. Stopping the single service makes the volume export
 SQLite-consistent:
 
 ```sh
-backup_dir="$HOME/.local/share/ainews-backups"
+backup_dir="/var/backups/ainews"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-mkdir -p "$backup_dir"
-systemctl --user stop ainews.service
-podman volume export ainews-data > "$backup_dir/ainews-$stamp.tar"
-sha256sum "$backup_dir/ainews-$stamp.tar" > "$backup_dir/ainews-$stamp.tar.sha256"
-systemctl --user start ainews.service
+backup_file="$backup_dir/ainews-$stamp.tar"
+sudo install -d -m 0700 "$backup_dir"
+sudo systemctl stop ainews.service
+sudo podman volume export ainews-data | sudo tee "$backup_file" >/dev/null
+sudo sha256sum "$backup_file" | sudo tee "$backup_file.sha256" >/dev/null
+sudo systemctl start ainews.service
 ```
 
 Store a copy off the server. Test restores periodically.
 
 ## Upgrade
 
-The update script requires a clean checkout at `~/src/Local-AI-Agent`. It pulls
-only fast-forward changes, refreshes the installed Quadlet definitions, creates
-`localhost/ainews:latest`, reloads the user systemd manager, restarts
-`ainews.service`, and waits for the health endpoint. It uses
-`ainews-build.service` when available and automatically falls back to
-`podman build` when that generated unit is unavailable:
+The update script requires a clean checkout at `~/Local-Ai-Agent`. When invoked
+through `sudo`, it discovers the invoking user's home, runs `git pull
+--ff-only` as that user so their Git credentials continue to work, installs the
+system Quadlets, builds `localhost/ainews:latest` with rootful Podman, reloads
+systemd, restarts `ainews.service`, and waits for the health endpoint:
 
 ```sh
-~/.local/bin/update-ainews
+sudo /usr/local/sbin/update-ainews
 ```
+
+For a root login or automation without `SUDO_USER`, pass the absolute checkout
+path explicitly:
+
+```sh
+sudo /usr/local/sbin/update-ainews /home/REPLACE_WITH_USER/Local-Ai-Agent
+```
+
+Only a trusted administrator should be able to modify this checkout: the
+updater builds its Containerfile and installs its Quadlet definitions as root.
 
 For a migration-sensitive release, take a consistent backup first:
 
 ```sh
-git rev-parse HEAD
-systemctl --user stop ainews.service
-podman volume export ainews-data > "$HOME/.local/share/ainews-backups/ainews-pre-upgrade.tar"
-systemctl --user start ainews.service
-~/.local/bin/update-ainews
+git -C "$HOME/Local-Ai-Agent" rev-parse HEAD
+sudo install -d -m 0700 /var/backups/ainews
+sudo systemctl stop ainews.service
+sudo podman volume export ainews-data \
+  | sudo tee /var/backups/ainews/ainews-pre-upgrade.tar >/dev/null
+sudo systemctl start ainews.service
+sudo /usr/local/sbin/update-ainews
 ```
 
 Review the journal after startup. Migrations run before the service accepts
@@ -215,12 +253,13 @@ Restore replaces the entire named volume. Verify the archive checksum and keep a
 pre-restore export until the restored service has been tested:
 
 ```sh
-systemctl --user stop ainews.service
-podman volume export ainews-data > "$HOME/.local/share/ainews-backups/ainews-pre-restore.tar"
-podman volume rm ainews-data
-systemctl --user restart ainews-volume.service
-podman volume import ainews-data /path/to/ainews-backup.tar
-systemctl --user start ainews.service
+sudo systemctl stop ainews.service
+sudo podman volume export ainews-data \
+  | sudo tee /var/backups/ainews/ainews-pre-restore.tar >/dev/null
+sudo podman volume rm ainews-data
+sudo systemctl restart ainews-volume.service
+sudo podman volume import ainews-data /path/to/ainews-backup.tar
+sudo systemctl start ainews.service
 ```
 
 For an application rollback, stop the service, return the checkout to the

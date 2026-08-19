@@ -1,8 +1,0 @@
-[Unit]
-Description=Build the AI News local image
-
-[Build]
-ImageTag=localhost/ainews:latest
-File=%h/src/Local-AI-Agent/Containerfile
-SetWorkingDirectory=%h/src/Local-AI-Agent
-Pull=newer
