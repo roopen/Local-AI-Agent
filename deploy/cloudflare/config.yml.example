@@ -1,0 +1,13 @@
+# Locally managed Cloudflare Tunnel configuration. Replace every placeholder.
+tunnel: REPLACE_WITH_TUNNEL_UUID
+credentials-file: /home/REPLACE_WITH_USER/.cloudflared/REPLACE_WITH_TUNNEL_UUID.json
+
+ingress:
+  - hostname: news.example.com
+    service: http://127.0.0.1:8180
+    originRequest:
+      # Must match the hostname in PUBLIC_ORIGIN so ASP.NET host filtering and
+      # WebAuthn use the same stable relying-party hostname.
+      httpHostHeader: news.example.com
+      connectTimeout: 10s
+  - service: http_status:404

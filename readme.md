@@ -28,7 +28,12 @@ member's news preferences, feeds, feedback, evaluations, and passkeys remain
 private.
 
 See [docs/linux-server.md](docs/linux-server.md) for the rootless Podman Quadlet,
-reverse-proxy, backup, upgrade, restore, and rollback runbook.
+Cloudflare Tunnel and reverse-proxy ingress, backup, upgrade, restore, and
+rollback runbook.
+
+After installation, `deploy/update-ainews.sh` performs a fast-forward Git pull,
+builds `localhost/ainews:latest` through the Quadlet build unit, reloads user
+systemd, restarts the application Quadlet, and verifies its health endpoint.
 
 ## License
 

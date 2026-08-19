@@ -2,7 +2,7 @@
 
 AI News runs as one same-origin ASP.NET Core service: the .NET API serves the
 React application, API routes, and the SignalR hub. The production container is
-non-root, exposes only host loopback port 8080, and keeps its root filesystem
+non-root, exposes only host loopback port 8180, and keeps its root filesystem
 read-only. SQLite, invitations, passkeys, encrypted AI tokens, and ASP.NET data
 protection keys live together in the `ainews-data` volume.
 
@@ -11,7 +11,8 @@ protection keys live together in the `ainews-data` volume.
 - Linux with a rootless Podman release that supports `.build` Quadlets
 - A user systemd instance and a stable checkout at
   `~/src/Local-AI-Agent`
-- A stable public HTTPS hostname and an existing reverse proxy
+- A stable public HTTPS hostname and either an existing reverse proxy or
+  Cloudflare Tunnel
 - The proxy's exact address as observed by the container and explicit trusted
   LAN CIDRs
 
@@ -24,11 +25,12 @@ new passkeys.
 From the repository checkout:
 
 ```sh
-mkdir -p ~/.config/containers/systemd ~/.config/ainews
+mkdir -p ~/.config/containers/systemd ~/.config/ainews ~/.local/bin
 install -m 0644 deploy/quadlet/ainews.build ~/.config/containers/systemd/
 install -m 0644 deploy/quadlet/ainews.container ~/.config/containers/systemd/
 install -m 0644 deploy/quadlet/ainews.volume ~/.config/containers/systemd/
 install -m 0600 deploy/quadlet/ainews.env.example ~/.config/ainews/ainews.env
+install -m 0755 deploy/update-ainews.sh ~/.local/bin/update-ainews
 ```
 
 Edit `~/.config/ainews/ainews.env` before starting. At minimum:
@@ -69,12 +71,79 @@ journalctl --user-unit ainews.service -f
 systemctl --user restart ainews-build.service
 systemctl --user restart ainews.service
 podman healthcheck run ainews
-curl --fail http://127.0.0.1:8080/alive
-ss -ltn | grep 8080
+curl --fail http://127.0.0.1:8180/alive
+ss -ltn | grep 8180
 ```
 
-Only `127.0.0.1:8080` should be listening. The public firewall must not expose
-8080.
+Only `127.0.0.1:8180` should be listening. The public firewall must not expose
+8180. Port 8080 remains internal to the container.
+
+## Cloudflare Tunnel
+
+Cloudflare Tunnel can be the HTTPS ingress instead of nginx. Run `cloudflared`
+on the same Linux host and route the public hostname directly to
+`http://127.0.0.1:8180`. The application port remains loopback-only, so the
+tunnel uses an outbound connection and no inbound firewall port is required.
+See Cloudflare's [published-application routing](https://developers.cloudflare.com/tunnel/routing/)
+and [Linux service](https://developers.cloudflare.com/tunnel/advanced/local-management/as-a-service/linux/)
+documentation for tunnel creation and installation.
+
+Copy `deploy/cloudflare/config.yml.example` to the configuration used by your
+locally managed tunnel, replace the tunnel UUID, credentials path, and both
+hostname placeholders, then validate it:
+
+```sh
+cloudflared tunnel ingress validate
+cloudflared tunnel route dns REPLACE_WITH_TUNNEL_UUID news.example.com
+curl --fail http://127.0.0.1:8180/alive
+```
+
+Set these application values in `~/.config/ainews/ainews.env`:
+
+```ini
+PUBLIC_ORIGIN=https://news.example.com
+Security__ForwardedForHeaderName=CF-Connecting-IP
+Security__TrustedProxies__0=127.0.0.1
+```
+
+The trusted proxy value must be the address that the application actually sees
+for the `cloudflared` connection. Depending on the rootless Podman network, that
+may be its gateway rather than `127.0.0.1`; if forwarded-header logs report an
+unknown proxy, replace the value with that exact address. Do not trust a broad
+client or Cloudflare address range: only the local tunnel process can reach the
+loopback-published port.
+
+If the observed address is unclear, temporarily add
+`Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides=Debug` to the environment
+file, restart `ainews.service`, make one request through the public hostname,
+and inspect `journalctl --user-unit ainews.service`. Remove the logging override
+after setting the exact proxy address.
+
+Cloudflare Tunnel reports the visitor through `CF-Connecting-IP`. Selecting that
+single-address header prevents a caller-supplied `X-Forwarded-For` chain from
+affecting bootstrap checks or rate limiting. Keep Cloudflare's "Remove visitor
+IP headers" transform disabled for this hostname. Enable WebSockets in the
+Cloudflare zone so the SignalR `/newsHub` connection can upgrade normally.
+
+The first owner request will carry the device's public egress address, not its
+private LAN address, when it travels through Cloudflare. Add that exact address
+as a `/32` (IPv4) or `/128` (IPv6) bootstrap network, or use split DNS with a
+trusted local HTTPS proxy if private LAN CIDR matching is required. After an
+owner exists, bootstrap registration is permanently closed regardless of this
+setting.
+
+Install and enable `cloudflared` as a service after validating the tunnel. A
+dashboard-managed tunnel can use the same published application values:
+hostname `news.example.com`, service `http://127.0.0.1:8180`, and HTTP Host
+Header `news.example.com`.
+
+For a locally managed tunnel whose configuration is in the service user's home:
+
+```sh
+sudo cloudflared --config "$HOME/.cloudflared/config.yml" service install
+sudo systemctl enable --now cloudflared
+sudo systemctl status cloudflared
+```
 
 ## Reverse proxy
 
@@ -85,7 +154,7 @@ host. Configure the proxy to:
 - terminate valid public TLS;
 - overwrite `Host`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and
   `X-Forwarded-For` instead of preserving client-supplied values;
-- proxy only to `http://127.0.0.1:8080`; and
+- proxy only to `http://127.0.0.1:8180`; and
 - allow HTTP/1.1 WebSocket upgrades, including `/newsHub`.
 
 After reloading the proxy, open `PUBLIC_ORIGIN` from an allowed LAN. On an empty
@@ -114,19 +183,23 @@ Store a copy off the server. Test restores periodically.
 
 ## Upgrade
 
-Record the current source revision, make a consistent backup, update the
-checkout, rebuild, and restart:
+The update script requires a clean checkout at `~/src/Local-AI-Agent`. It pulls
+only fast-forward changes, refreshes the installed Quadlet definitions, asks the
+`.build` unit to create `localhost/ainews:latest`, reloads the user systemd
+manager, restarts `ainews.service`, and waits for the health endpoint:
+
+```sh
+~/.local/bin/update-ainews
+```
+
+For a migration-sensitive release, take a consistent backup first:
 
 ```sh
 git rev-parse HEAD
 systemctl --user stop ainews.service
 podman volume export ainews-data > "$HOME/.local/share/ainews-backups/ainews-pre-upgrade.tar"
-git pull --ff-only
-systemctl --user daemon-reload
-systemctl --user restart ainews-build.service
 systemctl --user start ainews.service
-systemctl --user status ainews.service
-curl --fail http://127.0.0.1:8080/health
+~/.local/bin/update-ainews
 ```
 
 Review the journal after startup. Migrations run before the service accepts

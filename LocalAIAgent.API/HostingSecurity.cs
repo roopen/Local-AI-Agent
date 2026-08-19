@@ -125,6 +125,7 @@ internal static class HostingSecurity
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
             | ForwardedHeaders.XForwardedProto
             | ForwardedHeaders.XForwardedHost;
+        options.ForwardedForHeaderName = GetForwardedForHeaderName(configuration);
         options.ForwardLimit = 1;
         options.AllowedHosts.Add(publicOrigin.Host);
         options.KnownProxies.Clear();
@@ -155,6 +156,22 @@ internal static class HostingSecurity
             options.KnownProxies.Add(IPAddress.Loopback);
             options.KnownProxies.Add(IPAddress.IPv6Loopback);
         }
+    }
+
+    private static string GetForwardedForHeaderName(ConfigurationManager configuration)
+    {
+        string? configured = configuration["Security:ForwardedForHeaderName"];
+        if (string.IsNullOrWhiteSpace(configured)
+            || string.Equals(configured, "X-Forwarded-For", StringComparison.OrdinalIgnoreCase))
+        {
+            return "X-Forwarded-For";
+        }
+
+        if (string.Equals(configured, "CF-Connecting-IP", StringComparison.OrdinalIgnoreCase))
+            return "CF-Connecting-IP";
+
+        throw new InvalidOperationException(
+            "Security:ForwardedForHeaderName must be X-Forwarded-For or CF-Connecting-IP.");
     }
 
     private static void ConfigureCookie(CookieAuthenticationOptions options)
