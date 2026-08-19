@@ -81,8 +81,13 @@ Build the first image, reload the system manager, and enable the service:
 ```sh
 sudo podman build --pull=newer --tag localhost/ainews:latest --file Containerfile .
 sudo systemctl daemon-reload
-sudo systemctl enable --now ainews.service
+sudo systemctl start ainews.service
 ```
+
+Quadlet services are generated under `/run/systemd/generator` and cannot be
+enabled with `systemctl enable`. The persistent source unit declares
+`WantedBy=multi-user.target`, so the generator wires it into normal system boot
+whenever systemd reloads.
 
 The application Quadlet consumes the explicit local image name
 `localhost/ainews:latest`. The updater builds that image directly from the
