@@ -10,7 +10,7 @@ and ASP.NET data-protection keys live together in the `ainews-data` volume.
 ## Prerequisites
 
 - Linux with rootful Podman, systemd, and Quadlet support
-- A stable checkout at `~/Local-Ai-Agent`, owned by the trusted administrator
+- A stable checkout at `~/Local-AI-Agent`, owned by the trusted administrator
   who performs updates
 - A stable public HTTPS hostname and either an existing reverse proxy or
   Cloudflare Tunnel
@@ -27,7 +27,7 @@ From the existing repository checkout, install the system units and
 configuration:
 
 ```sh
-cd ~/Local-Ai-Agent
+cd ~/Local-AI-Agent
 sudo install -d -m 0755 /etc/containers/systemd /usr/local/sbin
 sudo install -d -m 0750 /etc/ainews
 sudo install -m 0644 deploy/quadlet/ainews.container /etc/containers/systemd/
@@ -217,7 +217,7 @@ Store a copy off the server. Test restores periodically.
 
 ## Upgrade
 
-The update script requires a clean checkout at `~/Local-Ai-Agent`. When invoked
+The update script requires a clean checkout at `~/Local-AI-Agent`. When invoked
 through `sudo`, it discovers the invoking user's home, runs `git pull
 --ff-only` as that user so their Git credentials continue to work, installs the
 system Quadlets, builds `localhost/ainews:latest` with rootful Podman, reloads
@@ -231,7 +231,7 @@ For a root login or automation without `SUDO_USER`, pass the absolute checkout
 path explicitly:
 
 ```sh
-sudo /usr/local/sbin/update-ainews /home/REPLACE_WITH_USER/Local-Ai-Agent
+sudo /usr/local/sbin/update-ainews /home/REPLACE_WITH_USER/Local-AI-Agent
 ```
 
 Only a trusted administrator should be able to modify this checkout: the
@@ -240,7 +240,7 @@ updater builds its Containerfile and installs its Quadlet definitions as root.
 For a migration-sensitive release, take a consistent backup first:
 
 ```sh
-git -C "$HOME/Local-Ai-Agent" rev-parse HEAD
+git -C "$HOME/Local-AI-Agent" rev-parse HEAD
 sudo install -d -m 0700 /var/backups/ainews
 sudo systemctl stop ainews.service
 sudo podman volume export ainews-data \

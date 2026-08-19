@@ -21,7 +21,7 @@ done
 [[ "$(id -u)" -eq 0 ]] \
     || fail "run this system-wide updater as root, for example with sudo"
 
-[[ "$#" -le 1 ]] || fail "usage: update-ainews [/absolute/path/to/Local-Ai-Agent]"
+[[ "$#" -le 1 ]] || fail "usage: update-ainews [/absolute/path/to/Local-AI-Agent]"
 
 repository_dir="${1:-}"
 if [[ -z "${repository_dir}" ]]; then
@@ -32,7 +32,7 @@ if [[ -z "${repository_dir}" ]]; then
     invoking_user_record="$(getent passwd "${invoking_user}")" \
         || fail "could not resolve invoking user '${invoking_user}'"
     IFS=: read -r _ _ _ _ _ invoking_user_home _ <<< "${invoking_user_record}"
-    repository_dir="${invoking_user_home}/Local-Ai-Agent"
+    repository_dir="${invoking_user_home}/Local-AI-Agent"
 fi
 
 [[ -d "${repository_dir}/.git" ]] \

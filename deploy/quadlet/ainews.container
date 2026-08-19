@@ -12,9 +12,7 @@ PublishPort=127.0.0.1:8180:8080
 Volume=ainews.volume:/data:U
 ReadOnly=true
 Tmpfs=/tmp:rw,size=128m,mode=1777
-DropCapability=all
-NoNewPrivileges=true
-PodmanArgs=--cap-add=NET_BIND_SERVICE --add-host=host.containers.internal:host-gateway
+PodmanArgs=--sysctl=net.ipv4.ip_unprivileged_port_start=0 --add-host=host.containers.internal:host-gateway
 HealthCmd=/usr/bin/curl --fail --silent --show-error http://127.0.0.1:8080/alive
 HealthInterval=30s
 HealthTimeout=5s
