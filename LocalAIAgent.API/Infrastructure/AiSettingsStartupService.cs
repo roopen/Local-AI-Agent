@@ -1,6 +1,5 @@
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.Application.Chat;
-using LocalAIAgent.Application.News.AI;
 using Microsoft.EntityFrameworkCore;
 
 namespace LocalAIAgent.API.Infrastructure;
@@ -9,7 +8,6 @@ public sealed class AiSettingsStartupService(
     UserContext context,
     IAiSettingsSecretProtector secretProtector,
     ILlmRuntimeManager runtimeManager,
-    ILoadLLMUseCase loadLlmUseCase,
     ILogger<AiSettingsStartupService> logger)
 {
     public async Task UpgradePlaintextTokensAsync(CancellationToken cancellationToken = default)
@@ -33,7 +31,7 @@ public sealed class AiSettingsStartupService(
             await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> ActivateFirstAndWarmUpAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> ActivateFirstAsync(CancellationToken cancellationToken = default)
     {
         AiSettings? settings = await context.AiSettings
             .AsNoTracking()
@@ -42,7 +40,7 @@ public sealed class AiSettingsStartupService(
 
         if (settings is null)
         {
-            logger.LogInformation("No database-backed LLM settings found; startup warm-up skipped");
+            logger.LogInformation("No database-backed LLM settings found; startup activation skipped");
             return false;
         }
 
@@ -71,6 +69,6 @@ public sealed class AiSettingsStartupService(
         }
 
         runtimeManager.Activate(candidate);
-        return await loadLlmUseCase.LoadLLMUseCaseAsync(cancellationToken);
+        return true;
     }
 }

@@ -30,6 +30,44 @@ public class GetNewsUseCaseTests
     }
 
     [Fact]
+    public async Task GetNewsStreamAsync_WarmsLlmWhileFeedsAreLoading()
+    {
+        TaskCompletionSource<bool> warmupCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Mock<ILoadLLMUseCase> loadLlmUseCase = new(MockBehavior.Strict);
+        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()))
+            .Returns(warmupCompletion.Task);
+
+        Mock<INewsService> newsService = new(MockBehavior.Strict);
+        newsService.Setup(s => s.GetNewsAsync(TestPrefs, It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                Assert.False(warmupCompletion.Task.IsCompleted);
+                warmupCompletion.SetResult(true);
+                return Task.FromResult<List<NewsItem>>([]);
+            });
+
+        Mock<ICustomFeedRepository> customFeedRepository = new(MockBehavior.Strict);
+        customFeedRepository.Setup(r => r.GetForUserAsync(TestPrefs.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        GetNewsUseCase sut = new(
+            newsService.Object,
+            customFeedRepository.Object,
+            Mock.Of<ICustomFeedFetcher>(),
+            loadLlmUseCase.Object,
+            Mock.Of<IEvaluateNewsUseCase>(),
+            Mock.Of<IGetTranslationUseCase>());
+
+        await foreach (NewsArticle _ in sut.GetNewsStreamAsync(TestPrefs, CancellationToken.None))
+        {
+        }
+
+        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task GetNewsStreamAsync_DislikedKeywordArticles_AreNotSentToLlmEvaluator()
     {
         NewsItem dislikedItem = MakeItem("Crypto tagged by RSS", "summary", "https://x.com/disliked");
@@ -75,6 +113,10 @@ public class GetNewsUseCaseTests
 
         Mock<ICustomFeedFetcher> customFeedFetcher = new(MockBehavior.Strict);
 
+        Mock<ILoadLLMUseCase> loadLlmUseCase = new(MockBehavior.Strict);
+        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         Mock<IEvaluateNewsUseCase> evaluateNewsUseCase = new(MockBehavior.Strict);
         evaluateNewsUseCase.Setup(e => e.EvaluateArticlesV2(
                 It.Is<List<NewsItem>>(items => items.SequenceEqual(new[] { unresolvedItem })),
@@ -95,6 +137,7 @@ public class GetNewsUseCaseTests
             newsService.Object,
             customFeedRepository.Object,
             customFeedFetcher.Object,
+            loadLlmUseCase.Object,
             evaluateNewsUseCase.Object,
             translationUseCase.Object);
 
@@ -117,5 +160,6 @@ public class GetNewsUseCaseTests
             TestPrefs,
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>()), Times.Once);
+        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

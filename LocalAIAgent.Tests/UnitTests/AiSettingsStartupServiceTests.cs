@@ -1,7 +1,6 @@
 using LocalAIAgent.API.Infrastructure;
 using LocalAIAgent.API.Infrastructure.Models;
 using LocalAIAgent.Application.Chat;
-using LocalAIAgent.Application.News.AI;
 using LocalAIAgent.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +13,11 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
     private readonly AiSettingsSecretProtector _protector = new(new EphemeralDataProtectionProvider());
 
     [Fact]
-    public async Task NoSettingsSkipsWarmupAndLeavesRuntimeUnconfigured()
+    public async Task NoSettingsLeavesRuntimeUnconfigured()
     {
         (AiSettingsStartupService service, FakeLlmRuntimeManager runtime, FakeChatClient chat) = CreateService();
 
-        bool result = await service.ActivateFirstAndWarmUpAsync(TestContext.Current.CancellationToken);
+        bool result = await service.ActivateFirstAsync(TestContext.Current.CancellationToken);
 
         Assert.False(result);
         Assert.False(runtime.IsConfigured);
@@ -27,36 +26,19 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
     }
 
     [Fact]
-    public async Task StartupDeterministicallyActivatesAndWarmsLowestIdRow()
+    public async Task StartupDeterministicallyActivatesLowestIdRowWithoutWarmup()
     {
         await SeedSettingsAsync("first-user", "first-model", "first-token");
         await SeedSettingsAsync("second-user", "second-model", "second-token");
         (AiSettingsStartupService service, FakeLlmRuntimeManager runtime, FakeChatClient chat) = CreateService();
-        chat.EnqueueResponseText("hello");
-
-        bool result = await service.ActivateFirstAndWarmUpAsync(TestContext.Current.CancellationToken);
+        bool result = await service.ActivateFirstAsync(TestContext.Current.CancellationToken);
 
         Assert.True(result);
         Assert.True(runtime.IsConfigured);
         Assert.Equal("first-model", runtime.GetRequiredSnapshot().Options.ModelId);
         Assert.Equal("first-token", runtime.GetRequiredSnapshot().Options.ApiKey);
-        RecordedCall call = Assert.Single(chat.Calls);
-        Assert.Equal("hi", Assert.Single(call.Messages).Text);
-        Assert.Equal(1, call.Options?.MaxOutputTokens);
-    }
-
-    [Fact]
-    public async Task StartupWarmupFailureRetainsConfiguredClient()
-    {
-        await SeedSettingsAsync("alice", "configured-model", "token");
-        (AiSettingsStartupService service, FakeLlmRuntimeManager runtime, _) = CreateService();
-        runtime.WarmUpException = new LlmConnectionException("Service unavailable.");
-
-        bool result = await service.ActivateFirstAndWarmUpAsync(TestContext.Current.CancellationToken);
-
-        Assert.False(result);
-        Assert.True(runtime.IsConfigured);
-        Assert.Equal("configured-model", runtime.GetRequiredSnapshot().Options.ModelId);
+        Assert.Equal(0, runtime.WarmUpCalls);
+        Assert.Empty(chat.Calls);
     }
 
     [Fact]
@@ -87,12 +69,10 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
         {
             IsConfigured = false,
         };
-        LoadLLMUseCase load = new(runtime);
         AiSettingsStartupService service = new(
             Db,
             _protector,
             runtime,
-            load,
             NullLogger<AiSettingsStartupService>.Instance);
         return (service, runtime, chat);
     }

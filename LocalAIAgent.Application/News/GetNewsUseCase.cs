@@ -22,6 +22,7 @@ namespace LocalAIAgent.Application.News
         INewsService newsService,
         ICustomFeedRepository customFeedRepository,
         ICustomFeedFetcher customFeedFetcher,
+        ILoadLLMUseCase loadLlmUseCase,
         IEvaluateNewsUseCase evaluateNewsUseCase,
         IGetTranslationUseCase getTranslationUseCase) : IGetNewsUseCase
     {
@@ -31,6 +32,10 @@ namespace LocalAIAgent.Application.News
             Func<NewsLoadingPhase, CancellationToken, Task>? loadingPhaseChanged = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Start the lightweight `hi`/one-token warm-up before feed I/O so model loading
+            // overlaps the slowest network-bound part of the news pipeline.
+            Task<bool> llmWarmupTask = loadLlmUseCase.LoadLLMUseCaseAsync(cancellationToken);
             List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences, cancellationToken);
 
             // Fetch the user's enabled custom feeds and merge into the stream.
@@ -42,6 +47,9 @@ namespace LocalAIAgent.Application.News
 
             // Merge and dedupe by Link so a user's custom feed pointing at a built-in URL doesn't duplicate.
             List<NewsItem> newsItems = [.. builtInItems.Concat(customItems).DistinctBy(i => i.Link)];
+
+            // Do not let a real evaluation race the warm-up request if feed loading wins.
+            await llmWarmupTask;
 
 #if DEBUG
             bool saveDataset = true;
