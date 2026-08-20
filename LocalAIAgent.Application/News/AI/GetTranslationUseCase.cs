@@ -28,6 +28,10 @@ namespace LocalAIAgent.Application.News.AI
         private const int TranslationBatchSize = 5;
         private const int SingleArticleMaxAttempts = 2;
 
+        // Translation is optional enrichment. Once the model is warm, a stream that produces no
+        // text for this long is treated as failed so it cannot hold the news stream open forever.
+        internal TimeSpan TranslationInactivityTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new()
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -239,17 +243,32 @@ namespace LocalAIAgent.Application.News.AI
 
             StringBuilder resultBuilder = new();
 
+            using CancellationTokenSource responseCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            responseCancellation.CancelAfter(TranslationInactivityTimeout);
+
             try
             {
                 await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(
                                     messages,
                                     chatOptions,
-                                    cancellationToken)
+                                    responseCancellation.Token)
                                     .ConfigureAwait(false))
                 {
                     if (!string.IsNullOrEmpty(update.Text))
+                    {
                         resultBuilder.Append(update.Text);
+                        responseCancellation.CancelAfter(TranslationInactivityTimeout);
+                    }
                 }
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested
+                && responseCancellation.IsCancellationRequested)
+            {
+                logger.LogWarning(
+                    "GetTranslationUseCase: translation response timed out after {TimeoutSeconds} seconds of inactivity for batch size {BatchSize}",
+                    TranslationInactivityTimeout.TotalSeconds,
+                    batch.Count);
             }
             catch (OperationCanceledException)
             {

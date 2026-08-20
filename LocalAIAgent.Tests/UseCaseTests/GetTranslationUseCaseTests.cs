@@ -7,6 +7,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using System.Runtime.CompilerServices;
 
 namespace LocalAIAgent.Tests.UseCaseTests;
 
@@ -294,6 +295,91 @@ public class GetTranslationUseCaseTests
 
         Assert.Equal("Hola", article.Title);
         Assert.Equal(2, chat.Calls.Count);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("–")]
+    public async Task TranslateArticleAsync_EmptyResponse_RetriesOnceThenLeavesOriginal(string response)
+    {
+        FakeChatClient chat = new();
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+        chat.EnqueueStreamingText(response);
+        chat.EnqueueStreamingText(response);
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat),
+            NullLogger<GetTranslationUseCase>.Instance);
+
+        NewsArticle article = Article(
+            "foreign",
+            "foreign summary",
+            "https://taiwan.example/a",
+            "taiwan.example");
+
+        await sut.TranslateArticleAsync([article], "Spanish");
+
+        Assert.Equal("foreign", article.Title);
+        Assert.Equal("foreign summary", article.Summary);
+        Assert.Equal(2, chat.Calls.Count);
+    }
+
+    [Fact]
+    public async Task TranslateArticleAsync_StalledEmptyResponse_TimesOutAndLeavesOriginal()
+    {
+        Mock<IChatClient> chat = new();
+        chat.Setup(c => c.GetStreamingResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<ChatMessage> _, ChatOptions? _, CancellationToken cancellationToken) =>
+                StallUntilCanceled(cancellationToken));
+
+        Mock<IArticleTranslationRepository> repo = new();
+        repo.Setup(r => r.GetCachedTranslationsAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedTranslation>());
+
+        GetTranslationUseCase sut = new(
+            [new StubTranslatableSource("taiwan.example")],
+            repo.Object,
+            new FakeLlmRuntimeManager(Options(useResultsForDataset: false), chat.Object),
+            NullLogger<GetTranslationUseCase>.Instance)
+        {
+            TranslationInactivityTimeout = TimeSpan.FromMilliseconds(25),
+        };
+
+        NewsArticle article = Article(
+            "foreign",
+            "foreign summary",
+            "https://taiwan.example/a",
+            "taiwan.example");
+
+        await sut.TranslateArticleAsync([article], "Spanish").WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal("foreign", article.Title);
+        Assert.Equal("foreign summary", article.Summary);
+        chat.Verify(c => c.GetStreamingResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(),
+            It.IsAny<ChatOptions>(),
+            It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> StallUntilCanceled(
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        yield break;
     }
 
     [Fact]
