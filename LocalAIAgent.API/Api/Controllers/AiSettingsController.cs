@@ -113,6 +113,11 @@ public sealed class AiSettingsController(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+            if (persisted.HostId == 0)
+            {
+                persisted.HostId = persisted.Id;
+                await context.SaveChangesAsync(cancellationToken);
+            }
         }
         catch
         {

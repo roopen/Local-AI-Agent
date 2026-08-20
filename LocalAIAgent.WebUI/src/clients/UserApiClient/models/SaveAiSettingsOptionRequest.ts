@@ -5,7 +5,8 @@
 export type SaveAiSettingsOptionRequest = {
     name: string;
     modelId: string;
-    endpointUrl: string;
+    endpointUrl?: string | null;
+    connectionSourceSettingsId?: number | null;
     apiKey?: string | null;
     clearApiKey?: boolean;
     temperature?: number;

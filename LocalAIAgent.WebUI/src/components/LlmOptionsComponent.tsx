@@ -53,6 +53,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
     const [catalog, setCatalog] = useState<AiSettingsCatalogResponse | null>(null);
     const [editor, setEditor] = useState<EditorState>(createEmptyEditor);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [connectionSource, setConnectionSource] = useState<AiSettingsOptionResponse | null>(null);
     const [clearApiKey, setClearApiKey] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -61,7 +62,20 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
     const options = useMemo(() => catalog?.options ?? [], [catalog]);
+    const hostGroups = useMemo(() => {
+        const groups = new Map<string, AiSettingsOptionResponse[]>();
+        for (const option of options) {
+            const hostKey = String(option.hostId ?? option.id ?? option.endpointUrl);
+            groups.set(hostKey, [...(groups.get(hostKey) ?? []), option]);
+        }
+        return [...groups.entries()].map(([key, models]) => ({ key, models }));
+    }, [options]);
     const isOwner = catalog?.isOwner ?? false;
+    const editingOption = options.find(option => option.id === editingId);
+    const editingHostModelCount = editingOption == null
+        ? 0
+        : options.filter(option =>
+            (option.hostId ?? option.id) === (editingOption.hostId ?? editingOption.id)).length;
 
     const load = useCallback(async () => {
         const loaded = await userService.getLlmOptions();
@@ -82,7 +96,21 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
 
     const beginCreate = () => {
         setEditingId(null);
+        setConnectionSource(null);
         setEditor(createEmptyEditor());
+        setClearApiKey(false);
+        setError(null);
+        setSavedMessage(null);
+    };
+
+    const beginCreateOnHost = (option: AiSettingsOptionResponse) => {
+        setEditingId(null);
+        setConnectionSource(option);
+        setEditor({
+            ...editorFromOption(option),
+            name: '',
+            modelId: '',
+        });
         setClearApiKey(false);
         setError(null);
         setSavedMessage(null);
@@ -90,6 +118,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
 
     const beginEdit = (option: AiSettingsOptionResponse) => {
         setEditingId(option.id ?? null);
+        setConnectionSource(null);
         setEditor(editorFromOption(option));
         setClearApiKey(false);
         setError(null);
@@ -129,8 +158,11 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
             const request: SaveAiSettingsOptionRequest = {
                 name: editor.name.trim(),
                 modelId: editor.modelId,
-                endpointUrl: editor.endpointUrl,
-                apiKey: editor.apiKey.trim().length > 0 ? editor.apiKey : null,
+                endpointUrl: connectionSource == null ? editor.endpointUrl : null,
+                connectionSourceSettingsId: connectionSource?.id ?? null,
+                apiKey: connectionSource == null && editor.apiKey.trim().length > 0
+                    ? editor.apiKey
+                    : null,
                 clearApiKey,
                 temperature: editor.temperature,
                 topP: editor.topP,
@@ -145,6 +177,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
 
             await load();
             setEditingId(saved.id ?? null);
+            setConnectionSource(null);
             setEditor(editorFromOption(saved));
             setClearApiKey(false);
             setSavedMessage('Connection tested and option saved.');
@@ -219,32 +252,72 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                                 <p className="prompt-hint">Every option is connection-tested before it is saved.</p>
                             </div>
                             <button type="button" className="secondary-button" onClick={beginCreate}>
-                                Add LLM
+                                Add separate host
                             </button>
                         </div>
                         <div className="llm-option-list">
-                            {options.map(option => (
-                                <div className="llm-option-row" key={option.id}>
-                                    <div>
-                                        <strong>{option.name}</strong>
-                                        <span>{option.modelId}</span>
+                            {hostGroups.map(host => {
+                                const connectionSourceOption = host.models[0];
+                                return (
+                                    <div className="llm-host-group" key={host.key}>
+                                        <div className="llm-host-header">
+                                            <div>
+                                                <strong>{connectionSourceOption.endpointUrl}</strong>
+                                                <span>{host.models.length} {host.models.length === 1 ? 'model' : 'models'}</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                aria-label={`Add model on ${connectionSourceOption.name} host`}
+                                                onClick={() => beginCreateOnHost(connectionSourceOption)}
+                                            >
+                                                Add model
+                                            </button>
+                                        </div>
+                                        {host.models.map(option => (
+                                            <div className="llm-option-row" key={option.id}>
+                                                <div>
+                                                    <strong>{option.name}</strong>
+                                                    <span>{option.modelId}</span>
+                                                </div>
+                                                <div className="llm-option-actions">
+                                                    <button type="button" onClick={() => beginEdit(option)}>Edit</button>
+                                                    <button type="button" onClick={() => void deleteOption(option)}>Delete</button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="llm-option-actions">
-                                        <button type="button" onClick={() => beginEdit(option)}>Edit</button>
-                                        <button type="button" onClick={() => void deleteOption(option)}>Delete</button>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
 
                     <form className="llm-option-editor" onSubmit={submit}>
                         <h2 className="settings-section-title">
-                            {editingId == null ? 'Add LLM option' : 'Edit LLM option'}
+                            {connectionSource != null
+                                ? `Add model on ${connectionSource.name} host`
+                                : editingId == null
+                                    ? 'Add separate host and model'
+                                    : 'Edit LLM option'}
                         </h2>
+                        {connectionSource != null && (
+                            <p className="llm-shared-host-note">
+                                Reusing the saved endpoint and API token from {connectionSource.name}. The new model is tested independently before saving.
+                            </p>
+                        )}
+                        {connectionSource == null && editingHostModelCount > 1 && (
+                            <p className="llm-shared-host-note">
+                                This host has {editingHostModelCount} models. Endpoint or API token changes apply to every model on the host, and all of them are retested before saving.
+                            </p>
+                        )}
                         <div className="llm-settings-grid">
                             <TextField label="Display name" value={editor.name} onChange={name => update({ name })} />
-                            <TextField label="Endpoint URL" type="url" value={editor.endpointUrl} onChange={endpointUrl => update({ endpointUrl })} />
+                            <TextField
+                                label="Endpoint URL"
+                                type="url"
+                                value={editor.endpointUrl}
+                                disabled={connectionSource != null}
+                                onChange={endpointUrl => update({ endpointUrl })}
+                            />
                             <TextField label="Model ID" value={editor.modelId} onChange={modelId => update({ modelId })} />
                             <label className="llm-field llm-field--wide">
                                 <span>API token</span>
@@ -252,9 +325,13 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                                     type="password"
                                     autoComplete="new-password"
                                     value={editor.apiKey}
-                                    disabled={clearApiKey}
+                                    disabled={clearApiKey || connectionSource != null}
                                     onChange={event => update({ apiKey: event.target.value })}
-                                    placeholder={editor.hasApiKey ? 'Saved token (leave blank to keep)' : 'Optional for unsecured local APIs'}
+                                    placeholder={connectionSource != null
+                                        ? 'Reusing the saved host token'
+                                        : editor.hasApiKey
+                                            ? 'Saved token (leave blank to keep)'
+                                            : 'Optional for unsecured local APIs'}
                                 />
                             </label>
                             {editingId != null && (
@@ -296,13 +373,14 @@ interface TextFieldProps {
     label: string;
     value: string;
     type?: 'text' | 'url';
+    disabled?: boolean;
     onChange: (value: string) => void;
 }
 
-const TextField: React.FC<TextFieldProps> = ({ label, value, type = 'text', onChange }) => (
+const TextField: React.FC<TextFieldProps> = ({ label, value, type = 'text', disabled = false, onChange }) => (
     <label className="llm-field llm-field--wide">
         <span>{label}</span>
-        <input type={type} required value={value} onChange={event => onChange(event.target.value)} />
+        <input type={type} required value={value} disabled={disabled} onChange={event => onChange(event.target.value)} />
     </label>
 );
 

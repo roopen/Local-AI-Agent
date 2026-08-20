@@ -1300,6 +1300,10 @@
             "type": "integer",
             "format": "int32"
           },
+          "hostId": {
+            "type": "integer",
+            "format": "int32"
+          },
           "name": {
             "type": "string",
             "nullable": true
@@ -2409,7 +2413,6 @@
       },
       "SaveAiSettingsOptionRequest": {
         "required": [
-          "endpointUrl",
           "modelId",
           "name"
         ],
@@ -2425,8 +2428,15 @@
             "type": "string"
           },
           "endpointUrl": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "nullable": true
+          },
+          "connectionSourceSettingsId": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "apiKey": {
             "type": "string",

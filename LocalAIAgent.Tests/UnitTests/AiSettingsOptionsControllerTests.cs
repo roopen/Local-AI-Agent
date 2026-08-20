@@ -18,27 +18,60 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         new(new EphemeralDataProtectionProvider());
 
     [Fact]
-    public async Task OwnerCanCreateMultipleTestedOptionsAndSelectOne()
+    public async Task OwnerCanCreateModelsOnSharedAndSeparateHostsAndSelectOne()
     {
         User user = await SeedUserAsync(UserRole.Owner);
         FakeChatClient chat = new();
+        chat.EnqueueResponseText("ok");
         chat.EnqueueResponseText("ok");
         chat.EnqueueResponseText("ok");
         FakeLlmRuntimeManager runtime = CreateRuntime(chat);
         AiSettingsOptionsController controller = CreateController(user.Id, UserRole.Owner, runtime);
 
         AiSettingsOptionResponse first = GetResponse(await controller.CreateOption(
-            Request("Local", "first-model"),
+            Request("Local small", "first-model", apiKey: "shared-token"),
             TestContext.Current.CancellationToken));
         AiSettingsOptionResponse second = GetResponse(await controller.CreateOption(
-            Request("Remote", "second-model"),
+            Request(
+                "Local large",
+                "second-model",
+                endpointUrl: null,
+                connectionSourceSettingsId: first.Id),
+            TestContext.Current.CancellationToken));
+        AiSettingsOptionResponse remote = GetResponse(await controller.CreateOption(
+            Request(
+                "Remote",
+                "remote-model",
+                apiKey: "remote-token",
+                endpointUrl: "https://llm.example/v1/"),
             TestContext.Current.CancellationToken));
 
         Assert.NotEqual(first.Id, second.Id);
-        Assert.Equal(2, runtime.WarmUpCalls);
+        Assert.NotEqual(second.Id, remote.Id);
+        Assert.Equal(3, runtime.WarmUpCalls);
         Assert.True(runtime.IsConfiguredFor(first.Id));
         Assert.True(runtime.IsConfiguredFor(second.Id));
-        Assert.Equal(2, await Db.AiSettings.CountAsync(TestContext.Current.CancellationToken));
+        Assert.True(runtime.IsConfiguredFor(remote.Id));
+        Assert.Equal(3, await Db.AiSettings.CountAsync(TestContext.Current.CancellationToken));
+
+        AiSettings sharedModel = await Db.AiSettings.SingleAsync(
+            option => option.Id == second.Id,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(first.Id, first.HostId);
+        Assert.Equal(first.Id, second.HostId);
+        Assert.Equal(first.Id, sharedModel.HostId);
+        Assert.Equal("http://localhost:1234/v1/", sharedModel.EndpointUrl);
+        Assert.True(_protector.TryUnprotect(sharedModel.ApiKeyCiphertext, out string sharedApiKey));
+        Assert.Equal("shared-token", sharedApiKey);
+
+        AiSettings remoteModel = await Db.AiSettings.SingleAsync(
+            option => option.Id == remote.Id,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(remote.Id, remote.HostId);
+        Assert.Equal(remote.Id, remoteModel.HostId);
+        Assert.Equal("https://llm.example/v1/", remoteModel.EndpointUrl);
+        Assert.True(_protector.TryUnprotect(remoteModel.ApiKeyCiphertext, out string remoteApiKey));
+        Assert.Equal("remote-token", remoteApiKey);
 
         IActionResult selectionResult = await controller.SelectOption(
             new SelectAiSettingsRequest { SettingsId = second.Id },
@@ -51,6 +84,58 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         Assert.Equal(
             "second-model",
             runtime.GetRequiredSnapshot(preferences.Id).Options.ModelId);
+    }
+
+    [Fact]
+    public async Task EditingSharedHostConnectionRetestsAndUpdatesEveryModelOnHost()
+    {
+        User user = await SeedUserAsync(UserRole.Owner);
+        FakeChatClient chat = new();
+        chat.EnqueueResponseText("ok");
+        chat.EnqueueResponseText("ok");
+        chat.EnqueueResponseText("ok");
+        chat.EnqueueResponseText("ok");
+        FakeLlmRuntimeManager runtime = CreateRuntime(chat);
+        AiSettingsOptionsController controller = CreateController(user.Id, UserRole.Owner, runtime);
+
+        AiSettingsOptionResponse first = GetResponse(await controller.CreateOption(
+            Request("Small", "small-model", apiKey: "old-token"),
+            TestContext.Current.CancellationToken));
+        AiSettingsOptionResponse second = GetResponse(await controller.CreateOption(
+            Request(
+                "Large",
+                "large-model",
+                endpointUrl: null,
+                connectionSourceSettingsId: first.Id),
+            TestContext.Current.CancellationToken));
+
+        GetResponse(await controller.UpdateOption(
+            first.Id,
+            Request(
+                "Small",
+                "small-model",
+                apiKey: "new-token",
+                endpointUrl: "https://replacement.example/v1/"),
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(4, runtime.WarmUpCalls);
+        List<AiSettings> savedModels = await Db.AiSettings
+            .OrderBy(option => option.Id)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.All(savedModels, option =>
+        {
+            Assert.Equal(first.Id, option.HostId);
+            Assert.Equal("https://replacement.example/v1/", option.EndpointUrl);
+            Assert.True(_protector.TryUnprotect(option.ApiKeyCiphertext, out string apiKey));
+            Assert.Equal("new-token", apiKey);
+        });
+        Assert.Equal(
+            "https://replacement.example/v1/",
+            runtime.GetRequiredSnapshot().Options.EndpointUrl);
+        runtime.SetUserSelection(user.Preferences!.Id, second.Id);
+        Assert.Equal(
+            "https://replacement.example/v1/",
+            runtime.GetRequiredSnapshot(user.Preferences.Id).Options.EndpointUrl);
     }
 
     [Fact]
@@ -138,11 +223,14 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
     private static SaveAiSettingsOptionRequest Request(
         string name,
         string modelId,
-        string? apiKey = null) => new()
+        string? apiKey = null,
+        string? endpointUrl = "http://localhost:1234/v1/",
+        int? connectionSourceSettingsId = null) => new()
     {
         Name = name,
         ModelId = modelId,
-        EndpointUrl = "http://localhost:1234/v1/",
+        EndpointUrl = endpointUrl,
+        ConnectionSourceSettingsId = connectionSourceSettingsId,
         ApiKey = apiKey,
         Temperature = 0.2m,
         TopP = 1m,

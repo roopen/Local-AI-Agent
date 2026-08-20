@@ -45,6 +45,8 @@ public sealed class LocalServerMigrationTests
         Assert.All(users, user => Assert.False(user.IsDisabled));
 
         AiSettings settings = await context.AiSettings.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(settings.Id, settings.HostId);
+        Assert.Equal("owner-model", settings.Name);
         Assert.Equal("owner-model", settings.ModelId);
         Assert.Equal("owner-secret", settings.ApiKeyCiphertext);
         Assert.Empty(await context.Invitations.ToListAsync(TestContext.Current.CancellationToken));

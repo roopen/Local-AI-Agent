@@ -13,6 +13,7 @@ public sealed record AiSettingsCatalogResponse
 public sealed record AiSettingsOptionResponse
 {
     public int Id { get; init; }
+    public int HostId { get; init; }
     public required string Name { get; init; }
     public required string ModelId { get; init; }
     public required string EndpointUrl { get; init; }
@@ -34,8 +35,10 @@ public sealed record SaveAiSettingsOptionRequest
     [Required]
     public required string ModelId { get; init; }
 
-    [Required]
-    public required string EndpointUrl { get; init; }
+    public string? EndpointUrl { get; init; }
+
+    [Range(1, int.MaxValue)]
+    public int? ConnectionSourceSettingsId { get; init; }
 
     public string? ApiKey { get; init; }
     public bool ClearApiKey { get; init; }

@@ -4,6 +4,7 @@
 /* eslint-disable */
 export type AiSettingsOptionResponse = {
     id?: number;
+    hostId?: number;
     name: string | null;
     modelId: string | null;
     endpointUrl: string | null;

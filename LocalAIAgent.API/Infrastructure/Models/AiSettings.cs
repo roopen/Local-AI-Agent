@@ -3,6 +3,7 @@
     public class AiSettings
     {
         public int Id { get; set; }
+        public int HostId { get; set; }
         public string Name { get; set; } = "Default";
         public required string ModelId { get; set; } = "gemma-3-27b-it-qat";
         public string ApiKeyCiphertext { get; set; } = string.Empty;

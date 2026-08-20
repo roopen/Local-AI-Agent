@@ -760,6 +760,49 @@ button:focus-visible {
   margin-top: 14px;
 }
 
+.llm-host-group {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.llm-host-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.llm-host-header > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.llm-host-header strong,
+.llm-host-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.llm-host-header span {
+  color: var(--muted-foreground);
+  font-size: 0.8em;
+}
+
+.llm-host-header button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--secondary);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
 .llm-option-row {
   display: flex;
   align-items: center;
@@ -812,6 +855,15 @@ button:focus-visible {
   .llm-settings-grid--numbers {
     grid-template-columns: 1fr;
   }
+}
+
+.llm-shared-host-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--muted-foreground);
+  font-size: 0.86em;
 }
 
 .taste-chip-x {

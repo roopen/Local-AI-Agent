@@ -3039,6 +3039,9 @@ namespace LocalAIAgent.Tests.Generated
         [System.Text.Json.Serialization.JsonPropertyName("id")]
         public int Id { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("hostId")]
+        public int HostId { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; }
 
@@ -4029,8 +4032,11 @@ namespace LocalAIAgent.Tests.Generated
         public string ModelId { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("endpointUrl")]
-        [System.ComponentModel.DataAnnotations.Required]
         public string EndpointUrl { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("connectionSourceSettingsId")]
+        [System.ComponentModel.DataAnnotations.Range(1, 2147483647)]
+        public int? ConnectionSourceSettingsId { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("apiKey")]
         public string ApiKey { get; set; }
