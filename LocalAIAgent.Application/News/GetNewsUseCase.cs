@@ -4,9 +4,18 @@ using System.Runtime.CompilerServices;
 
 namespace LocalAIAgent.Application.News
 {
+    public enum NewsLoadingPhase
+    {
+        Feeds,
+        Llm,
+    }
+
     public interface IGetNewsUseCase
     {
-        IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(UserPreferences preferences, CancellationToken cancellationToken);
+        IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
+            UserPreferences preferences,
+            CancellationToken cancellationToken,
+            Func<NewsLoadingPhase, CancellationToken, Task>? loadingPhaseChanged = null);
     }
 
     public class GetNewsUseCase(
@@ -18,7 +27,8 @@ namespace LocalAIAgent.Application.News
     {
         public async IAsyncEnumerable<NewsArticle> GetNewsStreamAsync(
             UserPreferences preferences,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken cancellationToken,
+            Func<NewsLoadingPhase, CancellationToken, Task>? loadingPhaseChanged = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences, cancellationToken);
@@ -38,6 +48,7 @@ namespace LocalAIAgent.Application.News
 #else
             bool saveDataset = false;
 #endif
+            bool llmPhaseReported = false;
             foreach (NewsItem[] newsBatch in newsItems.Chunk(5))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -49,6 +60,12 @@ namespace LocalAIAgent.Application.News
                 List<NewsArticle> evaluatedNewsArticles = [.. keywordEvaluation.EvaluatedArticles];
                 if (keywordEvaluation.UnresolvedArticles.Length > 0)
                 {
+                    if (!llmPhaseReported && loadingPhaseChanged is not null)
+                    {
+                        await loadingPhaseChanged(NewsLoadingPhase.Llm, cancellationToken);
+                        llmPhaseReported = true;
+                    }
+
                     EvaluatedNewsArticles llmEvaluatedArticles = await evaluateNewsUseCase.EvaluateArticlesV2(
                         keywordEvaluation.UnresolvedArticles.ToList(),
                         preferences,

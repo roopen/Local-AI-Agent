@@ -51,9 +51,11 @@ namespace LocalAIAgent.API.Api.Hubs
             if (user.Preferences is null)
                 throw new HubException("User preferences are not set.");
 
+            await SendLoadingPhaseAsync(NewsLoadingPhase.Feeds, cancellationToken);
+
             int newsCount = 0;
             await using IAsyncEnumerator<NewsArticle> enumerator = getNewsUseCase
-                .GetNewsStreamAsync(user.Preferences, cancellationToken)
+                .GetNewsStreamAsync(user.Preferences, cancellationToken, SendLoadingPhaseAsync)
                 .GetAsyncEnumerator(cancellationToken);
 
             while (true)
@@ -74,6 +76,7 @@ namespace LocalAIAgent.API.Api.Hubs
                     string safeMessage = LlmErrorSanitizer.GetSafeMessage(ex);
                     bool isLlmConnectionFailure = LlmErrorSanitizer.IsLlmConnectionFailure(ex);
                     logger.LogError(
+                        ex,
                         "News stream failed for user {UserId}: {ErrorType}: {Message}",
                         userId,
                         ex.GetType().Name,
@@ -96,6 +99,18 @@ namespace LocalAIAgent.API.Api.Hubs
 
             newsMetrics.RecordNewsArticleCount(newsCount);
             newsMetrics.StopRecordingRequest();
+        }
+
+        private Task SendLoadingPhaseAsync(NewsLoadingPhase phase, CancellationToken cancellationToken)
+        {
+            string clientPhase = phase switch
+            {
+                NewsLoadingPhase.Feeds => "feeds",
+                NewsLoadingPhase.Llm => "llm",
+                _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null),
+            };
+
+            return Clients.Caller.SendAsync("NewsLoadingPhaseChanged", clientPhase, cancellationToken);
         }
 
         public override Task OnDisconnectedAsync(Exception? exception)

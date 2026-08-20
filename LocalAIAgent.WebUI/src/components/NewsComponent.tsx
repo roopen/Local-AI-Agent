@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { LlmConnectionError, NewsStreamClient } from '../clients/NewsStreamingClient';
+import type { NewsLoadingPhase } from '../clients/NewsStreamingClient';
 import NewsArticle from '../domain/NewsArticle';
 import FeedbackModal from './FeedbackModal';
 import { Chip } from '@progress/kendo-react-buttons';
@@ -32,8 +33,9 @@ function TokenStatsBar({ avgInput, avgOutput, avgTotal }: TokenStatsBarProps) {
     );
 }
 
-function ArticleStatusMessage({ isLoading, filteredCount, error, dots }: { isLoading: boolean; filteredCount: number; error: string | null; dots: number }) {
-    if (isLoading) return <p>Loading articles{'.'.repeat(dots)}</p>;
+export function ArticleStatusMessage({ loadingPhase, isLoading, filteredCount, error, dots }: { loadingPhase: NewsLoadingPhase | null; isLoading: boolean; filteredCount: number; error: string | null; dots: number }) {
+    if (loadingPhase === 'feeds') return <p role="status">Loading news feeds{'.'.repeat(dots)}</p>;
+    if (loadingPhase === 'llm') return <p role="status">Loading LLM{'.'.repeat(dots)}</p>;
     if (!isLoading && filteredCount === 0 && !error) return <p>No articles found.</p>;
     return null;
 }
@@ -45,6 +47,7 @@ interface NewsComponentProps {
 const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure }) => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadingPhase, setLoadingPhase] = useState<NewsLoadingPhase | null>('feeds');
     const [error, setError] = useState<string | null>(null);
     const [dots, setDots] = useState(1);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -92,27 +95,30 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
     }, [feedback]);
 
     useEffect(() => {
-        if (isLoading) {
+        if (loadingPhase) {
             const interval = setInterval(() => {
                 setDots(d => (d % 3) + 1);
             }, 600);
             return () => clearInterval(interval);
         }
-    }, [isLoading]);
+    }, [loadingPhase]);
 
     useEffect(() => {
         const handleNewArticle = (newArticle: NewsArticle) => {
+            setLoadingPhase(null);
             setArticles(prevArticles => [...prevArticles, newArticle]);
         };
 
         const handleStreamEnd = () => {
             setIsLoading(newsStreamClient.isLoading);
+            setLoadingPhase(null);
         };
 
         const handleError = (err: Error) => {
             if (err instanceof LlmConnectionError && onLlmConnectionFailure) {
                 setError(null);
                 setIsLoading(false);
+                setLoadingPhase(null);
                 onLlmConnectionFailure(err.message);
                 return;
             }
@@ -120,14 +126,18 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
             setError(`Error loading articles: ${err.message}`);
             console.error(err);
             setIsLoading(newsStreamClient.isLoading);
+            setLoadingPhase(null);
         };
 
         const handleLoadingChange = (loading: boolean) => {
             setIsLoading(loading);
+            if (!loading) setLoadingPhase(null);
         };
 
+        const handleLoadingPhaseChange = (phase: NewsLoadingPhase | null) => setLoadingPhase(phase);
+
         console.log('Starting news stream...');
-        newsStreamClient.start(handleNewArticle, handleStreamEnd, handleError, handleLoadingChange);
+        newsStreamClient.start(handleNewArticle, handleStreamEnd, handleError, handleLoadingChange, handleLoadingPhaseChange);
 
         const handlePageHide = () => {
             void newsStreamClient.stop();
@@ -289,7 +299,7 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
                         ))}
                     </div>
                 ))}
-                <ArticleStatusMessage isLoading={isLoading} filteredCount={filteredArticles.length} error={error} dots={dots} />
+                <ArticleStatusMessage loadingPhase={loadingPhase} isLoading={isLoading} filteredCount={filteredArticles.length} error={error} dots={dots} />
             </div>
 
             {tokenStats && <TokenStatsBar avgInput={tokenStats.avgInput} avgOutput={tokenStats.avgOutput} avgTotal={tokenStats.avgTotal} />}

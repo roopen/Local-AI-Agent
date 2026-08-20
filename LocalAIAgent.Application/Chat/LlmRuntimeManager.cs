@@ -183,7 +183,10 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
         OpenAIClientOptions clientOptions = new()
         {
             Endpoint = endpoint,
-            NetworkTimeout = TimeSpan.FromSeconds(90),
+            // A remote GPU can take more than 90 seconds to load or compile a
+            // model before producing its first streamed token. The per-batch
+            // cancellation token remains the overall five-minute limit.
+            NetworkTimeout = TimeSpan.FromMinutes(5),
         };
 
         string apiKey = string.IsNullOrEmpty(settings.ApiKey) ? "no-key" : settings.ApiKey;

@@ -99,10 +99,19 @@ public class GetNewsUseCaseTests
             translationUseCase.Object);
 
         List<NewsArticle> result = [];
-        await foreach (NewsArticle article in sut.GetNewsStreamAsync(TestPrefs, CancellationToken.None))
+        List<NewsLoadingPhase> loadingPhases = [];
+        await foreach (NewsArticle article in sut.GetNewsStreamAsync(
+            TestPrefs,
+            CancellationToken.None,
+            (phase, _) =>
+            {
+                loadingPhases.Add(phase);
+                return Task.CompletedTask;
+            }))
             result.Add(article);
 
         Assert.Equal([llmArticle.Link], result.Select(a => a.Link));
+        Assert.Equal([NewsLoadingPhase.Llm], loadingPhases);
         evaluateNewsUseCase.Verify(e => e.EvaluateArticlesV2(
             It.Is<List<NewsItem>>(items => items.SequenceEqual(new[] { unresolvedItem })),
             TestPrefs,

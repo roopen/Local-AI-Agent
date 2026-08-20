@@ -80,7 +80,14 @@ namespace LocalAIAgent.API
                 builder.AddRequestSecurity();
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();
-                builder.Services.AddSignalR();
+                builder.Services.AddSignalR(options =>
+                {
+                    // Keep the browser-to-server tunnel active while a remote
+                    // model is still working and tolerate an occasional missed
+                    // ping without dropping the news stream immediately.
+                    options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+                    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+                });
                 builder.Services.AddApplicationServices(builder.Configuration);
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();

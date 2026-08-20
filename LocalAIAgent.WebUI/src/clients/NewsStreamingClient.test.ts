@@ -2,6 +2,7 @@ import {
     extractLlmConnectionFailureMessage,
     LLM_CONNECTION_FAILURE_CODE,
     NewsStreamClient,
+    parseNewsLoadingPhase,
 } from './NewsStreamingClient';
 import { HubConnectionState } from '@microsoft/signalr';
 
@@ -18,6 +19,17 @@ describe('extractLlmConnectionFailureMessage', () => {
     it('does not classify an ordinary stream error as an LLM connection failure', () => {
         expect(extractLlmConnectionFailureMessage(new Error('SignalR connection closed.')))
             .toBeNull();
+    });
+});
+
+describe('parseNewsLoadingPhase', () => {
+    it.each([
+        ['feeds', 'feeds'],
+        ['llm', 'llm'],
+        ['unknown', null],
+        [undefined, null],
+    ])('maps %p to %p', (value, expected) => {
+        expect(parseNewsLoadingPhase(value)).toBe(expected);
     });
 });
 

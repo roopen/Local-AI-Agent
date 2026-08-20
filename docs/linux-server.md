@@ -169,6 +169,32 @@ affecting rate limiting. Keep Cloudflare's "Remove visitor IP headers" transform
 disabled for this hostname. Enable WebSockets in the Cloudflare zone so the
 SignalR `/newsHub` connection can upgrade normally.
 
+### Remote AI API through a second tunnel
+
+When the OpenAI-compatible model server runs on another computer, use a second,
+named Cloudflare Tunnel with a different hostname. Its ingress must point to the
+model server's local listener, for example:
+
+```yaml
+ingress:
+  - hostname: llm.example.com
+    service: http://127.0.0.1:8000
+    originRequest:
+      connectTimeout: 30s
+  - service: http_status:404
+```
+
+Run that `cloudflared` connector as an operating-system service on the model
+computer, not in a terminal tied to an interactive login. In AI News, save the
+endpoint as `https://llm.example.com/v1/` (including the `/v1/` suffix) and use
+the API token expected by the model server.
+
+Do not put an interactive Cloudflare Access login page in front of this API
+hostname. AI News sends the configured model API token as a Bearer token, but it
+does not send Cloudflare Access service-token headers. An Access page or a
+Cloudflare error page is HTML rather than an OpenAI response and will make the
+model request fail.
+
 Verify that HTTPS forwarding is active. The unauthenticated CSRF endpoint
 redirect must retain the public `https` scheme:
 
@@ -189,6 +215,48 @@ sudo cloudflared --config /etc/cloudflared/config.yml service install
 sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared
 ```
+
+### Diagnose disconnects and 502 responses
+
+There are two independent paths in a remote-model deployment:
+
+1. browser -> Cloudflare -> Ubuntu AI News (`/newsHub` WebSocket); and
+2. Ubuntu AI News -> Cloudflare -> remote model API (streaming HTTPS).
+
+A Cloudflare HTML `502` from `/newsHub/negotiate` belongs to the first path. It
+means the browser reached Cloudflare but the Ubuntu connector could not reach
+the AI News origin. It is not a response from the model server. Check the local
+origin and capture its state before restarting it:
+
+```sh
+date --utc
+curl --verbose --max-time 5 http://127.0.0.1:8180/alive
+sudo systemctl --no-pager --full status ainews.service cloudflared
+sudo podman inspect ainews --format '{{json .State}}'
+sudo podman healthcheck run ainews
+sudo journalctl --unit ainews.service --since '-10 minutes' --no-pager
+sudo journalctl --unit cloudflared --since '-10 minutes' --no-pager
+```
+
+Interpret the checks in this order:
+
+- If loopback `/alive` fails, diagnose `ainews.service` first. Look for an exit,
+  out-of-memory kill, failed health check, or restart in the service journal.
+- If loopback `/alive` succeeds while the public hostname returns 502, diagnose
+  the Ubuntu `cloudflared` service and confirm its ingress still targets
+  `http://127.0.0.1:8180`.
+- From Ubuntu, request `https://llm.example.com/v1/models` with the same Bearer
+  token used by AI News. If it fails, compare the remote computer's local
+  `/v1/models` result with its `cloudflared` logs to separate the model process
+  from the second tunnel.
+- If all health checks pass but the first model token is simply slow, AI News
+  permits up to five minutes for the request. SignalR sends a keep-alive every
+  ten seconds while it waits.
+
+After its startup grace period, the supplied Quadlet kills an unresponsive
+container after three failed health checks and `Restart=always` recovers it.
+This improves recovery, but the journal is still needed to identify why the
+origin became unhealthy.
 
 ## Reverse proxy
 

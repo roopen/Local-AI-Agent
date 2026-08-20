@@ -9,8 +9,11 @@ type ArticleCallback = (article: NewsArticle) => void;
 type CompletionCallback = () => void;
 type ErrorCallback = (error: Error) => void;
 type LoadingChangeCallback = (isLoading: boolean) => void;
+export type NewsLoadingPhase = 'feeds' | 'llm';
+type LoadingPhaseChangeCallback = (phase: NewsLoadingPhase | null) => void;
 
 export const LLM_CONNECTION_FAILURE_CODE = "LLM_CONNECTION_FAILED:";
+const NEWS_LOADING_PHASE_EVENT = "NewsLoadingPhaseChanged";
 
 export class LlmConnectionError extends Error {
     constructor(message: string) {
@@ -26,6 +29,10 @@ export function extractLlmConnectionFailureMessage(error: unknown): string | nul
 
     const detail = message.slice(markerIndex + LLM_CONNECTION_FAILURE_CODE.length).trim();
     return detail.length > 0 ? detail : 'The AI service could not be reached.';
+}
+
+export function parseNewsLoadingPhase(value: unknown): NewsLoadingPhase | null {
+    return value === 'feeds' || value === 'llm' ? value : null;
 }
 
 function mapRelevancy(relevancy: RelevancyDto): Relevancy {
@@ -86,6 +93,7 @@ export class NewsStreamClient {
     private _loadStartTime: Date | null = null;
     private _loadEndTime: Date | null = null;
     private _streamSubscription: signalR.ISubscription<NewsDto> | null = null;
+    private _loadingPhaseHandler: ((phase: unknown) => void) | null = null;
     private _lifecycleVersion = 0;
 
     public get isLoading(): boolean {
@@ -116,6 +124,8 @@ export class NewsStreamClient {
 
     private connection = new signalR.HubConnectionBuilder()
         .withUrl(new URL('/newsHub', window.location.origin).toString())
+        .withServerTimeout(60_000)
+        .withKeepAliveInterval(10_000)
         .withAutomaticReconnect()
         .build();
     
@@ -129,7 +139,8 @@ export class NewsStreamClient {
         onArticleReceived: ArticleCallback,
         onComplete: CompletionCallback,
         onError: ErrorCallback,
-        onLoadingChange: LoadingChangeCallback
+        onLoadingChange: LoadingChangeCallback,
+        onLoadingPhaseChange?: LoadingPhaseChangeCallback
     ): Promise<void> {
         if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
             return;
@@ -151,6 +162,17 @@ export class NewsStreamClient {
             this._loadStartTime = new Date();
             this._loadEndTime = null;
             onLoadingChange(true);
+            onLoadingPhaseChange?.('feeds');
+
+            this.clearLoadingPhaseHandler();
+            this._loadingPhaseHandler = (value: unknown) => {
+                if (lifecycleVersion !== this._lifecycleVersion || this._articleCount > 0) return;
+
+                const phase = parseNewsLoadingPhase(value);
+                if (phase) onLoadingPhaseChange?.(phase);
+            };
+            this.connection.on(NEWS_LOADING_PHASE_EVENT, this._loadingPhaseHandler);
+
             await this.connection.start();
 
             // stop() may have been called while the connection was still starting.
@@ -170,23 +192,28 @@ export class NewsStreamClient {
                 next: (item: NewsDto) => {
                     if (lifecycleVersion !== this._lifecycleVersion) return;
                     this._articleCount++;
+                    onLoadingPhaseChange?.(null);
                     onArticleReceived(mapNewsDto(item));
                 },
                 complete: () => {
                     if (lifecycleVersion !== this._lifecycleVersion) return;
                     this._streamSubscription = null;
+                    this.clearLoadingPhaseHandler();
                     this._isLoading = false;
                     this._loadEndTime = new Date();
                     onLoadingChange(false);
+                    onLoadingPhaseChange?.(null);
                     console.log("✅ News stream completed.");
                     onComplete();
                 },
                 error: (err) => {
                     if (lifecycleVersion !== this._lifecycleVersion) return;
                     this._streamSubscription = null;
+                    this.clearLoadingPhaseHandler();
                     this._isLoading = false;
                     this._loadEndTime = new Date();
                     onLoadingChange(false);
+                    onLoadingPhaseChange?.(null);
                     console.error("❌ News stream error:", err);
                     const error = err instanceof Error ? err : new Error(String(err));
                     const llmConnectionMessage = extractLlmConnectionFailureMessage(error);
@@ -197,9 +224,11 @@ export class NewsStreamClient {
             });
         } catch (err) {
             if (lifecycleVersion !== this._lifecycleVersion) return;
+            this.clearLoadingPhaseHandler();
             this._isLoading = false;
             this._loadEndTime = new Date();
             onLoadingChange(false);
+            onLoadingPhaseChange?.(null);
             const error = err instanceof Error ? err : new Error("Failed to connect to SignalR hub");
             console.error(`❌ ${error.message}`);
             onError(error);
@@ -210,6 +239,7 @@ export class NewsStreamClient {
         ++this._lifecycleVersion;
         this._streamSubscription?.dispose();
         this._streamSubscription = null;
+        this.clearLoadingPhaseHandler();
         this._isLoading = false;
         this._loadEndTime = new Date();
 
@@ -221,5 +251,12 @@ export class NewsStreamClient {
         } catch (err) {
             console.error("❌ Error disconnecting:", err);
         }
+    }
+
+    private clearLoadingPhaseHandler(): void {
+        if (!this._loadingPhaseHandler) return;
+
+        this.connection.off(NEWS_LOADING_PHASE_EVENT, this._loadingPhaseHandler);
+        this._loadingPhaseHandler = null;
     }
 }
