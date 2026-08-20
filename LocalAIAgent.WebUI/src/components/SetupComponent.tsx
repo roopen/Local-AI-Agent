@@ -11,12 +11,12 @@ const SetupComponent: React.FC<SetupComponentProps> = ({ llmConnectionError }) =
   const userService = UserService.getInstance();
 
   const handleSettingsSaved = async () => {
-    const [preferences, aiSettings] = await Promise.all([
+    const [preferences, llmOptions] = await Promise.all([
       userService.getUserPreferences(),
-      userService.getAiSettings(),
+      userService.getLlmOptions(),
     ]);
 
-    if (preferences != null && !preferences.isEmpty() && aiSettings.isConfigured) {
+    if (preferences != null && !preferences.isEmpty() && llmOptions.isConfigured) {
         setSettingsCompleted(true);
     } else {
         setSettingsCompleted(false);

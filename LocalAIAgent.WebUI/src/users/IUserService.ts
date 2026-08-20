@@ -1,4 +1,4 @@
-import type { CredentialInfo, RegistrationStatusDto } from "../clients/UserApiClient";
+import type { AiSettingsCatalogResponse, AiSettingsOptionResponse, CredentialInfo, RegistrationStatusDto, SaveAiSettingsOptionRequest } from "../clients/UserApiClient";
 import type AISettings from "../domain/AISettings";
 import type { User } from "../domain/User";
 import type UserSettings from "../domain/UserSettings";
@@ -17,4 +17,8 @@ export interface IUserService {
     addCredential(): Promise<void>;
     getAiSettings(): Promise<AISettings>;
     saveAiSettings(settings: AISettings, clearApiKey?: boolean): Promise<AISettings>;
+    getLlmOptions(): Promise<AiSettingsCatalogResponse>;
+    saveLlmOption(option: SaveAiSettingsOptionRequest, settingsId?: number): Promise<AiSettingsOptionResponse>;
+    deleteLlmOption(settingsId: number): Promise<void>;
+    selectLlmOption(settingsId: number): Promise<void>;
 }

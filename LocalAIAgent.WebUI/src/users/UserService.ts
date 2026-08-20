@@ -1,4 +1,4 @@
-import { AiSettingsService, LoginService, OpenAPI, UserPreferencesService, Fido2Service, HostingSecurityService, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
+import { AiSettingsOptionsService, AiSettingsService, LoginService, OpenAPI, UserPreferencesService, Fido2Service, HostingSecurityService, PublicKeyCredentialType, AuthenticatorTransport } from "../clients/UserApiClient";
 import type {
     AssertionOptions,
     AuthenticatorAssertionRawResponse,
@@ -8,6 +8,7 @@ import type {
     RegisteredPublicKeyCredential
 } from "../clients/UserApiClient";
 import type { RegistrationStatusDto } from "../clients/UserApiClient";
+import type { AiSettingsCatalogResponse, AiSettingsOptionResponse, SaveAiSettingsOptionRequest } from "../clients/UserApiClient";
 import type { User } from "../domain/User";
 import type { IUserService } from "./IUserService";
 import UserSettings from "../domain/UserSettings";
@@ -71,6 +72,43 @@ export default class UserService implements IUserService {
             saved.frequencyPenalty ?? undefined,
             saved.presencePenalty ?? undefined,
         );
+    }
+
+    async getLlmOptions(): Promise<AiSettingsCatalogResponse> {
+        if (!this.getCurrentUser()) {
+            throw new Error("User must be logged in to get LLM options.");
+        }
+
+        return await AiSettingsOptionsService.getApiAiSettingsOptions();
+    }
+
+    async saveLlmOption(
+        option: SaveAiSettingsOptionRequest,
+        settingsId?: number,
+    ): Promise<AiSettingsOptionResponse> {
+        if (!this.getCurrentUser()) {
+            throw new Error("User must be logged in to save LLM options.");
+        }
+
+        return settingsId == null
+            ? await AiSettingsOptionsService.postApiAiSettingsOptions(option)
+            : await AiSettingsOptionsService.putApiAiSettingsOptions(settingsId, option);
+    }
+
+    async deleteLlmOption(settingsId: number): Promise<void> {
+        if (!this.getCurrentUser()) {
+            throw new Error("User must be logged in to delete LLM options.");
+        }
+
+        await AiSettingsOptionsService.deleteApiAiSettingsOptions(settingsId);
+    }
+
+    async selectLlmOption(settingsId: number): Promise<void> {
+        if (!this.getCurrentUser()) {
+            throw new Error("User must be logged in to select an LLM option.");
+        }
+
+        await AiSettingsOptionsService.putApiAiSettingsSelection({ settingsId });
     }
 
     async getCredentials(): Promise<CredentialInfo[]> {

@@ -36,7 +36,7 @@ public class GetNewsUseCaseTests
             TaskCreationOptions.RunContinuationsAsynchronously);
 
         Mock<ILoadLLMUseCase> loadLlmUseCase = new(MockBehavior.Strict);
-        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()))
+        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>(), TestPrefs.Id))
             .Returns(warmupCompletion.Task);
 
         Mock<INewsService> newsService = new(MockBehavior.Strict);
@@ -64,7 +64,7 @@ public class GetNewsUseCaseTests
         {
         }
 
-        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()), Times.Once);
+        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>(), TestPrefs.Id), Times.Once);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class GetNewsUseCaseTests
         Mock<ICustomFeedFetcher> customFeedFetcher = new(MockBehavior.Strict);
 
         Mock<ILoadLLMUseCase> loadLlmUseCase = new(MockBehavior.Strict);
-        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()))
+        loadLlmUseCase.Setup(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>(), TestPrefs.Id))
             .ReturnsAsync(true);
 
         Mock<IEvaluateNewsUseCase> evaluateNewsUseCase = new(MockBehavior.Strict);
@@ -130,8 +130,9 @@ public class GetNewsUseCaseTests
                 It.Is<List<NewsArticle>>(articles =>
                     articles.Select(a => a.Link).SequenceEqual(new[] { llmArticle.Link })),
                 "en",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((List<NewsArticle> articles, string _, CancellationToken _) => articles);
+                It.IsAny<CancellationToken>(),
+                TestPrefs.Id))
+            .ReturnsAsync((List<NewsArticle> articles, string _, CancellationToken _, int? _) => articles);
 
         GetNewsUseCase sut = new(
             newsService.Object,
@@ -160,6 +161,6 @@ public class GetNewsUseCaseTests
             TestPrefs,
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>()), Times.Once);
-        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>()), Times.Once);
+        loadLlmUseCase.Verify(l => l.LoadLLMUseCaseAsync(It.IsAny<CancellationToken>(), TestPrefs.Id), Times.Once);
     }
 }

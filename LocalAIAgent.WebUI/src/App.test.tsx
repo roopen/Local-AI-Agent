@@ -10,7 +10,7 @@ const mockUserService = {
     isLoggedIn: jest.fn().mockResolvedValue(true),
     getCurrentUser: jest.fn().mockReturnValue({ id: '1', name: 'test-user' }),
     getUserPreferences: jest.fn().mockResolvedValue({ isEmpty: () => false }),
-    getAiSettings: jest.fn().mockResolvedValue({ isConfigured: true }),
+    getLlmOptions: jest.fn().mockResolvedValue({ isConfigured: true }),
 };
 
 jest.mock('./users/UserService', () => ({

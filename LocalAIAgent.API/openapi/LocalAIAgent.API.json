@@ -317,6 +317,192 @@
         }
       }
     },
+    "/api/ai-settings/options": {
+      "get": {
+        "tags": [
+          "AiSettingsOptions"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsCatalogResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsCatalogResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AiSettingsOptions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai-settings/options/{settingsId}": {
+      "put": {
+        "tags": [
+          "AiSettingsOptions"
+        ],
+        "parameters": [
+          {
+            "name": "settingsId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAiSettingsOptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsOptionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AiSettingsOptions"
+        ],
+        "parameters": [
+          {
+            "name": "settingsId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/ai-settings/selection": {
+      "put": {
+        "tags": [
+          "AiSettingsOptions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectAiSettingsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectAiSettingsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectAiSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Feeds/Languages": {
       "get": {
         "tags": [
@@ -1071,6 +1257,82 @@
           "language": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AiSettingsCatalogResponse": {
+        "required": [
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "isConfigured": {
+            "type": "boolean"
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "selectedSettingsId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiSettingsOptionResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AiSettingsOptionResponse": {
+        "required": [
+          "endpointUrl",
+          "modelId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelId": {
+            "type": "string",
+            "nullable": true
+          },
+          "endpointUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasApiKey": {
+            "type": "boolean"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          },
+          "temperature": {
+            "type": "number",
+            "format": "double"
+          },
+          "topP": {
+            "type": "number",
+            "format": "double"
+          },
+          "frequencyPenalty": {
+            "type": "number",
+            "format": "double"
+          },
+          "presencePenalty": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false
@@ -2145,6 +2407,73 @@
         ],
         "type": "string"
       },
+      "SaveAiSettingsOptionRequest": {
+        "required": [
+          "endpointUrl",
+          "modelId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "modelId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "endpointUrl": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "clearApiKey": {
+            "type": "boolean"
+          },
+          "temperature": {
+            "maximum": 2,
+            "minimum": 0,
+            "type": "number",
+            "format": "double"
+          },
+          "topP": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "format": "double"
+          },
+          "frequencyPenalty": {
+            "maximum": 2,
+            "minimum": -2,
+            "type": "number",
+            "format": "double"
+          },
+          "presencePenalty": {
+            "maximum": 2,
+            "minimum": -2,
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SelectAiSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "settingsId": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "StringAuthenticationExtensionsPRFValuesKeyValuePair": {
         "type": "object",
         "properties": {
@@ -2444,6 +2773,9 @@
     },
     {
       "name": "AiSettings"
+    },
+    {
+      "name": "AiSettingsOptions"
     },
     {
       "name": "Feeds"

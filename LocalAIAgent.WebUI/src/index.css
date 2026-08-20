@@ -682,7 +682,8 @@ button:focus-visible {
   grid-column: 1 / -1;
 }
 
-.llm-field input {
+.llm-field input,
+.llm-field select {
   box-sizing: border-box;
   width: 100%;
   padding: 9px 11px;
@@ -694,7 +695,8 @@ button:focus-visible {
   font-weight: 400;
 }
 
-.llm-field input:focus {
+.llm-field input:focus,
+.llm-field select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 1px var(--primary);
@@ -738,6 +740,71 @@ button:focus-visible {
   border: 1px solid #166534;
   background: rgba(22, 101, 52, 0.22);
   color: #bbf7d0;
+}
+
+.llm-choice-section {
+  margin-bottom: 28px;
+}
+
+.llm-options-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.llm-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.llm-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.llm-option-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.llm-option-row span {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.84em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.llm-option-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.llm-option-actions button,
+.secondary-button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--secondary);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.llm-option-editor {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
 }
 
 @media (max-width: 760px) {

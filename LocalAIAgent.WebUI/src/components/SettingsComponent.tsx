@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PromptSettingsComponent from './PromptSettingsComponent';
 import AuthenticationSettingsComponent from './AuthenticationSettingsComponent';
 import FeedSettingsComponent from './FeedSettingsComponent';
-import LlmSettingsComponent from './LlmSettingsComponent';
+import LlmOptionsComponent from './LlmOptionsComponent';
 import AdministrationSettingsComponent from './AdministrationSettingsComponent';
 import UserService from '../users/UserService';
 
@@ -28,12 +28,12 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     initialLlmError,
 }) => {
     const isOwner = UserService.getInstance().getCurrentUser()?.role === 'Owner';
-    const availableTabs = settingsTabs.filter(tab => isOwner || (tab.id !== 'llm' && tab.id !== 'admin'));
+    const availableTabs = settingsTabs.filter(tab => isOwner || tab.id !== 'admin');
     const resolvedInitialTab = availableTabs.some(tab => tab.id === initialTab) ? initialTab : 'prompt';
     const [activeTab, setActiveTab] = useState<SettingsTab>(resolvedInitialTab);
     const tabContent: Record<SettingsTab, React.ReactNode> = {
         prompt: <PromptSettingsComponent onSave={onSave} />,
-        llm: <LlmSettingsComponent onSave={onSave} initialError={initialLlmError} />,
+        llm: <LlmOptionsComponent onSave={onSave} initialError={initialLlmError} />,
         feeds: <FeedSettingsComponent />,
         auth: <AuthenticationSettingsComponent />,
         admin: <AdministrationSettingsComponent />,

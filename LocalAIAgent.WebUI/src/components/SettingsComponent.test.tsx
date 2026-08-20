@@ -22,7 +22,7 @@ jest.mock('./AuthenticationSettingsComponent', () => ({
     __esModule: true,
     default: () => <div>Authentication settings</div>,
 }));
-jest.mock('./LlmSettingsComponent', () => ({
+jest.mock('./LlmOptionsComponent', () => ({
     __esModule: true,
     default: ({ initialError }: { initialError?: string }) => (
         <div>LLM settings: {initialError}</div>

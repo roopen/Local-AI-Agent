@@ -8,6 +8,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AddCustomFeedDto } from './models/AddCustomFeedDto';
+export type { AiSettingsCatalogResponse } from './models/AiSettingsCatalogResponse';
+export type { AiSettingsOptionResponse } from './models/AiSettingsOptionResponse';
 export type { AiSettingsResponse } from './models/AiSettingsResponse';
 export { Algorithm } from './models/Algorithm';
 export type { AssertionOptions } from './models/AssertionOptions';
@@ -56,6 +58,8 @@ export type { RegisteredPublicKeyCredential } from './models/RegisteredPublicKey
 export type { RegistrationOptionsRequest } from './models/RegistrationOptionsRequest';
 export type { RegistrationStatusDto } from './models/RegistrationStatusDto';
 export { ResidentKeyRequirement } from './models/ResidentKeyRequirement';
+export type { SaveAiSettingsOptionRequest } from './models/SaveAiSettingsOptionRequest';
+export type { SelectAiSettingsRequest } from './models/SelectAiSettingsRequest';
 export type { StringAuthenticationExtensionsPRFValuesKeyValuePair } from './models/StringAuthenticationExtensionsPRFValuesKeyValuePair';
 export type { TermString } from './models/TermString';
 export type { TermStringExplanationStringKeyValuePair } from './models/TermStringExplanationStringKeyValuePair';
@@ -74,6 +78,7 @@ export type { VerifyAssertionResult } from './models/VerifyAssertionResult';
 export { AdminService } from './services/AdminService';
 export { AiService } from './services/AiService';
 export { AiSettingsService } from './services/AiSettingsService';
+export { AiSettingsOptionsService } from './services/AiSettingsOptionsService';
 export { FeedsService } from './services/FeedsService';
 export { Fido2Service } from './services/Fido2Service';
 export { HostingSecurityService } from './services/HostingSecurityService';

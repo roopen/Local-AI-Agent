@@ -17,6 +17,10 @@ describe('LoginComponent', () => {
         addCredential: jest.fn(),
         getAiSettings: jest.fn(),
         saveAiSettings: jest.fn(),
+        getLlmOptions: jest.fn(),
+        saveLlmOption: jest.fn(),
+        deleteLlmOption: jest.fn(),
+        selectLlmOption: jest.fn(),
     };
 
     const mockOnLogin = jest.fn();

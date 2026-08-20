@@ -37,15 +37,15 @@ function App() {
             const loginStatus = await userService.isLoggedIn();
             setIsLoggedIn(loginStatus);
             if (loginStatus) {
-                const [userPreferences, aiSettings] = await Promise.all([
+                const [userPreferences, llmOptions] = await Promise.all([
                     userService.getUserPreferences(),
-                    userService.getAiSettings(),
+                    userService.getLlmOptions(),
                 ]);
 
                 setIsSetupComplete(Boolean(
                     userPreferences
                     && !userPreferences.isEmpty()
-                    && aiSettings.isConfigured));
+                    && llmOptions.isConfigured));
             } else {
                 setIsSetupComplete(false);
             }
