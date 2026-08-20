@@ -195,6 +195,13 @@ does not send Cloudflare Access service-token headers. An Access page or a
 Cloudflare error page is HTML rather than an OpenAI response and will make the
 model request fail.
 
+Use a named tunnel rather than a temporary `trycloudflare.com` quick tunnel.
+For streamed chat completions, the model API must return
+`Content-Type: text/event-stream`; otherwise `cloudflared` can buffer the
+response instead of forwarding tokens as they arrive. Warm the model before the
+first news request if model loading can delay the response for several minutes.
+See Cloudflare's [streaming-response troubleshooting](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/troubleshoot-tunnels/common-errors/#cloudflare-tunnel-is-buffering-my-streaming-response-instead-of-streaming-it-live).
+
 Verify that HTTPS forwarding is active. The unauthenticated CSRF endpoint
 redirect must retain the public `https` scheme:
 
