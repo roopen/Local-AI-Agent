@@ -184,8 +184,8 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
         {
             Endpoint = endpoint,
             // A remote GPU can take more than 90 seconds to load or compile a
-            // model before producing its first streamed token. The per-batch
-            // cancellation token remains the overall five-minute limit.
+            // model before producing its first streamed token. Each attempt can
+            // wait five minutes; the caller's token controls the retry lifetime.
             NetworkTimeout = TimeSpan.FromMinutes(5),
         };
 

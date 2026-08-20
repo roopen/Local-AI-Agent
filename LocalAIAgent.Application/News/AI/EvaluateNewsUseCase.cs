@@ -9,6 +9,7 @@ using System.ClientModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace LocalAIAgent.Application.News.AI
 {
@@ -106,15 +107,16 @@ namespace LocalAIAgent.Application.News.AI
                 string batchContent = topicsEventsContext + string.Join("\n---ARTICLE SEPARATOR---\n",
                     uncachedBatch.Select((a, i) => $"Article {i}:\n{a.Content}\nSource: {a.Source}\n"));
 
-                using CancellationTokenSource cts = CancellationTokenSource
-                    .CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromMinutes(5));
                 List<ChatMessage> messages =
                 [
                     new ChatMessage(ChatRole.System, systemPrompt),
                     new ChatMessage(ChatRole.User, batchContent),
                 ];
-                List<ChatResponseUpdate> stream = await GetStreamWithRetryAsync(chatClient, messages, chatOptions, cts.Token).ConfigureAwait(false);
+                List<ChatResponseUpdate> stream = await GetStreamWithRetryAsync(
+                    chatClient,
+                    messages,
+                    chatOptions,
+                    cancellationToken).ConfigureAwait(false);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -285,17 +287,22 @@ namespace LocalAIAgent.Application.News.AI
             }
         }
 
-        private static async Task<List<ChatResponseUpdate>> GetStreamWithRetryAsync(
+        private async Task<List<ChatResponseUpdate>> GetStreamWithRetryAsync(
             IChatClient chatClient,
             List<ChatMessage> messages,
             ChatOptions chatOptions,
             CancellationToken cancellationToken)
         {
             AsyncRetryPolicy retryPolicy = Policy
-                .Handle<Exception>(IsTransientFailure)
-                .WaitAndRetryAsync(
-                    retryCount: 5,
-                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                .Handle<Exception>(exception =>
+                    !cancellationToken.IsCancellationRequested
+                    && IsTransientFailure(exception))
+                .WaitAndRetryForeverAsync(
+                    sleepDurationProvider: GetRetryDelay,
+                    onRetry: (exception, retryDelay) => logger.LogWarning(
+                        exception,
+                        "AI service request failed transiently. Retrying the current news batch in {RetryDelaySeconds} seconds.",
+                        retryDelay.TotalSeconds));
 
             return await retryPolicy.ExecuteAsync(async ct =>
             {
@@ -308,18 +315,36 @@ namespace LocalAIAgent.Application.News.AI
             }, cancellationToken).ConfigureAwait(false);
         }
 
+        private static TimeSpan GetRetryDelay(int retryAttempt) =>
+            TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, Math.Min(retryAttempt, 5))));
+
         private static bool IsTransientFailure(Exception exception)
         {
-            if (exception is OperationCanceledException)
-                return false;
+            if (exception is AggregateException aggregateException)
+                return aggregateException.Flatten().InnerExceptions.Any(IsTransientFailure);
 
             if (exception is ClientResultException clientResultException)
             {
-                return clientResultException.Status is 408 or 429
+                return clientResultException.Status is 0 or 408 or 429
                     || clientResultException.Status >= 500;
             }
 
-            return exception is HttpRequestException or TimeoutException;
+            if (exception is HttpRequestException requestException)
+            {
+                int? status = (int?)requestException.StatusCode;
+                return status is null or 408 or 429 || status >= 500;
+            }
+
+            if (exception is OperationCanceledException
+                or TimeoutException
+                or IOException
+                or JsonException)
+            {
+                return true;
+            }
+
+            return exception.InnerException is not null
+                && IsTransientFailure(exception.InnerException);
         }
     }
 }

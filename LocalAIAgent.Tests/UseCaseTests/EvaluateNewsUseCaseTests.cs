@@ -8,6 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.ServiceModel.Syndication;
+using System.Text.Json;
 
 namespace LocalAIAgent.Tests.UseCaseTests;
 
@@ -36,6 +37,39 @@ public class EvaluateNewsUseCaseTests
             Started.TrySetResult();
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             yield break;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose() { }
+    }
+
+    private sealed class FailingThenSuccessfulChatClient(
+        Exception failure,
+        string successfulResponse) : IChatClient
+    {
+        public int StreamingCallCount { get; private set; }
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            [System.Runtime.CompilerServices.EnumeratorCancellation]
+            CancellationToken cancellationToken = default)
+        {
+            StreamingCallCount++;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (StreamingCallCount == 1)
+                throw failure;
+
+            yield return new ChatResponseUpdate(ChatRole.Assistant, successfulResponse);
+            await Task.Yield();
         }
 
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
@@ -240,6 +274,43 @@ public class EvaluateNewsUseCaseTests
         NewsArticle only = Assert.Single(result.NewsArticles);
         Assert.Equal(42, only.InputTokens);
         Assert.Equal(13, only.OutputTokens);
+    }
+
+    [Fact]
+    public async Task EvaluateArticlesV2_TransientGatewayPayload_RetriesBatchAndCompletes()
+    {
+        NewsItem item = MakeItem("Title", "Summary", "https://x.com/a");
+        FailingThenSuccessfulChatClient chat = new(
+            new JsonException("The gateway returned HTML instead of an OpenAI stream."),
+            """[{"ArticleIndex":0,"Relevancy":"High","Topic":"Tech"}]""");
+        Mock<INewsDatasetRepository> repo = new(MockBehavior.Strict);
+        repo.Setup(r => r.GetCachedEvaluationsAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, CachedNewsEvaluation>());
+        repo.Setup(r => r.SaveAsync(
+                It.IsAny<List<NewsArticle>>(),
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        EvaluateNewsUseCase sut = new(
+            new FakeLlmRuntimeManager(TestOptions, chat),
+            new MemoryCache(new MemoryCacheOptions()),
+            repo.Object,
+            NullLogger<EvaluateNewsUseCase>.Instance);
+
+        EvaluatedNewsArticles result = await sut.EvaluateArticlesV2(
+            [item],
+            TestPrefs,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, chat.StreamingCallCount);
+        NewsArticle article = Assert.Single(result.NewsArticles);
+        Assert.Equal(Relevancy.High, article.Relevancy);
+        Assert.Equal("Tech", article.Topic);
     }
 
     [Fact]

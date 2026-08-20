@@ -256,9 +256,10 @@ Interpret the checks in this order:
   token used by AI News. If it fails, compare the remote computer's local
   `/v1/models` result with its `cloudflared` logs to separate the model process
   from the second tunnel.
-- If all health checks pass but the first model token is simply slow, AI News
-  permits up to five minutes for the request. SignalR sends a keep-alive every
-  ten seconds while it waits.
+- If all health checks pass but the first model token is simply slow, each AI
+  request can wait up to five minutes. Transient failures retry the current news
+  batch with backoff capped at 30 seconds until the browser leaves the page.
+  SignalR sends a keep-alive every ten seconds while it waits.
 
 After its startup grace period, the supplied Quadlet kills an unresponsive
 container after three failed health checks and `Restart=always` recovers it.
