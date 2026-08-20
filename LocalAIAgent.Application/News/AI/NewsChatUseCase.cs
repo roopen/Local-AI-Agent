@@ -6,15 +6,15 @@ namespace LocalAIAgent.Application.News.AI
 {
     public interface INewsChatUseCase
     {
-        Task<ExpandedNewsResult> GetExpandedNewsAsync(string article);
+        Task<ExpandedNewsResult> GetExpandedNewsAsync(string article, int? userPreferencesId = null);
     }
 
     internal class NewsChatUseCase(
         ILlmRuntimeManager runtimeManager) : INewsChatUseCase
     {
-        public async Task<ExpandedNewsResult> GetExpandedNewsAsync(string article)
+        public async Task<ExpandedNewsResult> GetExpandedNewsAsync(string article, int? userPreferencesId = null)
         {
-            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot(userPreferencesId);
             IChatClient chatClient = runtime.ChatClient;
             AIOptions options = runtime.Options;
             string prompt =

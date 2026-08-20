@@ -162,7 +162,7 @@ namespace LocalAIAgent.API
                 {
                     using IServiceScope startupScope = app.Services.CreateScope();
                     startupScope.ServiceProvider.GetRequiredService<AiSettingsStartupService>()
-                        .ActivateFirstAsync().GetAwaiter().GetResult();
+                        .ActivateAllAsync().GetAwaiter().GetResult();
 
                     if (app.Environment.IsDevelopment())
                         app.Lifetime.ApplicationStarted.Register(() => OpenBrowser(app));

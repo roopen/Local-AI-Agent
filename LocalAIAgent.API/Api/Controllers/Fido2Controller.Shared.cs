@@ -34,8 +34,8 @@ namespace LocalAIAgent.API.Api.Controllers
                 new ClaimsPrincipal(claimsIdentity),
                 new AuthenticationProperties
                 {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(3600)
+                    // CookieAuthenticationOptions.ExpireTimeSpan defines the ticket lifetime.
+                    IsPersistent = true
                 });
         }
     }

@@ -29,6 +29,12 @@ public class UserContext(DbContextOptions<UserContext> options) : DbContext(opti
             .WithOne(p => p.User)
             .HasForeignKey<UserPreferences>(p => p.UserId);
 
+        modelBuilder.Entity<UserPreferences>()
+            .HasOne(p => p.SelectedAiSettings)
+            .WithMany()
+            .HasForeignKey(p => p.SelectedAiSettingsId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<Fido2Credential>()
             .HasOne(c => c.Owner)
             .WithMany(u => u.Fido2Credentials)

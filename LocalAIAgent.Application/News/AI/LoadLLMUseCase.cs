@@ -5,17 +5,21 @@ namespace LocalAIAgent.Application.News.AI
 {
     public interface ILoadLLMUseCase
     {
-        Task<bool> LoadLLMUseCaseAsync(CancellationToken cancellationToken = default);
+        Task<bool> LoadLLMUseCaseAsync(
+            CancellationToken cancellationToken = default,
+            int? userPreferencesId = null);
     }
 
     internal class LoadLLMUseCase(ILlmRuntimeManager runtimeManager) : ILoadLLMUseCase
     {
-        public async Task<bool> LoadLLMUseCaseAsync(CancellationToken cancellationToken = default)
+        public async Task<bool> LoadLLMUseCaseAsync(
+            CancellationToken cancellationToken = default,
+            int? userPreferencesId = null)
         {
             if (!runtimeManager.IsConfigured)
                 return false;
 
-            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot(userPreferencesId);
             try
             {
                 await runtimeManager.WarmUpAsync(runtime, cancellationToken);

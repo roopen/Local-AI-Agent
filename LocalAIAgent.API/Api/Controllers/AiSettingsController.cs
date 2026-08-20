@@ -120,7 +120,7 @@ public sealed class AiSettingsController(
             throw;
         }
 
-        runtimeManager.Activate(candidate);
+        runtimeManager.Activate(persisted.Id, candidate);
         return Ok(ToResponse(persisted));
     }
 

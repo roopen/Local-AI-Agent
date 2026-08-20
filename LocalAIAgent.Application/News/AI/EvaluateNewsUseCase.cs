@@ -57,12 +57,8 @@ namespace LocalAIAgent.Application.News.AI
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
-            IChatClient chatClient = runtime.ChatClient;
-            AIOptions options = runtime.Options;
-
+            AIOptions datasetOptions = runtimeManager.GetRequiredSnapshot(userPreferences.Id).Options;
             string systemPrompt = userPreferences.BuildSystemPrompt();
-            ChatOptions chatOptions = options.BuildChatOptions();
 
             List<NewsArticle> result = [];
             IEnumerable<NewsItem[]> articleBatches = articles.Where(a => !string.IsNullOrWhiteSpace(a.Content))
@@ -100,6 +96,13 @@ namespace LocalAIAgent.Application.News.AI
                 NewsItem[] uncachedBatch = batch.Where(a => a.Link == null || !cached.ContainsKey(a.Link)).ToArray();
                 if (uncachedBatch.Length == 0)
                     continue;
+
+                LlmRuntimeSnapshot runtime =
+                    runtimeManager.GetRequiredSnapshot(userPreferences.Id);
+                IChatClient chatClient = runtime.ChatClient;
+                AIOptions options = runtime.Options;
+                datasetOptions = options;
+                ChatOptions chatOptions = options.BuildChatOptions();
 
                 HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
                 string topicsEventsContext = FormatKnownTopics(knownTopics);
@@ -169,8 +172,8 @@ namespace LocalAIAgent.Application.News.AI
             await newsDatasetRepository.SaveAsync(
                 result,
                 userPreferences.Id,
-                options.UseResultsForDataset,
-                options.ModelId,
+                datasetOptions.UseResultsForDataset,
+                datasetOptions.ModelId,
                 cancellationToken);
 
             return result;

@@ -15,7 +15,8 @@ namespace LocalAIAgent.Application.News.AI
         Task<List<NewsArticle>> TranslateArticleAsync(
             List<NewsArticle> articles,
             string targetLanguage,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default,
+            int? userPreferencesId = null);
         string GetSystemPrompt(string targetLanguage);
     }
 
@@ -48,7 +49,8 @@ namespace LocalAIAgent.Application.News.AI
         public async Task<List<NewsArticle>> TranslateArticleAsync(
             List<NewsArticle> articles,
             string targetLanguage,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            int? userPreferencesId = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -88,7 +90,6 @@ namespace LocalAIAgent.Application.News.AI
 
             if (uncachedArticles.Count is 0) return articles;
 
-            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot();
             int translatedCount = 0;
             for (int i = 0; i < uncachedArticles.Count; i += TranslationBatchSize)
             {
@@ -97,7 +98,7 @@ namespace LocalAIAgent.Application.News.AI
                 translatedCount += await TranslateBatchWithFallbackAsync(
                     batch,
                     targetLanguage,
-                    runtime,
+                    userPreferencesId,
                     cancellationToken);
             }
 
@@ -136,7 +137,7 @@ namespace LocalAIAgent.Application.News.AI
         private async Task<int> TranslateBatchWithFallbackAsync(
             List<NewsArticle> batch,
             string targetLanguage,
-            LlmRuntimeSnapshot runtime,
+            int? userPreferencesId,
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -146,7 +147,7 @@ namespace LocalAIAgent.Application.News.AI
             TranslationAttemptResult attempt = await TryTranslateBatchAsync(
                 batch,
                 targetLanguage,
-                runtime,
+                userPreferencesId,
                 cancellationToken);
             if (attempt.UnresolvedArticles.Count == 0)
                 return attempt.TranslatedCount;
@@ -160,7 +161,7 @@ namespace LocalAIAgent.Application.News.AI
                         await TryTranslateBatchAsync(
                             attempt.UnresolvedArticles,
                             targetLanguage,
-                            runtime,
+                            userPreferencesId,
                             cancellationToken);
                     translatedCount += retryResult.TranslatedCount;
                     if (retryResult.UnresolvedArticles.Count == 0)
@@ -184,7 +185,7 @@ namespace LocalAIAgent.Application.News.AI
                     + await TranslateBatchWithFallbackAsync(
                         attempt.UnresolvedArticles,
                         targetLanguage,
-                        runtime,
+                        userPreferencesId,
                         cancellationToken);
             }
 
@@ -200,21 +201,22 @@ namespace LocalAIAgent.Application.News.AI
             return await TranslateBatchWithFallbackAsync(
                     firstBatch,
                     targetLanguage,
-                    runtime,
+                    userPreferencesId,
                     cancellationToken)
                 + await TranslateBatchWithFallbackAsync(
                     secondBatch,
                     targetLanguage,
-                    runtime,
+                    userPreferencesId,
                     cancellationToken);
         }
 
         private async Task<TranslationAttemptResult> TryTranslateBatchAsync(
             List<NewsArticle> batch,
             string targetLanguage,
-            LlmRuntimeSnapshot runtime,
+            int? userPreferencesId,
             CancellationToken cancellationToken)
         {
+            LlmRuntimeSnapshot runtime = runtimeManager.GetRequiredSnapshot(userPreferencesId);
             IChatClient chatClient = runtime.ChatClient;
             AIOptions options = runtime.Options;
             List<(string OriginalTitle, string OriginalSummary)> originals = batch

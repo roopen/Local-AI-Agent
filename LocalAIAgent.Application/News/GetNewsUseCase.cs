@@ -35,7 +35,9 @@ namespace LocalAIAgent.Application.News
 
             // Start the lightweight `hi`/one-token warm-up before feed I/O so model loading
             // overlaps the slowest network-bound part of the news pipeline.
-            Task<bool> llmWarmupTask = loadLlmUseCase.LoadLLMUseCaseAsync(cancellationToken);
+            Task<bool> llmWarmupTask = loadLlmUseCase.LoadLLMUseCaseAsync(
+                cancellationToken,
+                preferences.Id);
             List<NewsItem> builtInItems = await newsService.GetNewsAsync(preferences, cancellationToken);
 
             // Fetch the user's enabled custom feeds and merge into the stream.
@@ -87,7 +89,8 @@ namespace LocalAIAgent.Application.News
                 List<NewsArticle> newsArticles = await getTranslationUseCase.TranslateArticleAsync(
                     evaluatedNewsArticles,
                     targetLanguage,
-                    cancellationToken);
+                    cancellationToken,
+                    preferences.Id);
 
                 foreach (NewsArticle article in newsArticles)
                 {

@@ -21,11 +21,24 @@ namespace LocalAIAgent.API.Api.Controllers
         UserContext userContext) : ControllerBase
     {
         [HttpPost("GetExpandedNews")]
-        public async Task<ActionResult<ExpandedNewsResult>> GetExpandedNews([FromBody] string article)
+        public async Task<ActionResult<ExpandedNewsResult>> GetExpandedNews(
+            [FromBody] string article,
+            CancellationToken cancellationToken)
         {
+            if (!User.TryGetUserId(out int userId))
+                return Unauthorized();
+
+            int? preferencesId = await userContext.UserPreferences
+                .AsNoTracking()
+                .Where(preferences => preferences.UserId == userId)
+                .Select(preferences => (int?)preferences.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (preferencesId is null)
+                return NotFound("User preferences not found.");
+
             newsMetrics.StartRecordingRequest();
 
-            ExpandedNewsResult result = await newsChatUseCase.GetExpandedNewsAsync(article);
+            ExpandedNewsResult result = await newsChatUseCase.GetExpandedNewsAsync(article, preferencesId);
 
             newsMetrics.StopRecordingRequest();
             return Ok(result);

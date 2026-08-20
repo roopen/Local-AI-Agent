@@ -137,10 +137,14 @@ public static class LlmErrorSanitizer
 public interface ILlmRuntimeManager
 {
     bool IsConfigured { get; }
-    LlmRuntimeSnapshot GetRequiredSnapshot();
+    bool IsConfiguredFor(int settingsId);
+    LlmRuntimeSnapshot GetRequiredSnapshot(int? userPreferencesId = null);
     LlmRuntimeSnapshot CreateCandidate(LlmConnectionSettings settings);
     Task WarmUpAsync(LlmRuntimeSnapshot candidate, CancellationToken cancellationToken = default);
     void Activate(LlmRuntimeSnapshot candidate);
+    void Activate(int settingsId, LlmRuntimeSnapshot candidate);
+    void Remove(int settingsId);
+    void SetUserSelection(int userPreferencesId, int settingsId);
     void Discard(LlmRuntimeSnapshot candidate);
 }
 
@@ -149,13 +153,41 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
 {
     private readonly object _sync = new();
     private readonly HashSet<IChatClient> _ownedClients = [];
-    private LlmRuntimeSnapshot? _current;
+    private readonly Dictionary<int, LlmRuntimeSnapshot> _runtimes = [];
+    private readonly Dictionary<int, int> _userSelections = [];
 
-    public bool IsConfigured => Volatile.Read(ref _current) is not null;
+    public bool IsConfigured
+    {
+        get
+        {
+            lock (_sync)
+                return _runtimes.Count > 0;
+        }
+    }
 
-    public LlmRuntimeSnapshot GetRequiredSnapshot() =>
-        Volatile.Read(ref _current)
-        ?? throw new InvalidOperationException("LLM API settings are required before AI features can be used.");
+    public bool IsConfiguredFor(int settingsId)
+    {
+        lock (_sync)
+            return _runtimes.ContainsKey(settingsId);
+    }
+
+    public LlmRuntimeSnapshot GetRequiredSnapshot(int? userPreferencesId = null)
+    {
+        lock (_sync)
+        {
+            if (userPreferencesId is int preferencesId
+                && _userSelections.TryGetValue(preferencesId, out int settingsId)
+                && _runtimes.TryGetValue(settingsId, out LlmRuntimeSnapshot? selected))
+            {
+                return selected;
+            }
+
+            if (_runtimes.Count > 0)
+                return _runtimes.OrderBy(pair => pair.Key).First().Value;
+        }
+
+        throw new InvalidOperationException("LLM API settings are required before AI features can be used.");
+    }
 
     public LlmRuntimeSnapshot CreateCandidate(LlmConnectionSettings settings)
     {
@@ -212,11 +244,40 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
     }
 
     public void Activate(LlmRuntimeSnapshot candidate)
+        => Activate(0, candidate);
+
+    public void Activate(int settingsId, LlmRuntimeSnapshot candidate)
     {
         lock (_sync)
         {
             _ownedClients.Add(candidate.ChatClient);
-            Volatile.Write(ref _current, candidate);
+            _runtimes[settingsId] = candidate;
+        }
+    }
+
+    public void Remove(int settingsId)
+    {
+        lock (_sync)
+        {
+            _runtimes.Remove(settingsId);
+            foreach (int preferencesId in _userSelections
+                .Where(pair => pair.Value == settingsId)
+                .Select(pair => pair.Key)
+                .ToList())
+            {
+                _userSelections.Remove(preferencesId);
+            }
+        }
+    }
+
+    public void SetUserSelection(int userPreferencesId, int settingsId)
+    {
+        lock (_sync)
+        {
+            if (!_runtimes.ContainsKey(settingsId))
+                throw new InvalidOperationException("The selected LLM is not available.");
+
+            _userSelections[userPreferencesId] = settingsId;
         }
     }
 
@@ -237,7 +298,8 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
                 client.Dispose();
 
             _ownedClients.Clear();
-            Volatile.Write(ref _current, null);
+            _runtimes.Clear();
+            _userSelections.Clear();
         }
     }
 }

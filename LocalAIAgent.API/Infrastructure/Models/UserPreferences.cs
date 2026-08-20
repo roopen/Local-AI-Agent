@@ -10,6 +10,8 @@ public class UserPreferences
     public List<string> DisabledFeedSources { get; set; } = [];
     public int UserId { get; set; }
     public User? User { get; set; }
+    public int? SelectedAiSettingsId { get; set; }
+    public AiSettings? SelectedAiSettings { get; set; }
     public List<NewsEvaluationEntry> EvaluationEntries { get; set; } = [];
     public List<CustomFeed> CustomFeeds { get; set; } = [];
 }
