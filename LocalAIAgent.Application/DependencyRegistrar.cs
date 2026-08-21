@@ -30,13 +30,15 @@ namespace LocalAIAgent.Application
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
                 client.Timeout = TimeSpan.FromSeconds(30);
-            });
+            })
+            .ConfigurePrimaryHttpMessageHandler(PublicNetworkHttpHandler.Create);
             services.AddHttpClient("FeedValidatorClient", client =>
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
                 // Shorter timeout — the user is waiting on this synchronously in the Add-Feed flow.
                 client.Timeout = TimeSpan.FromSeconds(15);
-            });
+            })
+            .ConfigurePrimaryHttpMessageHandler(PublicNetworkHttpHandler.Create);
             services.AddScoped<IEvaluateNewsUseCase, EvaluateNewsUseCase>();
             services.AddScoped<IGetTranslationUseCase, GetTranslationUseCase>();
             services.AddScoped<INewsChatUseCase, NewsChatUseCase>();
