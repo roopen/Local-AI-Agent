@@ -7,23 +7,11 @@ import type {
 import { ApiError } from '../clients/UserApiClient';
 import UserService from '../users/UserService';
 import DatasetDownloadComponent from './DatasetDownloadComponent';
+import LlmOptionEditor, { type EditorState } from './LlmOptionEditor';
 
 interface LlmOptionsProps {
     onSave?: () => Promise<void>;
     initialError?: string | null;
-}
-
-interface EditorState {
-    name: string;
-    modelId: string;
-    endpointUrl: string;
-    apiKey: string;
-    hasApiKey: boolean;
-    temperature: number;
-    topP: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
-    useResultsForDataset: boolean;
 }
 
 const createEmptyEditor = (): EditorState => ({
@@ -39,18 +27,50 @@ const createEmptyEditor = (): EditorState => ({
     useResultsForDataset: false,
 });
 
-const editorFromOption = (option: AiSettingsOptionResponse): EditorState => ({
-    name: option.name ?? '',
-    modelId: option.modelId ?? '',
-    endpointUrl: option.endpointUrl ?? '',
-    apiKey: '',
-    hasApiKey: option.hasApiKey ?? false,
+const generationFromOption = (option: AiSettingsOptionResponse) => ({
     temperature: option.temperature ?? 0.2,
     topP: option.topP ?? 1,
     frequencyPenalty: option.frequencyPenalty ?? 1,
     presencePenalty: option.presencePenalty ?? 1,
+});
+
+const editorFromOption = (option: AiSettingsOptionResponse): EditorState => ({
+    ...generationFromOption(option),
+    name: option.name ?? '',
+    modelId: option.modelId ?? '',
+    endpointUrl: option.endpointUrl ?? '',
+    apiKey: '',
+    hasApiKey: option.hasApiKey === true,
     useResultsForDataset: option.useResultsForDataset === true,
 });
+
+const createSaveRequest = (
+    editor: EditorState,
+    connectionSource: AiSettingsOptionResponse | null,
+    clearApiKey: boolean,
+): SaveAiSettingsOptionRequest => ({
+    name: editor.name.trim(),
+    modelId: editor.modelId,
+    endpointUrl: connectionSource == null ? editor.endpointUrl : null,
+    connectionSourceSettingsId: connectionSource?.id ?? null,
+    apiKey: connectionSource == null && editor.apiKey.trim().length > 0 ? editor.apiKey : null,
+    clearApiKey,
+    temperature: editor.temperature,
+    topP: editor.topP,
+    frequencyPenalty: editor.frequencyPenalty,
+    presencePenalty: editor.presencePenalty,
+    useResultsForDataset: editor.useResultsForDataset,
+});
+
+const getOptionLabel = (option: AiSettingsOptionResponse | undefined) =>
+    option?.name ?? option?.modelId ?? 'the selected LLM';
+
+const countHostModels = (options: AiSettingsOptionResponse[], editingId: number | null) => {
+    const editingOption = options.find(option => option.id === editingId);
+    if (editingOption == null) return 0;
+    const hostId = editingOption.hostId ?? editingOption.id;
+    return options.filter(option => (option.hostId ?? option.id) === hostId).length;
+};
 
 const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }) => {
     const userService = UserService.getInstance();
@@ -74,18 +94,13 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
         }
         return [...groups.entries()].map(([key, models]) => ({ key, models }));
     }, [options]);
-    const isOwner = catalog?.isOwner ?? false;
-    const editingOption = options.find(option => option.id === editingId);
-    const editingHostModelCount = editingOption == null
-        ? 0
-        : options.filter(option =>
-            (option.hostId ?? option.id) === (editingOption.hostId ?? editingOption.id)).length;
+    const isOwner = catalog?.isOwner === true;
+    const editingHostModelCount = countHostModels(options, editingId);
 
-    const load = useCallback(async () => {
-        const loaded = await userService.getLlmOptions();
+    const load = useCallback(() => userService.getLlmOptions().then(loaded => {
         setCatalog({ ...loaded, options: loaded.options ?? [] });
         return loaded;
-    }, [userService]);
+    }), [userService]);
 
     useEffect(() => {
         load()
@@ -143,7 +158,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                 ? { ...current, selectedSettingsId: settingsId }
                 : current);
             setSavedMessage(
-                `Switched to ${selected?.name ?? selected?.modelId ?? 'the selected LLM'}. New requests in the active news stream use it immediately.`
+                `Switched to ${getOptionLabel(selected)}. New requests in the active news stream use it immediately.`
             );
         } catch (reason) {
             setError(getErrorMessage(reason, 'Failed to select the LLM.'));
@@ -160,21 +175,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
         setError(null);
         setSavedMessage(null);
         try {
-            const request: SaveAiSettingsOptionRequest = {
-                name: editor.name.trim(),
-                modelId: editor.modelId,
-                endpointUrl: connectionSource == null ? editor.endpointUrl : null,
-                connectionSourceSettingsId: connectionSource?.id ?? null,
-                apiKey: connectionSource == null && editor.apiKey.trim().length > 0
-                    ? editor.apiKey
-                    : null,
-                clearApiKey,
-                temperature: editor.temperature,
-                topP: editor.topP,
-                frequencyPenalty: editor.frequencyPenalty,
-                presencePenalty: editor.presencePenalty,
-                useResultsForDataset: editor.useResultsForDataset,
-            };
+            const request = createSaveRequest(editor, connectionSource, clearApiKey);
             const wasFirstOption = options.length === 0;
             const saved = await userService.saveLlmOption(request, editingId ?? undefined);
             if (wasFirstOption && saved.id != null) {
@@ -182,10 +183,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
             }
 
             await load();
-            setEditingId(saved.id ?? null);
-            setConnectionSource(null);
-            setEditor(editorFromOption(saved));
-            setClearApiKey(false);
+            beginEdit(saved);
             setSavedMessage('Connection tested and option saved.');
             await onSave?.();
         } catch (reason) {
@@ -215,39 +213,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
 
     return (
         <div className="llm-settings-form">
-            <section className="llm-choice-section">
-                <h2 className="settings-section-title">Your LLM</h2>
-                <p className="prompt-hint">
-                    Choose which tested LLM handles your news. A change applies to the next AI request, including an active news stream.
-                </p>
-                {options.length > 0 ? (
-                    <label className="llm-field llm-field--wide">
-                        <span>Active LLM</span>
-                        <select
-                            aria-label="Active LLM"
-                            value={catalog?.selectedSettingsId ?? ''}
-                            disabled={isSelecting}
-                            onChange={event => void selectOption(Number(event.target.value))}
-                        >
-                            {options.map(option => (
-                                <option
-                                    key={option.id}
-                                    value={option.id}
-                                    disabled={!option.isAvailable}
-                                >
-                                    {option.name} ({option.modelId}){option.isAvailable ? '' : ' - unavailable'}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                ) : (
-                    <p className="prompt-hint">
-                        {isOwner
-                            ? 'Add and test the first LLM option below.'
-                            : 'The owner has not configured an LLM option yet.'}
-                    </p>
-                )}
-            </section>
+            <LlmChoiceSection catalog={catalog} options={options} isSelecting={isSelecting} selectOption={selectOption} />
 
             {isOwner && (
                 <>
@@ -298,89 +264,17 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                         </div>
                     </section>
 
-                    <form className="llm-option-editor" onSubmit={submit}>
-                        <h2 className="settings-section-title">
-                            {connectionSource != null
-                                ? `Add model on ${connectionSource.name} host`
-                                : editingId == null
-                                    ? 'Add separate host and model'
-                                    : 'Edit LLM option'}
-                        </h2>
-                        {connectionSource != null && (
-                            <p className="llm-shared-host-note">
-                                Reusing the saved endpoint and API token from {connectionSource.name}. The new model is tested independently before saving.
-                            </p>
-                        )}
-                        {connectionSource == null && editingHostModelCount > 1 && (
-                            <p className="llm-shared-host-note">
-                                This host has {editingHostModelCount} models. Endpoint or API token changes apply to every model on the host, and all of them are retested before saving.
-                            </p>
-                        )}
-                        <div className="llm-settings-grid">
-                            <TextField label="Display name" value={editor.name} onChange={name => update({ name })} />
-                            <TextField
-                                label="Endpoint URL"
-                                type="url"
-                                value={editor.endpointUrl}
-                                disabled={connectionSource != null}
-                                onChange={endpointUrl => update({ endpointUrl })}
-                            />
-                            <TextField label="Model ID" value={editor.modelId} onChange={modelId => update({ modelId })} />
-                            <label className="llm-field llm-field--wide">
-                                <span>API token</span>
-                                <input
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={editor.apiKey}
-                                    disabled={clearApiKey || connectionSource != null}
-                                    onChange={event => update({ apiKey: event.target.value })}
-                                    placeholder={connectionSource != null
-                                        ? 'Reusing the saved host token'
-                                        : editor.hasApiKey
-                                            ? 'Saved token (leave blank to keep)'
-                                            : 'Optional for unsecured local APIs'}
-                                />
-                            </label>
-                            {editingId != null && (
-                                <label className="llm-clear-token llm-field--wide">
-                                    <input
-                                        type="checkbox"
-                                        checked={clearApiKey}
-                                        onChange={event => setClearApiKey(event.target.checked)}
-                                    />
-                                    <span>Remove the saved token and test without authentication</span>
-                                </label>
-                            )}
-                        </div>
-                        <div className="llm-generation-section">
-                            <h2 className="settings-section-title">Generation</h2>
-                            <div className="llm-settings-grid llm-settings-grid--numbers">
-                                <NumberField label="Temperature" value={editor.temperature} min={0} max={2} step={0.1} onChange={temperature => update({ temperature })} />
-                                <NumberField label="Top P" value={editor.topP} min={0} max={1} step={0.05} onChange={topP => update({ topP })} />
-                                <NumberField label="Frequency penalty" value={editor.frequencyPenalty} min={-2} max={2} step={0.1} onChange={frequencyPenalty => update({ frequencyPenalty })} />
-                                <NumberField label="Presence penalty" value={editor.presencePenalty} min={-2} max={2} step={0.1} onChange={presencePenalty => update({ presencePenalty })} />
-                            </div>
-                        </div>
-                        <div className="llm-collection-setting">
-                            <label className="llm-clear-token">
-                                <input
-                                    type="checkbox"
-                                    checked={editor.useResultsForDataset}
-                                    disabled={isSaving}
-                                    onChange={event => update({ useResultsForDataset: event.target.checked })}
-                                />
-                                <span>Save results to dataset</span>
-                            </label>
-                        </div>
-                        <p className="prompt-hint">
-                            Include new evaluations and translations from this LLM in training data. Previously collected data stays available.
-                        </p>
-                        <div className="prompt-save-row">
-                            <button type="submit" className="primary-button" disabled={isSaving}>
-                                {isSaving ? 'Testing connection...' : 'Test and save'}
-                            </button>
-                        </div>
-                    </form>
+                    <LlmOptionEditor
+                        editor={editor}
+                        editingId={editingId}
+                        connectionSource={connectionSource}
+                        editingHostModelCount={editingHostModelCount}
+                        clearApiKey={clearApiKey}
+                        isSaving={isSaving}
+                        update={update}
+                        setClearApiKey={setClearApiKey}
+                        submit={submit}
+                    />
                     <DatasetDownloadComponent />
                 </>
             )}
@@ -391,35 +285,47 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
     );
 };
 
-interface TextFieldProps {
-    label: string;
-    value: string;
-    type?: 'text' | 'url';
-    disabled?: boolean;
-    onChange: (value: string) => void;
+interface LlmChoiceSectionProps {
+    catalog: AiSettingsCatalogResponse | null;
+    options: AiSettingsOptionResponse[];
+    isSelecting: boolean;
+    selectOption: (settingsId: number) => Promise<void>;
 }
 
-const TextField: React.FC<TextFieldProps> = ({ label, value, type = 'text', disabled = false, onChange }) => (
-    <label className="llm-field llm-field--wide">
-        <span>{label}</span>
-        <input type={type} required value={value} disabled={disabled} onChange={event => onChange(event.target.value)} />
-    </label>
-);
-
-interface NumberFieldProps {
-    label: string;
-    value: number;
-    min: number;
-    max: number;
-    step: number;
-    onChange: (value: number) => void;
-}
-
-const NumberField: React.FC<NumberFieldProps> = ({ label, value, min, max, step, onChange }) => (
-    <label className="llm-field">
-        <span>{label}</span>
-        <input type="number" required value={value} min={min} max={max} step={step} onChange={event => onChange(event.target.valueAsNumber)} />
-    </label>
+const LlmChoiceSection: React.FC<LlmChoiceSectionProps> = ({ catalog, options, isSelecting, selectOption }) => (
+    <section className="llm-choice-section">
+        <h2 className="settings-section-title">Your LLM</h2>
+        <p className="prompt-hint">
+            Choose which tested LLM handles your news. A change applies to the next AI request, including an active news stream.
+        </p>
+        {options.length > 0 ? (
+            <label className="llm-field llm-field--wide">
+                <span>Active LLM</span>
+                <select
+                    aria-label="Active LLM"
+                    value={catalog?.selectedSettingsId ?? ''}
+                    disabled={isSelecting}
+                    onChange={event => void selectOption(Number(event.target.value))}
+                >
+                    {options.map(option => (
+                        <option
+                            key={option.id}
+                            value={option.id}
+                            disabled={!option.isAvailable}
+                        >
+                            {option.name} ({option.modelId}){option.isAvailable ? '' : ' - unavailable'}
+                        </option>
+                    ))}
+                </select>
+            </label>
+        ) : (
+            <p className="prompt-hint">
+                {catalog?.isOwner
+                    ? 'Add and test the first LLM option below.'
+                    : 'The owner has not configured an LLM option yet.'}
+            </p>
+        )}
+    </section>
 );
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
