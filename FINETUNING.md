@@ -36,7 +36,9 @@ The application already builds a chat-format dataset for you while you use it. Y
 
 ### Dataset export (the file you fine-tune on)
 
-Entry point: `LocalAIAgent.API/Application/UseCases/GetDatasetUseCase.cs:21` (`GetDatasetZipAsync`). HTTP endpoint: `GET /News/Dataset` (`NewsController.cs:73`).
+Entry point: `LocalAIAgent.API/Application/UseCases/GetDatasetUseCase.cs` (`GetDatasetZipAsync`). HTTP endpoint: `GET /api/News/Dataset` (`NewsController.GetDataset`), available to authenticated owners.
+
+To export evaluations produced by one model, use `GET /api/News/Dataset?modelId=your-model-id` and URL-encode the model ID. The filter matches the stored `ModelUsed` exactly (case-sensitive), after trimming surrounding whitespace. Filtered exports exclude translation samples because translations do not store the producing model; no matches returns HTTP 404. Omitting `modelId`, or leaving it blank, keeps the combined export across all models.
 
 It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 
@@ -66,7 +68,7 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 2. Use the app normally for the data-collection period.
 3. Download:
    ```
-   GET http://localhost:<port>/News/Dataset
+   GET http://localhost:<port>/api/News/Dataset
    → dataset.zip
    ```
 4. Unzip. You will get `training_dataset.jsonl` and `evaluation_dataset.jsonl`.

@@ -87,9 +87,12 @@ namespace LocalAIAgent.API.Api.Controllers
 
         [Authorize(Roles = AuthRoles.Owner)]
         [HttpGet("Dataset")]
-        public async Task<IActionResult> GetDataset(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetDataset([FromQuery] string? modelId, CancellationToken cancellationToken)
         {
-            byte[] zip = await getDatasetUseCase.GetDatasetZipAsync(cancellationToken);
+            byte[]? zip = await getDatasetUseCase.GetDatasetZipAsync(modelId, cancellationToken);
+            if (zip is null)
+                return NotFound($"No dataset entries found for model '{modelId}'.");
+
             return File(zip, "application/zip", "dataset.zip");
         }
     }

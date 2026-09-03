@@ -2666,15 +2666,15 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync()
+        public virtual System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync(string modelId)
         {
-            return DatasetAsync(System.Threading.CancellationToken.None);
+            return DatasetAsync(modelId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse> DatasetAsync(string modelId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2688,6 +2688,12 @@ namespace LocalAIAgent.Tests.Generated
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/News/Dataset"
                     urlBuilder_.Append("api/News/Dataset");
+                    urlBuilder_.Append('?');
+                    if (modelId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("modelId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(modelId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
 

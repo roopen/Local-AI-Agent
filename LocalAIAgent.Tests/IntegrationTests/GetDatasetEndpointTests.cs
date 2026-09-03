@@ -1,29 +1,60 @@
 using LocalAIAgent.API.Infrastructure;
-using LocalAIAgent.Tests.Generated;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO.Compression;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using InfraModels = LocalAIAgent.API.Infrastructure.Models;
 
 namespace LocalAIAgent.Tests.IntegrationTests;
 
-public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
-    : IClassFixture<CustomWebApplicationFactory>
+public sealed class GetDatasetEndpointTests : IDisposable
 {
-    private readonly HttpClient _httpClient = factory.CreateClient();
+    private readonly CustomWebApplicationFactory _factory = new();
+    private readonly HttpClient _httpClient;
 
-    private UserClient CreateClient() => new(string.Empty, _httpClient);
+    public GetDatasetEndpointTests() => _httpClient = _factory.CreateClient();
 
-    private async Task<(int StatusCode, byte[] Bytes, string? ContentType, string? FileName)> GetDatasetAsync()
+    public void Dispose()
     {
-        UserClient client = CreateClient();
-        SwaggerResponse response = await client.DatasetAsync();
-        byte[] bytes = await _httpClient.GetByteArrayAsync("/api/News/Dataset");
-        response.Headers.TryGetValue("Content-Disposition", out IEnumerable<string>? cd);
-        string? fileName = cd?.FirstOrDefault()?.Split("filename=").ElementAtOrDefault(1)?.Trim('"');
-        response.Headers.TryGetValue("Content-Type", out IEnumerable<string>? ct);
-        return (response.StatusCode, bytes, ct?.FirstOrDefault(), fileName);
+        _httpClient.Dispose();
+        _factory.Dispose();
+    }
+
+    private async Task<(int StatusCode, byte[] Bytes, string? ContentType, string? FileName)> GetDatasetAsync(string? modelId = null)
+    {
+        string url = modelId is null ? "/api/News/Dataset" : $"/api/News/Dataset?modelId={Uri.EscapeDataString(modelId)}";
+        using HttpResponseMessage response = await _httpClient.GetAsync(url, TestContext.Current.CancellationToken);
+        byte[] bytes = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+        string? fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+        string? contentType = response.Content.Headers.ContentType?.MediaType;
+        return ((int)response.StatusCode, bytes, contentType, fileName);
+    }
+
+    private static InfraModels.NewsEvaluationEntry EvaluationEntry(string title, string link, string modelUsed) => new()
+    {
+        ArticleTitle = title,
+        ArticleSummary = $"Summary for {title}.",
+        ArticleLink = link,
+        ArticleSource = "example.com",
+        ArticleTopic = "Technology",
+        Relevancy = "High",
+        ModelUsed = modelUsed,
+    };
+
+    private static async Task<string> ReadAllDatasetContentAsync(ZipArchive archive)
+    {
+        StringBuilder content = new();
+        string[] entryNames = ["training_dataset.jsonl", "evaluation_dataset.jsonl"];
+        foreach (string entryName in entryNames)
+        {
+            ZipArchiveEntry? entry = archive.GetEntry(entryName);
+            Assert.NotNull(entry);
+
+            using StreamReader reader = new(entry.Open());
+            content.AppendLine(await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
+        }
+        return content.ToString();
     }
 
     [Fact]
@@ -37,13 +68,17 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         using ZipArchive archive = new(new MemoryStream(bytes), ZipArchiveMode.Read);
         Assert.Contains(archive.Entries, e => e.Name == "training_dataset.jsonl");
         Assert.Contains(archive.Entries, e => e.Name == "evaluation_dataset.jsonl");
+        Assert.True(string.IsNullOrWhiteSpace(await ReadAllDatasetContentAsync(archive)));
     }
 
-    [Fact]
-    public async Task GetDataset_WithEvaluationEntries_ReturnsZipWithJsonlEntries()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public async Task GetDataset_WithEvaluationEntriesAndNoModelFilter_ReturnsZipWithJsonlEntries(string? modelId)
     {
         // Arrange — seed a user with preferences and evaluation entries
-        using (IServiceScope scope = factory.Services.CreateScope())
+        using (IServiceScope scope = _factory.Services.CreateScope())
         {
             UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
 
@@ -77,7 +112,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                             ArticleSource = "example.com",
                             ArticleTopic = "Finance",
                             Relevancy = "Low",
-                            ModelUsed = "test-model",
+                            ModelUsed = "other-model",
                         },
                         new InfraModels.NewsEvaluationEntry
                         {
@@ -87,7 +122,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
                             ArticleSource = "example.com",
                             ArticleTopic = "Technology",
                             Relevancy = "High",
-                            ModelUsed = "test-model",
+                            ModelUsed = "Unknown",
                         },
                     ]
                 }
@@ -98,7 +133,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
 
         // Act
-        (int statusCode, byte[] bytes, string? contentType, string? fileName) = await GetDatasetAsync();
+        (int statusCode, byte[] bytes, string? contentType, string? fileName) = await GetDatasetAsync(modelId);
 
         // Assert
         Assert.Equal((int)HttpStatusCode.OK, statusCode);
@@ -119,6 +154,11 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         using StreamReader evalReader = new(evalEntry.Open());
         string evalContent = await evalReader.ReadToEndAsync(TestContext.Current.CancellationToken);
 
+        string allContent = trainContent + evalContent;
+        Assert.Contains("AI Breakthrough", allContent);
+        Assert.Contains("Stock Market Update", allContent);
+        Assert.Contains(".NET 10 Released", allContent);
+
         int totalLines = trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
@@ -134,11 +174,14 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
     }
 
-    [Fact]
-    public async Task GetDataset_WithTranslations_IncludesTranslationEntries()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public async Task GetDataset_WithTranslationsAndNoModelFilter_IncludesTranslationEntries(string? modelId)
     {
         // Arrange — seed translations only (no evaluation entries)
-        using (IServiceScope scope = factory.Services.CreateScope())
+        using (IServiceScope scope = _factory.Services.CreateScope())
         {
             UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
 
@@ -158,7 +201,7 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
 
         // Act
-        (int statusCode, byte[] bytes, _, _) = await GetDatasetAsync();
+        (int statusCode, byte[] bytes, _, _) = await GetDatasetAsync(modelId);
 
         Assert.Equal((int)HttpStatusCode.OK, statusCode);
 
@@ -204,5 +247,106 @@ public class GetDatasetEndpointTests(CustomWebApplicationFactory factory)
         }
 
         Assert.True(foundTranslationEntry, "Expected an indexed-array translation sample.");
+    }
+
+    [Theory]
+    [InlineData("model-a", "model-a")]
+    [InlineData("  model-a  ", "model-a")]
+    [InlineData("publisher/model-a:4b+q8", "publisher/model-a:4b+q8")]
+    public async Task GetDataset_WithModelIdFilter_ReturnsOnlyEntriesFromThatModel(string modelId, string modelUsed)
+    {
+        // Arrange — seed entries collected by two different models plus a translation
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
+
+            InfraModels.User user = new()
+            {
+                Fido2Id = [1, 2, 3],
+                Username = "dataset-model-filter-user",
+                Preferences = new InfraModels.UserPreferences
+                {
+                    Prompt = "You are a helpful news evaluator.",
+                    Interests = ["Technology"],
+                    Dislikes = [],
+                    EvaluationEntries =
+                    [
+                        EvaluationEntry("Alpha model report", "https://example.com/alpha-1", modelUsed),
+                        EvaluationEntry("Beta market watch", "https://example.com/beta-1", "model-b"),
+                        EvaluationEntry("Gamma tech review", "https://example.com/gamma-1", modelUsed),
+                        EvaluationEntry("Unknown model report", "https://example.com/unknown-1", "Unknown"),
+                    ]
+                }
+            };
+
+            db.Users.Add(user);
+            db.ArticleTranslations.Add(new InfraModels.ArticleTranslation
+            {
+                ArticleLink = "https://example.com/translated-article",
+                OriginalTitle = "Original translated title",
+                OriginalSummary = "Original translated summary.",
+                TranslatedTitle = "Título traducido",
+                TranslatedSummary = "Resumen traducido.",
+                TargetLanguage = "Spanish",
+            });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        (int statusCode, byte[] bytes, _, _) = await GetDatasetAsync(modelId);
+
+        // Assert
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
+
+        using ZipArchive archive = new(new MemoryStream(bytes), ZipArchiveMode.Read);
+        string allContent = await ReadAllDatasetContentAsync(archive);
+
+        Assert.Contains("Alpha model report", allContent);
+        Assert.Contains("Gamma tech review", allContent);
+        Assert.DoesNotContain("Beta market watch", allContent);
+        Assert.DoesNotContain("Unknown model report", allContent);
+        Assert.DoesNotContain("Translate every news item into", allContent);
+    }
+
+    [Theory]
+    [InlineData("unknown-model")]
+    [InlineData("MODEL-A")]
+    [InlineData("model")]
+    public async Task GetDataset_WithNonMatchingModelId_ReturnsNotFound(string modelId)
+    {
+        // Arrange — seed entries for a single model only
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
+
+            InfraModels.User user = new()
+            {
+                Fido2Id = [1, 2, 3],
+                Username = "dataset-model-404-user",
+                Preferences = new InfraModels.UserPreferences
+                {
+                    Prompt = "You are a helpful news evaluator.",
+                    Interests = ["Technology"],
+                    Dislikes = [],
+                    EvaluationEntries =
+                    [
+                        EvaluationEntry("Alpha model report", "https://example.com/alpha-2", "model-a"),
+                    ]
+                }
+            };
+
+            db.Users.Add(user);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        using HttpResponseMessage response = await _httpClient.GetAsync(
+            $"/api/News/Dataset?modelId={Uri.EscapeDataString(modelId)}",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal($"No dataset entries found for model '{modelId}'.",
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 }

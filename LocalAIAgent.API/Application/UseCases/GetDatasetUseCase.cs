@@ -11,21 +11,28 @@ namespace LocalAIAgent.API.Application.UseCases;
 
 public interface IGetDatasetUseCase
 {
-    Task<byte[]> GetDatasetZipAsync(CancellationToken cancellationToken = default);
+    Task<byte[]?> GetDatasetZipAsync(string? modelId = null, CancellationToken cancellationToken = default);
 }
 
 internal sealed class GetDatasetUseCase(
     UserContext userContext,
     IGetTranslationUseCase translationUseCase) : IGetDatasetUseCase
 {
-    public async Task<byte[]> GetDatasetZipAsync(CancellationToken cancellationToken = default)
+    public async Task<byte[]?> GetDatasetZipAsync(string? modelId = null, CancellationToken cancellationToken = default)
     {
-        // Translation dataset — count batches first to balance with news entries
-        List<ArticleTranslation> allTranslations = await userContext.ArticleTranslations
-            .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
-            .OrderBy(t => t.TargetLanguage)
-            .ThenBy(t => t.CreatedAt)
-            .ToListAsync(cancellationToken);
+        string? modelFilter = string.IsNullOrWhiteSpace(modelId) ? null : modelId.Trim();
+
+        // Translation dataset — count batches first to balance with news entries.
+        // Translations do not record which LLM produced them, so they are excluded when filtering by model.
+        List<ArticleTranslation> allTranslations = [];
+        if (modelFilter is null)
+        {
+            allTranslations = await userContext.ArticleTranslations
+                .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
+                .OrderBy(t => t.TargetLanguage)
+                .ThenBy(t => t.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
 
         int translationBatchCount = 0;
         List<string> translationEntries = [];
@@ -56,10 +63,13 @@ internal sealed class GetDatasetUseCase(
         }
 
         // Load all preferences and translation mapping
-        List<UserPreferences> allPreferences = await userContext.UserPreferences
+        IQueryable<UserPreferences> preferencesQuery = userContext.UserPreferences
             .Include(p => p.EvaluationEntries)
-            .Where(p => p.EvaluationEntries.Count > 0)
-            .ToListAsync(cancellationToken);
+            .Where(p => p.EvaluationEntries.Count > 0);
+        if (modelFilter is not null)
+            preferencesQuery = preferencesQuery.Where(p => p.EvaluationEntries.Any(e => e.ModelUsed == modelFilter));
+
+        List<UserPreferences> allPreferences = await preferencesQuery.ToListAsync(cancellationToken);
 
         Dictionary<string, ArticleTranslation> translationsByLink = await userContext.ArticleTranslations
             .Where(t => t.OriginalTitle != null && t.OriginalSummary != null)
@@ -72,10 +82,13 @@ internal sealed class GetDatasetUseCase(
         List<string> newsEntries = GetBalancedNewsEntries(
             allPreferences,
             translationsByLink,
-            newsTarget);
+            newsTarget,
+            modelFilter);
 
         // Combine and shuffle both datasets
         List<string> allEntries = [.. newsEntries, .. translationEntries];
+        if (modelFilter is not null && allEntries.Count == 0)
+            return null;
         allEntries = allEntries.OrderBy(_ => Random.Shared.Next()).ToList();
 
         // Smart split: use translation proportion to size the evaluation set (clamped 15–30%)
@@ -101,7 +114,8 @@ internal sealed class GetDatasetUseCase(
     private static List<string> GetBalancedNewsEntries(
         List<UserPreferences> allPreferences,
         Dictionary<string, ArticleTranslation> translationsByLink,
-        int targetCount)
+        int targetCount,
+        string? modelFilter)
     {
         // Collect all evaluation entries from all users, deduplicated by entry Id
         Dictionary<int, (UserPreferences preferences, NewsEvaluationEntry entry)> seenIds = [];
@@ -110,6 +124,9 @@ internal sealed class GetDatasetUseCase(
         {
             foreach (NewsEvaluationEntry entry in preferences.EvaluationEntries)
             {
+                if (modelFilter is not null && entry.ModelUsed != modelFilter)
+                    continue;
+
                 seenIds.TryAdd(entry.Id, (preferences, entry));
             }
         }
