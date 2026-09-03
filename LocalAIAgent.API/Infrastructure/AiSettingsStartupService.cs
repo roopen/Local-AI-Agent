@@ -60,7 +60,8 @@ public sealed class AiSettingsStartupService(
                 settings.Temperature,
                 settings.TopP,
                 settings.FrequencyPenalty,
-                settings.PresencePenalty));
+                settings.PresencePenalty,
+                settings.UseResultsForDataset));
         }
         catch (LlmConnectionException ex)
         {
@@ -100,7 +101,8 @@ public sealed class AiSettingsStartupService(
                         settings.Temperature,
                         settings.TopP,
                         settings.FrequencyPenalty,
-                        settings.PresencePenalty));
+                        settings.PresencePenalty,
+                        settings.UseResultsForDataset));
                 runtimeManager.Activate(settings.Id, candidate);
                 activatedCount++;
             }

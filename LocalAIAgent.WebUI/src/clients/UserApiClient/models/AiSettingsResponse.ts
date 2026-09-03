@@ -5,6 +5,7 @@
 export type AiSettingsResponse = {
     isConfigured?: boolean;
     hasApiKey?: boolean;
+    useResultsForDataset?: boolean;
     modelId: string | null;
     endpointUrl: string | null;
     temperature?: number;

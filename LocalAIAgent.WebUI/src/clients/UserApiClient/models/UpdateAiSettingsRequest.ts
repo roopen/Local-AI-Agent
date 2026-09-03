@@ -7,6 +7,7 @@ export type UpdateAiSettingsRequest = {
     endpointUrl: string;
     apiKey?: string | null;
     clearApiKey?: boolean;
+    useResultsForDataset?: boolean;
     temperature?: number;
     topP?: number;
     frequencyPenalty?: number;

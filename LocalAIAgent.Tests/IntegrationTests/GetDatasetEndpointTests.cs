@@ -2,6 +2,7 @@ using LocalAIAgent.API.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using InfraModels = LocalAIAgent.API.Infrastructure.Models;
@@ -31,7 +32,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
         return ((int)response.StatusCode, bytes, contentType, fileName);
     }
 
-    private static InfraModels.NewsEvaluationEntry EvaluationEntry(string title, string link, string modelUsed) => new()
+    private static InfraModels.NewsEvaluationEntry EvaluationEntry(string title, string link, string modelUsed, bool useInDataset = true) => new()
     {
         ArticleTitle = title,
         ArticleSummary = $"Summary for {title}.",
@@ -40,6 +41,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
         ArticleTopic = "Technology",
         Relevancy = "High",
         ModelUsed = modelUsed,
+        UseInDataset = useInDataset,
     };
 
     private static async Task<string> ReadAllDatasetContentAsync(ZipArchive archive)
@@ -103,6 +105,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
                             Relevancy = "High",
                             Reasoning = "Relevant to tech interests.",
                             ModelUsed = "test-model",
+                            UseInDataset = true,
                         },
                         new InfraModels.NewsEvaluationEntry
                         {
@@ -113,6 +116,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
                             ArticleTopic = "Finance",
                             Relevancy = "Low",
                             ModelUsed = "other-model",
+                            UseInDataset = true,
                         },
                         new InfraModels.NewsEvaluationEntry
                         {
@@ -123,7 +127,9 @@ public sealed class GetDatasetEndpointTests : IDisposable
                             ArticleTopic = "Technology",
                             Relevancy = "High",
                             ModelUsed = "Unknown",
+                            UseInDataset = true,
                         },
+                        EvaluationEntry("Excluded cached article", "https://example.com/excluded", "test-model", useInDataset: false),
                     ]
                 }
             };
@@ -158,6 +164,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
         Assert.Contains("AI Breakthrough", allContent);
         Assert.Contains("Stock Market Update", allContent);
         Assert.Contains(".NET 10 Released", allContent);
+        Assert.DoesNotContain("Excluded cached article", allContent);
 
         int totalLines = trainContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
                        + evalContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -275,6 +282,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
                         EvaluationEntry("Beta market watch", "https://example.com/beta-1", "model-b"),
                         EvaluationEntry("Gamma tech review", "https://example.com/gamma-1", modelUsed),
                         EvaluationEntry("Unknown model report", "https://example.com/unknown-1", "Unknown"),
+                        EvaluationEntry("Excluded cached article", "https://example.com/excluded", modelUsed, useInDataset: false),
                     ]
                 }
             };
@@ -305,6 +313,7 @@ public sealed class GetDatasetEndpointTests : IDisposable
         Assert.Contains("Gamma tech review", allContent);
         Assert.DoesNotContain("Beta market watch", allContent);
         Assert.DoesNotContain("Unknown model report", allContent);
+        Assert.DoesNotContain("Excluded cached article", allContent);
         Assert.DoesNotContain("Translate every news item into", allContent);
     }
 
@@ -348,5 +357,60 @@ public sealed class GetDatasetEndpointTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal($"No dataset entries found for model '{modelId}'.",
             await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task DatasetModelsListsDistinctEligibleHistoricalModels()
+    {
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            UserContext db = scope.ServiceProvider.GetRequiredService<UserContext>();
+            db.Users.Add(new InfraModels.User
+            {
+                Fido2Id = [1], Username = "historical-models",
+                Preferences = new InfraModels.UserPreferences
+                {
+                    EvaluationEntries =
+                    [
+                        EvaluationEntry("Beta", "https://example.com/b", "retired-model"),
+                        EvaluationEntry("Alpha", "https://example.com/a", "alpha-model"),
+                        EvaluationEntry("Alpha again", "https://example.com/a2", "alpha-model"),
+                        EvaluationEntry("Excluded", "https://example.com/x", "excluded-model", useInDataset: false),
+                    ],
+                },
+            });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        string[]? models = await _httpClient.GetFromJsonAsync<string[]>(
+            "/api/News/Dataset/Models", TestContext.Current.CancellationToken);
+        Assert.NotNull(models);
+        Assert.Equal(["alpha-model", "retired-model"], models);
+        using HttpResponseMessage excluded = await _httpClient.GetAsync(
+            "/api/News/Dataset?modelId=excluded-model", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, excluded.StatusCode);
+    }
+
+    [Fact]
+    public async Task DatasetModelsWithNoDataReturnsEmptyList()
+    {
+        string[]? models = await _httpClient.GetFromJsonAsync<string[]>(
+            "/api/News/Dataset/Models", TestContext.Current.CancellationToken);
+        Assert.NotNull(models);
+        Assert.Empty(models);
+    }
+
+    [Theory]
+    [InlineData(AuthRoles.Member, HttpStatusCode.Forbidden)]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    public async Task DatasetEndpointsRequireOwner(string? role, HttpStatusCode expected)
+    {
+        using CustomWebApplicationFactory restrictedFactory = new() { Role = role };
+        using HttpClient client = restrictedFactory.CreateClient();
+        foreach (string path in new[] { "/api/News/Dataset", "/api/News/Dataset/Models" })
+        {
+            using HttpResponseMessage response = await client.GetAsync(path, TestContext.Current.CancellationToken);
+            Assert.Equal(expected, response.StatusCode);
+        }
     }
 }

@@ -86,6 +86,20 @@ namespace LocalAIAgent.API.Api.Controllers
         }
 
         [Authorize(Roles = AuthRoles.Owner)]
+        [HttpGet("Dataset/Models", Name = nameof(GetDatasetModels))]
+        public async Task<ActionResult<List<string>>> GetDatasetModels(CancellationToken cancellationToken)
+        {
+            List<string> models = await userContext.NewsEvaluationEntries
+                .AsNoTracking()
+                .Where(entry => entry.UseInDataset && entry.ModelUsed != "")
+                .Select(entry => entry.ModelUsed)
+                .Distinct()
+                .OrderBy(model => model)
+                .ToListAsync(cancellationToken);
+            return Ok(models);
+        }
+
+        [Authorize(Roles = AuthRoles.Owner)]
         [HttpGet("Dataset")]
         public async Task<IActionResult> GetDataset([FromQuery] string? modelId, CancellationToken cancellationToken)
         {

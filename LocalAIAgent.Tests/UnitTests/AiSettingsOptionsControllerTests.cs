@@ -29,7 +29,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         AiSettingsOptionsController controller = CreateController(user.Id, UserRole.Owner, runtime);
 
         AiSettingsOptionResponse first = GetResponse(await controller.CreateOption(
-            Request("Local small", "first-model", apiKey: "shared-token"),
+            Request("Local small", "first-model", apiKey: "shared-token") with { UseResultsForDataset = true },
             TestContext.Current.CancellationToken));
         AiSettingsOptionResponse second = GetResponse(await controller.CreateOption(
             Request(
@@ -47,6 +47,9 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
             TestContext.Current.CancellationToken));
 
         Assert.NotEqual(first.Id, second.Id);
+        Assert.True(first.UseResultsForDataset);
+        Assert.False(second.UseResultsForDataset);
+        Assert.True(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
         Assert.NotEqual(second.Id, remote.Id);
         Assert.Equal(3, runtime.WarmUpCalls);
         Assert.True(runtime.IsConfiguredFor(first.Id));
@@ -60,6 +63,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         Assert.Equal(first.Id, first.HostId);
         Assert.Equal(first.Id, second.HostId);
         Assert.Equal(first.Id, sharedModel.HostId);
+        Assert.False(sharedModel.UseResultsForDataset);
         Assert.Equal("http://localhost:1234/v1/", sharedModel.EndpointUrl);
         Assert.True(_protector.TryUnprotect(sharedModel.ApiKeyCiphertext, out string sharedApiKey));
         Assert.Equal("shared-token", sharedApiKey);
@@ -106,7 +110,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
                 "Large",
                 "large-model",
                 endpointUrl: null,
-                connectionSourceSettingsId: first.Id),
+                connectionSourceSettingsId: first.Id) with { UseResultsForDataset = true },
             TestContext.Current.CancellationToken));
 
         GetResponse(await controller.UpdateOption(
@@ -119,6 +123,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
             TestContext.Current.CancellationToken));
 
         Assert.Equal(4, runtime.WarmUpCalls);
+        Assert.False(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
         List<AiSettings> savedModels = await Db.AiSettings
             .OrderBy(option => option.Id)
             .ToListAsync(TestContext.Current.CancellationToken);
@@ -133,6 +138,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
             "https://replacement.example/v1/",
             runtime.GetRequiredSnapshot().Options.EndpointUrl);
         runtime.SetUserSelection(user.Preferences!.Id, second.Id);
+        Assert.True(runtime.GetRequiredSnapshot(user.Preferences.Id).Options.UseResultsForDataset);
         Assert.Equal(
             "https://replacement.example/v1/",
             runtime.GetRequiredSnapshot(user.Preferences.Id).Options.EndpointUrl);
@@ -149,7 +155,7 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         AiSettingsOptionsController ownerController =
             CreateController(owner.Id, UserRole.Owner, runtime);
         AiSettingsOptionResponse saved = GetResponse(await ownerController.CreateOption(
-            Request("Private remote", "remote-model", apiKey: "secret"),
+            Request("Private remote", "remote-model", apiKey: "secret") with { UseResultsForDataset = true },
             TestContext.Current.CancellationToken));
 
         AiSettingsOptionsController memberController =
@@ -165,7 +171,32 @@ public sealed class AiSettingsOptionsControllerTests : InMemoryDbTestBase
         Assert.Equal("remote-model", option.ModelId);
         Assert.Empty(option.EndpointUrl);
         Assert.False(option.HasApiKey);
+        Assert.False(option.UseResultsForDataset);
         Assert.False(catalog.IsOwner);
+    }
+
+    [Fact]
+    public async Task OwnerCanEnableAndDisableCollectionWithoutChangingModels()
+    {
+        User owner = await SeedUserAsync(UserRole.Owner);
+        FakeChatClient chat = new();
+        chat.EnqueueResponseText("ok");
+        chat.EnqueueResponseText("ok");
+        FakeLlmRuntimeManager runtime = CreateRuntime(chat);
+        AiSettingsOptionsController controller = CreateController(owner.Id, UserRole.Owner, runtime);
+        AiSettingsOptionResponse saved = GetResponse(await controller.CreateOption(
+            Request("Model", "model") with { UseResultsForDataset = true },
+            TestContext.Current.CancellationToken));
+        Assert.True(saved.UseResultsForDataset);
+        Assert.True((await Db.AiSettings.SingleAsync(TestContext.Current.CancellationToken)).UseResultsForDataset);
+        Assert.True(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
+
+        AiSettingsOptionResponse updated = GetResponse(await controller.UpdateOption(saved.Id,
+            Request("Model", "model") with { UseResultsForDataset = false },
+            TestContext.Current.CancellationToken));
+        Assert.False(updated.UseResultsForDataset);
+        Assert.False((await Db.AiSettings.SingleAsync(TestContext.Current.CancellationToken)).UseResultsForDataset);
+        Assert.False(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
     }
 
     private async Task<User> SeedUserAsync(UserRole role)

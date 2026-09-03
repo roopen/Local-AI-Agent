@@ -16,6 +16,7 @@ namespace LocalAIAgent.Tests.IntegrationTests
 {
     public class CustomWebApplicationFactory : WebApplicationFactory<API.Program>, IDisposable
     {
+        public string? Role { get; init; } = AuthRoles.Owner;
         private SqliteConnection? _connection;
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -53,9 +54,9 @@ namespace LocalAIAgent.Tests.IntegrationTests
                 {
                     options.DefaultAuthenticateScheme = TestAuthenticationHandler.AuthenticationScheme;
                     options.DefaultChallengeScheme = TestAuthenticationHandler.AuthenticationScheme;
-                }).AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                }).AddScheme<TestAuthenticationOptions, TestAuthenticationHandler>(
                     TestAuthenticationHandler.AuthenticationScheme,
-                    _ => { });
+                    options => options.Role = Role);
 
                 // 4) Build a temporary provider to initialize schema
                 using ServiceProvider sp = services.BuildServiceProvider();
@@ -77,20 +78,27 @@ namespace LocalAIAgent.Tests.IntegrationTests
         }
     }
 
+    public sealed class TestAuthenticationOptions : AuthenticationSchemeOptions
+    {
+        public string? Role { get; set; }
+    }
+
     internal sealed class TestAuthenticationHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        IOptionsMonitor<TestAuthenticationOptions> options,
         ILoggerFactory logger,
-        UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+        UrlEncoder encoder) : AuthenticationHandler<TestAuthenticationOptions>(options, logger, encoder)
     {
         public const string AuthenticationScheme = "IntegrationTest";
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            if (Options.Role is null)
+                return Task.FromResult(AuthenticateResult.NoResult());
             ClaimsIdentity identity = new(
                 [
                     new Claim(ClaimTypes.NameIdentifier, "1"),
                     new Claim(ClaimTypes.Name, "integration-owner"),
-                    new Claim(ClaimTypes.Role, AuthRoles.Owner),
+                    new Claim(ClaimTypes.Role, Options.Role),
                 ],
                 AuthenticationScheme);
             AuthenticationTicket ticket = new(new ClaimsPrincipal(identity), AuthenticationScheme);

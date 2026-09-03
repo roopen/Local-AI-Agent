@@ -1162,6 +1162,45 @@
         }
       }
     },
+    "/api/News/Dataset/Models": {
+      "get": {
+        "tags": [
+          "News"
+        ],
+        "operationId": "GetDatasetModels",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/News/Dataset": {
       "get": {
         "tags": [
@@ -1331,6 +1370,9 @@
           "isAvailable": {
             "type": "boolean"
           },
+          "useResultsForDataset": {
+            "type": "boolean"
+          },
           "temperature": {
             "type": "number",
             "format": "double"
@@ -1361,6 +1403,9 @@
             "type": "boolean"
           },
           "hasApiKey": {
+            "type": "boolean"
+          },
+          "useResultsForDataset": {
             "type": "boolean"
           },
           "modelId": {
@@ -2454,6 +2499,9 @@
           "clearApiKey": {
             "type": "boolean"
           },
+          "useResultsForDataset": {
+            "type": "boolean"
+          },
           "temperature": {
             "maximum": 2,
             "minimum": 0,
@@ -2565,6 +2613,9 @@
             "nullable": true
           },
           "clearApiKey": {
+            "type": "boolean"
+          },
+          "useResultsForDataset": {
             "type": "boolean"
           },
           "temperature": {

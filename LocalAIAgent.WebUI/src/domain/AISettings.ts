@@ -8,6 +8,7 @@ export default class AISettings {
     topP: number;
     frequencyPenalty: number;
     presencePenalty: number;
+    useResultsForDataset: boolean;
 
     // eslint-disable-next-line complexity
     constructor(
@@ -19,7 +20,8 @@ export default class AISettings {
         topP: number = 1.0,
         frequencyPenalty: number = 1.0,
         presencePenalty: number = 1.0,
-        apiKey: string = '') {
+        apiKey: string = '',
+        useResultsForDataset: boolean = false) {
         this.isConfigured = isConfigured;
         this.hasApiKey = hasApiKey;
         this.modelId = modelId;
@@ -29,5 +31,6 @@ export default class AISettings {
         this.topP = topP;
         this.frequencyPenalty = frequencyPenalty;
         this.presencePenalty = presencePenalty;
+        this.useResultsForDataset = useResultsForDataset;
     }
 }

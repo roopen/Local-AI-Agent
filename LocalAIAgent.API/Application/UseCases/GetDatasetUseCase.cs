@@ -64,10 +64,11 @@ internal sealed class GetDatasetUseCase(
 
         // Load all preferences and translation mapping
         IQueryable<UserPreferences> preferencesQuery = userContext.UserPreferences
-            .Include(p => p.EvaluationEntries)
-            .Where(p => p.EvaluationEntries.Count > 0);
+            .AsNoTracking()
+            .Include(p => p.EvaluationEntries.Where(e => e.UseInDataset))
+            .Where(p => p.EvaluationEntries.Any(e => e.UseInDataset));
         if (modelFilter is not null)
-            preferencesQuery = preferencesQuery.Where(p => p.EvaluationEntries.Any(e => e.ModelUsed == modelFilter));
+            preferencesQuery = preferencesQuery.Where(p => p.EvaluationEntries.Any(e => e.UseInDataset && e.ModelUsed == modelFilter));
 
         List<UserPreferences> allPreferences = await preferencesQuery.ToListAsync(cancellationToken);
 
@@ -124,7 +125,7 @@ internal sealed class GetDatasetUseCase(
         {
             foreach (NewsEvaluationEntry entry in preferences.EvaluationEntries)
             {
-                if (modelFilter is not null && entry.ModelUsed != modelFilter)
+                if (!entry.UseInDataset || (modelFilter is not null && entry.ModelUsed != modelFilter))
                     continue;
 
                 seenIds.TryAdd(entry.Id, (preferences, entry));

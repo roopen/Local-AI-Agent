@@ -19,6 +19,7 @@ public sealed record AiSettingsOptionResponse
     public required string EndpointUrl { get; init; }
     public bool HasApiKey { get; init; }
     public bool IsAvailable { get; init; }
+    public bool UseResultsForDataset { get; init; }
     public decimal Temperature { get; init; }
     public decimal TopP { get; init; }
     public decimal FrequencyPenalty { get; init; }
@@ -42,6 +43,7 @@ public sealed record SaveAiSettingsOptionRequest
 
     public string? ApiKey { get; init; }
     public bool ClearApiKey { get; init; }
+    public bool UseResultsForDataset { get; init; }
 
     [Range(0, 2)]
     public decimal Temperature { get; init; }

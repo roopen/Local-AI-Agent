@@ -2,11 +2,6 @@
 
 namespace LocalAIAgent.Application.Chat
 {
-    public sealed class AIApplicationOptions
-    {
-        public bool UseResultsForDataset { get; init; }
-    }
-
     public sealed class AIOptions
     {
         public required string ModelId { get; init; }

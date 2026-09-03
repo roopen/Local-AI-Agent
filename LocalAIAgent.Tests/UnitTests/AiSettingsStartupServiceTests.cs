@@ -28,7 +28,7 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
     [Fact]
     public async Task StartupDeterministicallyActivatesLowestIdRowWithoutWarmup()
     {
-        await SeedSettingsAsync("first-user", "first-model", "first-token");
+        await SeedSettingsAsync("first-user", "first-model", "first-token", useResultsForDataset: true);
         await SeedSettingsAsync("second-user", "second-model", "second-token");
         (AiSettingsStartupService service, FakeLlmRuntimeManager runtime, FakeChatClient chat) = CreateService();
         bool result = await service.ActivateFirstAsync(TestContext.Current.CancellationToken);
@@ -37,6 +37,7 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
         Assert.True(runtime.IsConfigured);
         Assert.Equal("first-model", runtime.GetRequiredSnapshot().Options.ModelId);
         Assert.Equal("first-token", runtime.GetRequiredSnapshot().Options.ApiKey);
+        Assert.True(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
         Assert.Equal(0, runtime.WarmUpCalls);
         Assert.Empty(chat.Calls);
     }
@@ -56,6 +57,19 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
         Assert.StartsWith("dp:v1:", firstCiphertext);
         Assert.Equal(firstCiphertext, secondCiphertext);
         Assert.Equal("legacy-token", _protector.Unprotect(secondCiphertext));
+    }
+
+    [Fact]
+    public async Task StartupRestoresEachModelsCollectionSetting()
+    {
+        AiSettings first = await SeedSettingsAsync("first", "first-model", "", useResultsForDataset: true);
+        AiSettings second = await SeedSettingsAsync("second", "second-model", "");
+        (AiSettingsStartupService service, FakeLlmRuntimeManager runtime, _) = CreateService();
+        Assert.Equal(2, await service.ActivateAllAsync(TestContext.Current.CancellationToken));
+        runtime.SetUserSelection(1, first.Id);
+        runtime.SetUserSelection(2, second.Id);
+        Assert.True(runtime.GetRequiredSnapshot(1).Options.UseResultsForDataset);
+        Assert.False(runtime.GetRequiredSnapshot(2).Options.UseResultsForDataset);
     }
 
     private (AiSettingsStartupService Service, FakeLlmRuntimeManager Runtime, FakeChatClient Chat) CreateService()
@@ -81,7 +95,8 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
         string username,
         string model,
         string token,
-        bool protect = true)
+        bool protect = true,
+        bool useResultsForDataset = false)
     {
         User user = new()
         {
@@ -95,6 +110,7 @@ public class AiSettingsStartupServiceTests : InMemoryDbTestBase
         AiSettings settings = new()
         {
             ModelId = model,
+            UseResultsForDataset = useResultsForDataset,
             EndpointUrl = "http://localhost:1234/v1/",
             ApiKeyCiphertext = protect ? _protector.Protect(token) : token,
         };

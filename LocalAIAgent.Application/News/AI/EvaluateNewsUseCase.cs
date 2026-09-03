@@ -57,7 +57,6 @@ namespace LocalAIAgent.Application.News.AI
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            AIOptions datasetOptions = runtimeManager.GetRequiredSnapshot(userPreferences.Id).Options;
             string systemPrompt = userPreferences.BuildSystemPrompt();
 
             List<NewsArticle> result = [];
@@ -101,7 +100,6 @@ namespace LocalAIAgent.Application.News.AI
                     runtimeManager.GetRequiredSnapshot(userPreferences.Id);
                 IChatClient chatClient = runtime.ChatClient;
                 AIOptions options = runtime.Options;
-                datasetOptions = options;
                 ChatOptions chatOptions = options.BuildChatOptions();
 
                 HashSet<string> knownTopics = LoadKnownTopics(preferencesKey);
@@ -137,6 +135,7 @@ namespace LocalAIAgent.Application.News.AI
                 }
 
                 string jsonContent = jsonBuilder.ToString();
+                List<NewsArticle> batchResults = [];
 
                 if (!string.IsNullOrWhiteSpace(jsonContent))
                 {
@@ -159,7 +158,7 @@ namespace LocalAIAgent.Application.News.AI
                                     null);
                             }
                             UpdateKnownTopicsAndEvents(knownTopics, evaluations);
-                            AddResults(result, uncachedBatch, evaluations, includeReasoning);
+                            AddResults(batchResults, uncachedBatch, evaluations, includeReasoning);
                         }
                     }
                     catch (Exception ex)
@@ -167,14 +166,17 @@ namespace LocalAIAgent.Application.News.AI
                         logger.LogWarning(ex, "Failed to deserialize LLM response: {JsonContent}", jsonContent);
                     }
                 }
+                if (batchResults.Count > 0)
+                {
+                    await newsDatasetRepository.SaveAsync(
+                        batchResults,
+                        userPreferences.Id,
+                        options.UseResultsForDataset,
+                        options.ModelId,
+                        cancellationToken);
+                    result.AddRange(batchResults);
+                }
             }
-
-            await newsDatasetRepository.SaveAsync(
-                result,
-                userPreferences.Id,
-                datasetOptions.UseResultsForDataset,
-                datasetOptions.ModelId,
-                cancellationToken);
 
             return result;
         }

@@ -39,6 +39,16 @@ export class NewsService {
         });
     }
     /**
+     * @returns string OK
+     * @throws ApiError
+     */
+    public static getDatasetModels(): CancelablePromise<Array<string>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/News/Dataset/Models',
+        });
+    }
+    /**
      * @param modelId
      * @returns any OK
      * @throws ApiError

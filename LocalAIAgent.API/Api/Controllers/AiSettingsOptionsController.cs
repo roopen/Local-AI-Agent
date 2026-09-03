@@ -168,7 +168,8 @@ public sealed class AiSettingsOptionsController(
                 request.Temperature,
                 request.TopP,
                 request.FrequencyPenalty,
-                request.PresencePenalty));
+                request.PresencePenalty,
+                request.UseResultsForDataset));
             await runtimeManager.WarmUpAsync(candidate, cancellationToken);
 
             if (existing is not null
@@ -188,7 +189,8 @@ public sealed class AiSettingsOptionsController(
                             otherModel.Temperature,
                             otherModel.TopP,
                             otherModel.FrequencyPenalty,
-                            otherModel.PresencePenalty));
+                            otherModel.PresencePenalty,
+                            otherModel.UseResultsForDataset));
                     sharedHostCandidates.Add((otherModel, otherCandidate));
                     await runtimeManager.WarmUpAsync(otherCandidate, cancellationToken);
                 }
@@ -231,6 +233,7 @@ public sealed class AiSettingsOptionsController(
         persisted.TopP = normalized.TopP;
         persisted.FrequencyPenalty = normalized.FrequencyPenalty;
         persisted.PresencePenalty = normalized.PresencePenalty;
+        persisted.UseResultsForDataset = normalized.UseResultsForDataset;
 
         if (existing is null)
             context.AiSettings.Add(persisted);
@@ -328,6 +331,7 @@ public sealed class AiSettingsOptionsController(
             EndpointUrl = includePrivateDetails ? settings.EndpointUrl : string.Empty,
             HasApiKey = includePrivateDetails && canDecrypt && !string.IsNullOrEmpty(apiKey),
             IsAvailable = canDecrypt && runtimeManager.IsConfiguredFor(settings.Id),
+            UseResultsForDataset = includePrivateDetails && settings.UseResultsForDataset,
             Temperature = includePrivateDetails ? settings.Temperature : 0,
             TopP = includePrivateDetails ? settings.TopP : 0,
             FrequencyPenalty = includePrivateDetails ? settings.FrequencyPenalty : 0,

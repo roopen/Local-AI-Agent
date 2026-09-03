@@ -6,6 +6,7 @@ import type {
 } from '../clients/UserApiClient';
 import { ApiError } from '../clients/UserApiClient';
 import UserService from '../users/UserService';
+import DatasetDownloadComponent from './DatasetDownloadComponent';
 
 interface LlmOptionsProps {
     onSave?: () => Promise<void>;
@@ -22,6 +23,7 @@ interface EditorState {
     topP: number;
     frequencyPenalty: number;
     presencePenalty: number;
+    useResultsForDataset: boolean;
 }
 
 const createEmptyEditor = (): EditorState => ({
@@ -34,6 +36,7 @@ const createEmptyEditor = (): EditorState => ({
     topP: 1,
     frequencyPenalty: 1,
     presencePenalty: 1,
+    useResultsForDataset: false,
 });
 
 const editorFromOption = (option: AiSettingsOptionResponse): EditorState => ({
@@ -46,6 +49,7 @@ const editorFromOption = (option: AiSettingsOptionResponse): EditorState => ({
     topP: option.topP ?? 1,
     frequencyPenalty: option.frequencyPenalty ?? 1,
     presencePenalty: option.presencePenalty ?? 1,
+    useResultsForDataset: option.useResultsForDataset === true,
 });
 
 const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }) => {
@@ -110,6 +114,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
             ...editorFromOption(option),
             name: '',
             modelId: '',
+            useResultsForDataset: false,
         });
         setClearApiKey(false);
         setError(null);
@@ -168,6 +173,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                 topP: editor.topP,
                 frequencyPenalty: editor.frequencyPenalty,
                 presencePenalty: editor.presencePenalty,
+                useResultsForDataset: editor.useResultsForDataset,
             };
             const wasFirstOption = options.length === 0;
             const saved = await userService.saveLlmOption(request, editingId ?? undefined);
@@ -278,6 +284,7 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                                                 <div>
                                                     <strong>{option.name}</strong>
                                                     <span>{option.modelId}</span>
+                                                    <span>Dataset collection: {option.useResultsForDataset ? 'on' : 'off'}</span>
                                                 </div>
                                                 <div className="llm-option-actions">
                                                     <button type="button" onClick={() => beginEdit(option)}>Edit</button>
@@ -354,12 +361,27 @@ const LlmOptionsComponent: React.FC<LlmOptionsProps> = ({ onSave, initialError }
                                 <NumberField label="Presence penalty" value={editor.presencePenalty} min={-2} max={2} step={0.1} onChange={presencePenalty => update({ presencePenalty })} />
                             </div>
                         </div>
+                        <div className="llm-collection-setting">
+                            <label className="llm-clear-token">
+                                <input
+                                    type="checkbox"
+                                    checked={editor.useResultsForDataset}
+                                    disabled={isSaving}
+                                    onChange={event => update({ useResultsForDataset: event.target.checked })}
+                                />
+                                <span>Save results to dataset</span>
+                            </label>
+                        </div>
+                        <p className="prompt-hint">
+                            Include new evaluations and translations from this LLM in training data. Previously collected data stays available.
+                        </p>
                         <div className="prompt-save-row">
                             <button type="submit" className="primary-button" disabled={isSaving}>
                                 {isSaving ? 'Testing connection...' : 'Test and save'}
                             </button>
                         </div>
                     </form>
+                    <DatasetDownloadComponent />
                 </>
             )}
 

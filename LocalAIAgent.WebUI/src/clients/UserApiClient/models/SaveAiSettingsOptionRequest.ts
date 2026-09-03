@@ -9,6 +9,7 @@ export type SaveAiSettingsOptionRequest = {
     connectionSourceSettingsId?: number | null;
     apiKey?: string | null;
     clearApiKey?: boolean;
+    useResultsForDataset?: boolean;
     temperature?: number;
     topP?: number;
     frequencyPenalty?: number;

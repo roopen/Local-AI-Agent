@@ -39,6 +39,7 @@ public sealed class AiSettingsController(
             response = response with
             {
                 HasApiKey = false,
+                UseResultsForDataset = false,
                 ModelId = string.Empty,
                 EndpointUrl = string.Empty,
                 Temperature = 0,
@@ -76,7 +77,8 @@ public sealed class AiSettingsController(
                 request.Temperature,
                 request.TopP,
                 request.FrequencyPenalty,
-                request.PresencePenalty));
+                request.PresencePenalty,
+                request.UseResultsForDataset));
             await runtimeManager.WarmUpAsync(candidate, cancellationToken);
         }
         catch (LlmConnectionException ex)
@@ -106,6 +108,7 @@ public sealed class AiSettingsController(
         persisted.TopP = normalized.TopP;
         persisted.FrequencyPenalty = normalized.FrequencyPenalty;
         persisted.PresencePenalty = normalized.PresencePenalty;
+        persisted.UseResultsForDataset = normalized.UseResultsForDataset;
 
         if (existing is null)
             context.AiSettings.Add(persisted);
@@ -155,6 +158,7 @@ public sealed class AiSettingsController(
         {
             IsConfigured = canDecrypt,
             HasApiKey = hasApiKey,
+            UseResultsForDataset = settings.UseResultsForDataset,
             ModelId = settings.ModelId,
             EndpointUrl = settings.EndpointUrl,
             Temperature = settings.Temperature,

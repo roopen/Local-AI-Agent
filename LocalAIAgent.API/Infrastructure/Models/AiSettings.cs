@@ -6,6 +6,7 @@
         public int HostId { get; set; }
         public string Name { get; set; } = "Default";
         public required string ModelId { get; set; } = "gemma-3-27b-it-qat";
+        public bool UseResultsForDataset { get; set; }
         public string ApiKeyCiphertext { get; set; } = string.Empty;
         public required string EndpointUrl { get; set; } = "http://localhost:1234/v1/";
         public decimal Temperature { get; set; } = 0.2m;

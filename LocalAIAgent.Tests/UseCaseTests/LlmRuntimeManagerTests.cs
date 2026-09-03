@@ -8,6 +8,18 @@ namespace LocalAIAgent.Tests.UseCaseTests;
 
 public class LlmRuntimeManagerTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void DatasetCollectionUsesTheLlmOption(bool enabled)
+    {
+        using LlmRuntimeManager runtime = new();
+        LlmRuntimeSnapshot candidate = runtime.CreateCandidate(new LlmConnectionSettings(
+            "model", "http://localhost:1234/v1/", "", 0.2m, 1m, 0m, 0m, enabled));
+        Assert.Equal(enabled, candidate.Options.UseResultsForDataset);
+        runtime.Discard(candidate);
+    }
+
     [Fact]
     public void SanitizerExplainsWrappedDnsFailures()
     {
@@ -65,7 +77,7 @@ public class LlmRuntimeManagerTests
     public async Task WarmupUsesChatEndpointAndBearerAuthorizationHeader()
     {
         await using OpenAiStubServer server = new();
-        using LlmRuntimeManager runtime = new(new AIApplicationOptions());
+        using LlmRuntimeManager runtime = new();
         LlmRuntimeSnapshot candidate = runtime.CreateCandidate(new LlmConnectionSettings(
             "test-model",
             server.Endpoint,
@@ -89,7 +101,7 @@ public class LlmRuntimeManagerTests
     public async Task EmptyTokenCanWarmUpAgainstUnsecuredLocalApi()
     {
         await using OpenAiStubServer server = new();
-        using LlmRuntimeManager runtime = new(new AIApplicationOptions());
+        using LlmRuntimeManager runtime = new();
         LlmRuntimeSnapshot candidate = runtime.CreateCandidate(new LlmConnectionSettings(
             "test-model",
             server.Endpoint,

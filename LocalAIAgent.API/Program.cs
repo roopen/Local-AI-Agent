@@ -88,7 +88,7 @@ namespace LocalAIAgent.API
                     options.KeepAliveInterval = TimeSpan.FromSeconds(10);
                     options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
                 });
-                builder.Services.AddApplicationServices(builder.Configuration);
+                builder.Services.AddApplicationServices();
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
                 builder.Services.AddScoped<IGetDatasetUseCase, GetDatasetUseCase>();

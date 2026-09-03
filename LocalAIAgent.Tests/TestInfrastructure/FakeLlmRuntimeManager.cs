@@ -47,7 +47,7 @@ public sealed class FakeLlmRuntimeManager(AIOptions options, IChatClient chatCli
             TopP = settings.TopP,
             FrequencyPenalty = settings.FrequencyPenalty,
             PresencePenalty = settings.PresencePenalty,
-            UseResultsForDataset = _snapshot.Options.UseResultsForDataset,
+            UseResultsForDataset = settings.UseResultsForDataset,
         },
         _snapshot.ChatClient);
 

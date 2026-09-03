@@ -49,6 +49,7 @@ public sealed class LocalServerMigrationTests
         Assert.Equal("owner-model", settings.Name);
         Assert.Equal("owner-model", settings.ModelId);
         Assert.Equal("owner-secret", settings.ApiKeyCiphertext);
+        Assert.False(settings.UseResultsForDataset);
         Assert.Empty(await context.Invitations.ToListAsync(TestContext.Current.CancellationToken));
     }
 }

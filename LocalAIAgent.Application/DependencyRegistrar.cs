@@ -2,7 +2,6 @@ using LocalAIAgent.Application.Chat;
 using LocalAIAgent.Application.Extensions;
 using LocalAIAgent.Application.News;
 using LocalAIAgent.Application.News.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,13 +9,8 @@ namespace LocalAIAgent.Application
 {
     public static class DependencyRegistrar
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
-            AIApplicationOptions applicationOptions = new()
-            {
-                UseResultsForDataset = configuration.GetValue<bool>("AIOptions:UseResultsForDataset"),
-            };
-            services.AddSingleton(applicationOptions);
             services.AddMemoryCache();
             services.TryAddSingleton(TimeProvider.System);
             services.AddSingleton<ILlmRuntimeManager, LlmRuntimeManager>();

@@ -21,7 +21,7 @@ The application already builds a chat-format dataset for you while you use it. Y
 | Build `NewsItem` | `LocalAIAgent.Application/News/NewsItem.cs:41` | Captures `Title`, `Summary`, `Link`, `Source` (DNS host), `Categories`, `Language`, `SourceClientName`. HTML is stripped and decoded. |
 | Filter by user prefs | `NewsService.FilterNews` (`NewsService.cs:111`) | Drops articles older than 24h, articles from disabled feeds, and articles whose title/summary/category whole-word-matches any entry in `UserPreferences.Dislikes`. |
 | Evaluate with LLM | `LocalAIAgent.Application/News/AI/EvaluateNewsUseCase.cs:37` (`EvaluateCoreAsync`) | Batches of 3. System prompt is `UserPreferences.BuildSystemPrompt()` (`LocalAIAgent.Domain/UserPreferences.cs:30`). LLM emits a `<\|think\|>` block + JSON array of `{ArticleIndex, Relevancy, Topic}`. Cached evaluations are reused. |
-| Persist | `NewsDatasetRepository.SaveAsync` (`LocalAIAgent.API/Infrastructure/NewsDatasetRepository.cs:27`) → `NewsEvaluationEntry` table | Saves `Title`, `Summary`, `Link`, `Source`, `Topic`, `Relevancy`, optional `Reasoning`, `UseInDataset` flag (controlled by `AIOptions.UseResultsForDataset`), `ModelUsed`, `UserPreferencesId`. |
+| Persist | `NewsDatasetRepository.SaveAsync` (`LocalAIAgent.API/Infrastructure/NewsDatasetRepository.cs:27`) → `NewsEvaluationEntry` table | Saves `Title`, `Summary`, `Link`, `Source`, `Topic`, `Relevancy`, optional `Reasoning`, `UseInDataset` flag (controlled by the LLM option's **Save results to dataset** setting), `ModelUsed`, `UserPreferencesId`. |
 | User feedback | `NewsController.SubmitFeedback` (`LocalAIAgent.API/Api/Controllers/NewsController.cs`) | Like/dislike clicks create/update the same `NewsEvaluationEntry` rows — this is your highest-quality label source. |
 
 ### Translation pipeline
@@ -32,7 +32,7 @@ The application already builds a chat-format dataset for you while you use it. Y
 | Cache lookup | `IArticleTranslationRepository.GetCachedTranslationsAsync` | Hits go straight to the article, no LLM call. |
 | Translate | `TranslateBatchWithFallbackAsync` (`GetTranslationUseCase.cs`) | Batches of up to 5 articles. The short system prompt disables translation-time reasoning, and LM Studio constrains the response to `[{index,title,summary}]`. Valid indexed results are kept while only missing items are retried; total failures are split into smaller batches. |
 | Robust parsing | `SanitizeJsonResponse` (line 213) | Regex extracts the JSON array; a small state machine repairs unescaped quotes and `\'`. |
-| Persist | `translationRepository.SaveTranslationsAsync` (line 174) | Only when `AIOptions.UseResultsForDataset == true`. Stores `ArticleLink`, `OriginalTitle`, `OriginalSummary`, `TranslatedTitle`, `TranslatedSummary`, `TargetLanguage`, `CreatedAt`. |
+| Persist | `translationRepository.SaveTranslationsAsync` (line 174) | Only when **Save results to dataset** is enabled for the selected LLM option. Stores `ArticleLink`, `OriginalTitle`, `OriginalSummary`, `TranslatedTitle`, `TranslatedSummary`, `TargetLanguage`, `CreatedAt`. |
 
 ### Dataset export (the file you fine-tune on)
 
@@ -40,7 +40,9 @@ Entry point: `LocalAIAgent.API/Application/UseCases/GetDatasetUseCase.cs` (`GetD
 
 To export evaluations produced by one model, use `GET /api/News/Dataset?modelId=your-model-id` and URL-encode the model ID. The filter matches the stored `ModelUsed` exactly (case-sensitive), after trimming surrounding whitespace. Filtered exports exclude translation samples because translations do not store the producing model; no matches returns HTTP 404. Omitting `modelId`, or leaving it blank, keeps the combined export across all models.
 
-It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
+Only evaluations marked `UseInDataset = true` are exported. The owner-only `GET /api/News/Dataset/Models` endpoint lists their distinct model IDs.
+
+The export produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 
 ```jsonl
 {"messages":[{"role":"system","content":"…"},{"role":"user","content":"…"},{"role":"assistant","content":"…"}]}
@@ -55,7 +57,7 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 
 ## 2. Prerequisites
 
-1. **Use the app for real for at least a week with `AIOptions.UseResultsForDataset = true`.** Without this flag, translations are not persisted and evaluations are flagged `UseInDataset = false`. Target ≥1000 evaluations and ≥300 translation pairs (per target language) before training — fewer can fine-tune a tiny model but won't beat the base on a 7B+.
+1. Use the app for real for at least a week with **Save results to dataset** enabled in **Settings → LLM**. Without this flag, translations are not persisted and evaluations are flagged `UseInDataset = false`. Target ≥1000 evaluations and ≥300 translation pairs (per target language) before training — fewer can fine-tune a tiny model but won't beat the base on a 7B+.
 2. **Give honest feedback in the UI.** Like/dislike clicks overwrite the LLM's guess on `NewsEvaluationEntry.Relevancy`. Those rows are the gold labels — the more you click, the more the recommender will resemble *your* taste rather than the bootstrap model's.
 3. **Don't mutate an existing `UserPreferences` row mid-collection.** Different users with different prompts/interests/dislikes are *desirable* — that variation is what teaches the model to condition on the system prompt instead of memorizing one taste. The narrow problem is in-place edits to a single row: `GetBalancedNewsEntries` calls `BuildSystemPrompt()` on the *current* preferences at export time (`GetDatasetUseCase.cs:141`), so every historical `NewsEvaluationEntry` joined by `UserPreferencesId` gets re-paired with the new prompt text — including labels that were produced under the old prompt. If you need to change your preferences, prefer creating a new `UserPreferences` row (new `Id`) so old rows stay attached to the prompt they were actually judged under, or filter out evaluations older than the edit before training.
 4. **Pick a base model that already runs in your LM Studio / Ollama.** Recommendation samples use reasoning markers, while translation samples use a concise indexed JSON contract. Recommended starting points: a 4B–8B instruct model for the recommender (Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct, Gemma-2-9B), and the same or larger for translation if your target language is non-Latin.
@@ -64,9 +66,9 @@ It produces a ZIP containing two JSONL files in OpenAI chat-completions format:
 
 ## 3. Producing the dataset
 
-1. Set `AIOptions.UseResultsForDataset = true` in `appsettings.json` (or the relevant config layer) and restart the API.
+1. As the owner, open **Settings → LLM**, edit the LLM option, enable **Save results to dataset**, and choose **Test and save**. This setting is stored per option and applies immediately; new and migrated options start with collection off. Turning it off affects new results, while previously collected data remains available. Evaluations cached while collection was off stay excluded.
 2. Use the app normally for the data-collection period.
-3. Download:
+3. In **Settings → LLM → Training dataset**, choose **All models** or one recorded model and click **Download dataset**. The model list includes eligible historical evaluations, even if the LLM option was deleted. You can also download through the owner-only API:
    ```
    GET http://localhost:<port>/api/News/Dataset
    → dataset.zip
@@ -118,15 +120,8 @@ Either way: ship the result as a GGUF (`llama.cpp` / Unsloth `save_pretrained_gg
 ## 5. Wiring the fine-tuned model back in
 
 1. Quantize to Q4_K_M or Q5_K_M GGUF, load it in LM Studio, give it a clear name like `local-ai-agent-recommender-q4`.
-2. Update `appsettings.json`:
-   ```json
-   "AIOptions": {
-     "ModelId": "local-ai-agent-recommender-q4",
-     "EndpointUrl": "http://localhost:1234/v1",
-     "UseResultsForDataset": false
-   }
-   ```
-3. Turn `UseResultsForDataset` **off** for a while — you don't want the new model's outputs poisoning the next dataset until you confirm it's at least as good as the base. Re-enable once you trust it (and rotate datasets so you can train v2 only on rows the new model produced + your feedback corrections).
+2. As the owner, add or edit an option in **Settings → LLM** with model ID `local-ai-agent-recommender-q4` and the LM Studio endpoint, then **Test and save**.
+3. Leave **Save results to dataset** **off** for a while — you don't want the new model's outputs poisoning the next dataset until you confirm it's at least as good as the base. Re-enable once you trust it (and rotate datasets so you can train v2 only on rows the new model produced + your feedback corrections).
 4. Verify both pipelines end-to-end:
    - `EvaluateNewsUseCase` should still produce a JSON array of length 3 per 3-article batch. The deserializer in `EvaluationResult.Deserialize` is strict — a malformed array means the fine-tune broke the format. If this happens, lower the LR and retrain.
    - `GetTranslationUseCase.SanitizeJsonResponse` is forgiving (handles `\'`, unescaped inner quotes). But translation regressions usually show as truncated summaries — spot-check 20 articles across two languages before declaring success.

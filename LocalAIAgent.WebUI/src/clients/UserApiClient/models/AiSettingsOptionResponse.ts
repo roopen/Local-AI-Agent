@@ -10,6 +10,7 @@ export type AiSettingsOptionResponse = {
     endpointUrl: string | null;
     hasApiKey?: boolean;
     isAvailable?: boolean;
+    useResultsForDataset?: boolean;
     temperature?: number;
     topP?: number;
     frequencyPenalty?: number;

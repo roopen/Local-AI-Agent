@@ -41,6 +41,8 @@ export default class UserService implements IUserService {
             aiSettings.topP ?? undefined,
             aiSettings.frequencyPenalty ?? undefined,
             aiSettings.presencePenalty ?? undefined,
+            '',
+            aiSettings.useResultsForDataset ?? false,
         );
     }
 
@@ -59,7 +61,8 @@ export default class UserService implements IUserService {
             temperature: settings.temperature,
             topP: settings.topP,
             frequencyPenalty: settings.frequencyPenalty,
-            presencePenalty: settings.presencePenalty
+            presencePenalty: settings.presencePenalty,
+            useResultsForDataset: settings.useResultsForDataset,
         });
 
         return new AISettings(
@@ -71,6 +74,8 @@ export default class UserService implements IUserService {
             saved.topP ?? undefined,
             saved.frequencyPenalty ?? undefined,
             saved.presencePenalty ?? undefined,
+            '',
+            saved.useResultsForDataset ?? false,
         );
     }
 

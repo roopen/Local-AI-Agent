@@ -33,7 +33,7 @@ public sealed class NewsStreamLlmSwitchTests
             """[{"ArticleIndex":0,"Relevancy":"High","Topic":"Four"}]""");
 
         runtime = new FakeLlmRuntimeManager(Options("first-model"), firstClient);
-        runtime.Activate(1, new LlmRuntimeSnapshot(Options("first-model"), firstClient));
+        runtime.Activate(1, new LlmRuntimeSnapshot(Options("first-model", useResultsForDataset: true), firstClient));
         runtime.Activate(2, new LlmRuntimeSnapshot(Options("second-model"), secondClient));
         runtime.SetUserSelection(preferencesId, settingsId: 1);
 
@@ -49,7 +49,7 @@ public sealed class NewsStreamLlmSwitchTests
                 It.IsAny<List<NewsArticle>>(),
                 preferencesId,
                 It.IsAny<bool>(),
-                "second-model",
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -82,11 +82,18 @@ public sealed class NewsStreamLlmSwitchTests
         Assert.Equal(1, firstClient.StreamingCallCount);
         Assert.Single(secondClient.Calls, call => call.Streaming);
         Assert.Equal(4, result.NewsArticles.Count);
+        repository.Verify(item => item.SaveAsync(
+            It.Is<List<NewsArticle>>(saved => saved.Count == 3 && saved.All(article => article.Link != "https://example.com/3")),
+            preferencesId, true, "first-model", It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(item => item.SaveAsync(
+            It.Is<List<NewsArticle>>(saved => saved.Count == 1 && saved[0].Link == "https://example.com/3"),
+            preferencesId, false, "second-model", It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static AIOptions Options(string modelId) => new()
+    private static AIOptions Options(string modelId, bool useResultsForDataset = false) => new()
     {
         ModelId = modelId,
+        UseResultsForDataset = useResultsForDataset,
         EndpointUrl = "http://localhost:1234/v1/",
         Temperature = 0.2m,
         TopP = 1m,

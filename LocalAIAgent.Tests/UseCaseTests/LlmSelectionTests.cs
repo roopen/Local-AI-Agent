@@ -7,7 +7,7 @@ public sealed class LlmSelectionTests
     [Fact]
     public void ChangingUserSelectionChangesTheNextResolvedRuntime()
     {
-        using LlmRuntimeManager runtime = new(new AIApplicationOptions());
+        using LlmRuntimeManager runtime = new();
         LlmRuntimeSnapshot first = runtime.CreateCandidate(Settings("first-model"));
         LlmRuntimeSnapshot second = runtime.CreateCandidate(Settings("second-model"));
 
@@ -29,7 +29,7 @@ public sealed class LlmSelectionTests
     [Fact]
     public void UsersCanResolveDifferentRuntimesConcurrently()
     {
-        using LlmRuntimeManager runtime = new(new AIApplicationOptions());
+        using LlmRuntimeManager runtime = new();
         runtime.Activate(10, runtime.CreateCandidate(Settings("first-model")));
         runtime.Activate(20, runtime.CreateCandidate(Settings("second-model")));
         runtime.SetUserSelection(userPreferencesId: 1, settingsId: 10);

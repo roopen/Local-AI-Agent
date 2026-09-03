@@ -13,7 +13,8 @@ public sealed record LlmConnectionSettings(
     decimal Temperature,
     decimal TopP,
     decimal FrequencyPenalty,
-    decimal PresencePenalty);
+    decimal PresencePenalty,
+    bool UseResultsForDataset = false);
 
 public sealed record LlmRuntimeSnapshot(AIOptions Options, IChatClient ChatClient);
 
@@ -148,7 +149,7 @@ public interface ILlmRuntimeManager
     void Discard(LlmRuntimeSnapshot candidate);
 }
 
-internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
+internal sealed class LlmRuntimeManager
     : ILlmRuntimeManager, IDisposable
 {
     private readonly object _sync = new();
@@ -209,7 +210,7 @@ internal sealed class LlmRuntimeManager(AIApplicationOptions applicationOptions)
             TopP = settings.TopP,
             FrequencyPenalty = settings.FrequencyPenalty,
             PresencePenalty = settings.PresencePenalty,
-            UseResultsForDataset = applicationOptions.UseResultsForDataset,
+            UseResultsForDataset = settings.UseResultsForDataset,
         };
 
         OpenAIClientOptions clientOptions = new()

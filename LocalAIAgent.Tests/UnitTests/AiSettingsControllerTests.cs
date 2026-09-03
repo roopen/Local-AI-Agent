@@ -140,12 +140,13 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
         AiSettingsController controller = CreateController(bob.Id, runtime);
 
         ActionResult<AiSettingsResponse> result = await controller.Put(
-            MakeRequest(apiKey: "unsloth-token"),
+            MakeRequest(apiKey: "unsloth-token") with { UseResultsForDataset = true },
             TestContext.Current.CancellationToken);
 
         Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(1, runtime.WarmUpCalls);
         Assert.True(runtime.IsConfigured);
+        Assert.True(runtime.GetRequiredSnapshot().Options.UseResultsForDataset);
         Assert.Equal("new-model", runtime.GetRequiredSnapshot().Options.ModelId);
 
         AiSettings saved = await Db.AiSettings.SingleAsync(TestContext.Current.CancellationToken);
@@ -153,6 +154,7 @@ public class AiSettingsControllerTests : InMemoryDbTestBase
         Assert.DoesNotContain("unsloth-token", saved.ApiKeyCiphertext);
         Assert.Equal("unsloth-token", _protector.Unprotect(saved.ApiKeyCiphertext));
         Assert.Equal(0.42m, saved.TopP);
+        Assert.True(saved.UseResultsForDataset);
     }
 
     [Fact]

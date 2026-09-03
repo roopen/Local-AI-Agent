@@ -857,6 +857,28 @@ button:focus-visible {
   }
 }
 
+.llm-dataset-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.llm-collection-setting {
+  margin-top: 24px;
+}
+
+.llm-dataset-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.llm-dataset-controls .llm-field {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
 .llm-shared-host-note {
   margin: 0 0 14px;
   padding: 10px 12px;
