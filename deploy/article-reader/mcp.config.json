@@ -6,11 +6,11 @@
       "headless": true,
       "chromiumSandbox": false,
       "args": ["--disable-quic", "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"],
-      "proxy": { "server": "http://article-egress:3128", "bypass": "<-loopback>" }
+      "proxy": { "server": "http://10.203.0.2:3128", "bypass": "<-loopback>" }
     },
     "contextOptions": { "serviceWorkers": "block", "acceptDownloads": false }
   },
-  "server": { "host": "0.0.0.0", "port": 8931, "allowedHosts": ["article-mcp:8931", "localhost:8931", "127.0.0.1:8931"] },
+  "server": { "host": "0.0.0.0", "port": 8931, "allowedHosts": ["10.203.0.3:8931", "localhost:8931", "127.0.0.1:8931"] },
   "sharedBrowserContext": false,
   "imageResponses": "omit",
   "outputDir": "/tmp/article-reader",

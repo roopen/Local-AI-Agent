@@ -6,7 +6,10 @@ services:
     build:
       context: ../..
       dockerfile: deploy/article-reader/Proxy.Containerfile
-    networks: [reader, internet]
+    networks:
+      reader:
+        ipv4_address: 10.203.0.2
+      internet: {}
     read_only: true
     cap_drop: [ALL]
   article-mcp:
@@ -16,7 +19,9 @@ services:
       context: ../..
       dockerfile: deploy/article-reader/Mcp.Containerfile
     depends_on: [article-egress]
-    networks: [reader]
+    networks:
+      reader:
+        ipv4_address: 10.203.0.3
     ports: ["127.0.0.1:8931:8931"]
     read_only: true
     tmpfs: ["/tmp:size=512m,mode=1777"]
@@ -26,4 +31,9 @@ services:
 networks:
   reader:
     internal: true
+    ipam:
+      config:
+        - subnet: 10.203.0.0/24
+          gateway: 10.203.0.1
+          ip_range: 10.203.0.128/25
   internet: {}

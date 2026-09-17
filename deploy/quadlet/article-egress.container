@@ -5,13 +5,12 @@ Description=Public-network-only article browser proxy
 Image=localhost/ainews-article-egress:1
 Pull=never
 ContainerName=article-egress
-Network=article-reader.network
+Network=article-reader.network:ip=10.203.0.2
 Network=article-egress.network
-NetworkAlias=article-egress
+PodmanArgs=--memory=256m
 ReadOnly=true
 NoNewPrivileges=true
 DropCapability=all
-Memory=256m
 
 [Service]
 Restart=always

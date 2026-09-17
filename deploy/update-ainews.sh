@@ -13,7 +13,7 @@ fail() {
     exit 1
 }
 
-for command_name in git install podman systemctl curl stat journalctl id getent realpath runuser env rm; do
+for command_name in git install podman systemctl curl stat journalctl id getent realpath runuser env rm grep sed; do
     command -v "${command_name}" >/dev/null 2>&1 \
         || fail "required command '${command_name}' was not found"
 done
@@ -70,8 +70,20 @@ install -d -m 0755 "${quadlet_target_dir}"
 install -m 0644 "${quadlet_source_dir}/ainews.container" "${quadlet_target_dir}/ainews.container"
 install -m 0644 "${quadlet_source_dir}/ainews.volume" "${quadlet_target_dir}/ainews.volume"
 for reader_unit in article-reader.network article-egress.network article-egress.container article-mcp.container; do
+    # Preserve the host's Ubuntu/crun AppArmor workaround across deployments.
+    preserve_no_new_privileges=false
+    if [[ "${reader_unit}" == *.container ]] && [[ -f "${quadlet_target_dir}/${reader_unit}" ]] \
+        && grep -Eq '^NoNewPrivileges=false[[:space:]]*$' "${quadlet_target_dir}/${reader_unit}"; then
+        preserve_no_new_privileges=true
+    fi
     install -m 0644 "${quadlet_source_dir}/${reader_unit}" "${quadlet_target_dir}/${reader_unit}"
+    if [[ "${preserve_no_new_privileges}" == true ]]; then
+        sed -i 's/^NoNewPrivileges=true/NoNewPrivileges=false/' "${quadlet_target_dir}/${reader_unit}"
+    fi
 done
+# Keep the environment file consistent with the bundled static endpoint.
+# Preserve custom remote endpoints.
+sed -i 's|^ArticleReader__McpEndpoint=http://article-mcp:8931/mcp\r\?$|ArticleReader__McpEndpoint=http://10.203.0.3:8931/mcp|' "${environment_file}"
 rm -f -- "${quadlet_target_dir}/ainews.build"
 install -d -m 0755 "${system_bin_dir}"
 install -m 0755 "${repository_dir}/deploy/update-ainews.sh" "${system_bin_dir}/update-ainews"
@@ -93,6 +105,13 @@ podman build --tag localhost/ainews-article-egress:1 \
     --file "${repository_dir}/deploy/article-reader/Proxy.Containerfile" "${repository_dir}"
 podman build --tag localhost/ainews-article-mcp:0.0.80 \
     --file "${repository_dir}/deploy/article-reader/Mcp.Containerfile" "${repository_dir}"
+if ! podman network exists article-reader-static; then
+    # The old generated network service may still be active after daemon-reload.
+    # Create the new fixed-subnet network without deleting the existing network.
+    systemctl stop "${service_name}" article-mcp.service article-egress.service
+    systemctl restart article-reader-network.service
+fi
+systemctl reset-failed article-egress.service article-mcp.service "${service_name}"
 systemctl restart article-egress.service article-mcp.service
 systemctl restart "${service_name}"
 

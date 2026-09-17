@@ -7,14 +7,13 @@ After=article-egress.service
 Image=localhost/ainews-article-mcp:0.0.80
 Pull=never
 ContainerName=article-mcp
-Network=article-reader.network
-NetworkAlias=article-mcp
+Network=article-reader.network:ip=10.203.0.3
+PodmanArgs=--memory=2g
 ReadOnly=true
 Tmpfs=/tmp:rw,size=512m,mode=1777
 ShmSize=512m
 NoNewPrivileges=true
 DropCapability=all
-Memory=2g
 PidsLimit=512
 
 [Service]

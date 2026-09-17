@@ -24,7 +24,29 @@ sudo systemctl start article-egress.service article-mcp.service
 sudo systemctl restart ainews.service
 ```
 
-Use the same Podman user/context as the existing server when building and installing images. The private API setting is `ArticleReader__McpEndpoint=http://article-mcp:8931/mcp`. Do not publish the MCP endpoint through the reverse proxy or Cloudflare tunnel. If the sidecar is unavailable, the feed still works and the modal offers retry and the source link.
+Use the same Podman user/context as the existing server when building and installing images. The private API setting is `ArticleReader__McpEndpoint=http://10.203.0.3:8931/mcp`. Do not publish the MCP endpoint through the reverse proxy or Cloudflare tunnel. If the sidecar is unavailable, the feed still works and the modal offers retry and the source link.
+
+### Static addresses and upgrading an existing server
+
+The internal `article-reader-static` network uses `10.203.0.0/24`: gateway `.1`, proxy `.2`, MCP `.3`, and API `.4`. Automatic allocation uses `.128/25`, outside the service addresses. Both API-to-MCP and browser-to-proxy traffic use IP literals. Compose uses the same proxy and MCP addresses because it shares the browser image configuration. Before deployment, check `ip route` and `sudo podman network inspect --all` for conflicts with this subnet; if necessary, change the subnet and addresses together in the Quadlets, Compose, MCP configuration, and API environment.
+
+Run the current repository updater after synchronizing these changes:
+
+```sh
+sudo bash deploy/update-ainews.sh "$PWD"
+```
+
+It rebuilds the browser image (which contains the proxy URL and MCP allowed-host list), migrates the old bundled MCP endpoint in `/etc/ainews/ainews.env`, and creates the new network before restarting the containers. This causes a brief outage during migration. The old `article-reader` network is left in place; no data volumes are removed. A reload alone does not reconfigure an existing Podman network, so the new network has a distinct name. For manual migration, stop all three services and restart `article-reader-network.service` after installing the definitions and rebuilding the browser image, then start the services again.
+
+The updater preserves `NoNewPrivileges=false` when already set in either installed browser container definition, retaining the Ubuntu/crun AppArmor workaround. The source defaults remain hardened for hosts without that issue. Podman 4.9 installations should apply this setting directly in the installed `.container` files rather than relying on Quadlet drop-ins.
+
+Verify connectivity from the API container:
+
+```sh
+sudo podman exec ainews curl --noproxy '*' --connect-timeout 5 --max-time 10 -sS -o /dev/null -w 'MCP HTTP %{http_code}\n' http://10.203.0.3:8931/mcp
+```
+
+An HTTP response confirms transport reachability; an MCP protocol error to this plain GET is expected and does not verify a complete MCP session. Use **Read in app** to verify the handshake, browser launch, and proxy together.
 
 ### Visual Studio / local development
 
@@ -52,7 +74,7 @@ For a failed request, expand **Diagnostic details** in the modal or use **Copy e
 
 ## Network isolation
 
-The browser is connected **only** to an internal network, with no default internet route. Chromium sends HTTP(S), including loopback addresses, redirects and subresources, through `article-egress:3128`. Service workers and non-proxied WebRTC UDP are disabled. The proxy connects only to public addresses on ports 80/443; it compiles the same `PublicNetworkHttpHandler` source used by feed fetching. DNS resolution and socket connection use the same validated IP, preventing DNS rebinding. IPv4-mapped IPv6, loopback, private, link-local and metadata ranges are rejected.
+The browser is connected **only** to an internal network, with no default internet route. Chromium sends HTTP(S), including loopback addresses, redirects and subresources, through `10.203.0.2:3128`. Service workers and non-proxied WebRTC UDP are disabled. The proxy connects only to public addresses on ports 80/443; it compiles the same `PublicNetworkHttpHandler` source used by feed fetching. DNS resolution and socket connection use the same validated IP, preventing DNS rebinding. IPv4-mapped IPv6, loopback, private, link-local and metadata ranges are rejected.
 
 The proxy and API join both internal and internet networks; the browser never does. The proxy has no published port. A dedicated DNS-enabled egress network is necessary: combining an internal network with Podman's default DNS-disabled bridge can prevent public DNS resolution. Do not attach the browser to the internet network or remove its proxy configuration. MCP host checks and origin filters alone are not network security boundaries. The MCP endpoint exposes powerful trusted-client tools; the application gives the model only constrained wrappers and never passes model-generated JavaScript to MCP.
 

@@ -1,3 +1,6 @@
 [Network]
-NetworkName=article-reader
+NetworkName=article-reader-static
 Internal=true
+Subnet=10.203.0.0/24
+Gateway=10.203.0.1
+IPRange=10.203.0.128/25

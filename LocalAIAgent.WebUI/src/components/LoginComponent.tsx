@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@progress/kendo-react-buttons';
 import { Input } from '@progress/kendo-react-inputs';
 import type { RegistrationStatusDto } from '../clients/UserApiClient';
@@ -17,12 +17,30 @@ const readInviteToken = (): string | undefined => {
 // The conditional copy and controls represent the bootstrap, invite, and login states.
 // eslint-disable-next-line complexity
 const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
+    const formRef = useRef<HTMLFormElement>(null);
     const [username, setUsername] = useState('');
     const [inviteToken] = useState(readInviteToken);
     const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatusDto | null>(null);
     const [isRegister, setIsRegister] = useState(Boolean(inviteToken));
     const [isWorking, setIsWorking] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isRegister || isWorking) return;
+
+        const handleEnter = (event: KeyboardEvent) => {
+            const ignoreKey = [event.repeat, event.isComposing, event.altKey, event.ctrlKey,
+                event.metaKey, event.shiftKey, event.defaultPrevented].some(Boolean);
+            const isPageFocused = event.target === document.body || event.target === document.documentElement;
+            if (event.key !== 'Enter' || ignoreKey || !isPageFocused) return;
+
+            event.preventDefault();
+            formRef.current?.requestSubmit();
+        };
+
+        document.addEventListener('keydown', handleEnter);
+        return () => document.removeEventListener('keydown', handleEnter);
+    }, [isRegister, isWorking]);
 
     useEffect(() => {
         if (window.location.hash) {
@@ -79,7 +97,7 @@ const LoginComponent = ({ userService, onLogin }: LoginComponentProps) => {
                     </p>
                 </header>
 
-                <form className="login-form" onSubmit={handleSubmit}>
+                <form ref={formRef} className="login-form" onSubmit={handleSubmit}>
                     {isRegister && (
                         <div className="login-field">
                             <Input
