@@ -106,11 +106,20 @@ podman build --tag localhost/ainews-article-egress:1 \
 podman build --tag localhost/ainews-article-mcp:0.0.80 \
     --file "${repository_dir}/deploy/article-reader/Mcp.Containerfile" "${repository_dir}"
 if ! podman network exists article-reader-static; then
-    # The old generated network service may still be active after daemon-reload.
-    # Create the new fixed-subnet network without deleting the existing network.
-    systemctl stop "${service_name}" article-mcp.service article-egress.service
-    systemctl restart article-reader-network.service
+    # A generated oneshot service can be active without the renamed network.
+    # Ensure the actual network exists before restarting any containers.
+    # Keep these settings aligned with quadlet/article-reader.network.
+    podman network create --internal \
+        --subnet 10.203.0.0/24 --gateway 10.203.0.1 \
+        --ip-range 10.203.0.128/25 article-reader-static \
+        || fail "could not create the static article reader network"
 fi
+podman network exists article-reader-static \
+    || fail "article-reader-static is missing; refusing to restart containers"
+reader_network_config="$(podman network inspect article-reader-static \
+    --format '{{.Internal}} {{range .Subnets}}{{.Subnet}} {{.Gateway}}{{end}}')"
+[[ "${reader_network_config}" == 'true 10.203.0.0/24 10.203.0.1' ]] \
+    || fail "article-reader-static must be internal with subnet 10.203.0.0/24 and gateway 10.203.0.1"
 systemctl reset-failed article-egress.service article-mcp.service "${service_name}"
 systemctl restart article-egress.service article-mcp.service
 systemctl restart "${service_name}"
