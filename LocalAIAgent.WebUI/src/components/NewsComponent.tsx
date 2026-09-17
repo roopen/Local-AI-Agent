@@ -8,6 +8,7 @@ import { Card, CardBody } from '@progress/kendo-react-layout';
 import { NewsClient } from '../clients/NewsClient';
 import UserService from '../users/UserService';
 import ArticleCard from './ArticleCard';
+import ArticleReaderModal from './ArticleReaderModal';
 
 const newsClient = NewsClient.getInstance();
 const userService = UserService.getInstance();
@@ -46,6 +47,7 @@ interface NewsComponentProps {
 
 const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure }) => {
     const [articles, setArticles] = useState<NewsArticle[]>([]);
+    const [readerArticle, setReaderArticle] = useState<NewsArticle | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [loadingPhase, setLoadingPhase] = useState<NewsLoadingPhase | null>('feeds');
     const [error, setError] = useState<string | null>(null);
@@ -286,6 +288,7 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
                             <ArticleCard
                                 key={article.Link}
                                 article={article}
+                                onReadArticle={() => setReaderArticle(article)}
                                 feedback={feedback}
                                 onFeedbackClick={(isLiked) => {
                                     if (feedback[article.Link] === isLiked) {
@@ -318,6 +321,7 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
                             }}
                         />
             )}
+            {readerArticle && <ArticleReaderModal key={readerArticle.Link} article={readerArticle} onClose={() => setReaderArticle(null)} />}
         </div>
     );
 };

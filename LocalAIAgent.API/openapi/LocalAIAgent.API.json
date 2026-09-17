@@ -1083,6 +1083,54 @@
         }
       }
     },
+    "/api/News/ReadArticle": {
+      "post": {
+        "tags": [
+          "News"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadArticleRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadArticleRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadArticleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadArticleResult"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadArticleResult"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadArticleResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/News/GetExpandedNews": {
       "post": {
         "tags": [
@@ -1452,6 +1500,43 @@
         ],
         "type": "integer",
         "format": "int32"
+      },
+      "ArticleContent": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "markdown": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "author": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "accessRestricted": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "AssertionOptions": {
         "type": "object",
@@ -2375,6 +2460,62 @@
           "invalid"
         ],
         "type": "string"
+      },
+      "ReadArticleRequest": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "maxLength": 35,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadArticleResult": {
+        "required": [
+          "original",
+          "targetLanguage"
+        ],
+        "type": "object",
+        "properties": {
+          "original": {
+            "$ref": "#/components/schemas/ArticleContent"
+          },
+          "translatedMarkdown": {
+            "type": "string",
+            "nullable": true
+          },
+          "translatedTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "detectedLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "translationStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "RegisteredPublicKeyCredential": {
         "type": "object",

@@ -1,0 +1,14 @@
+.git
+.github
+.vs
+**/bin
+**/obj
+**/node_modules
+**/dist
+publish
+TestResults
+*.db
+*.db-shm
+*.db-wal
+*.env
+!deploy/quadlet/ainews.env.example

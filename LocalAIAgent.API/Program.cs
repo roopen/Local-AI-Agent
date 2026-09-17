@@ -19,6 +19,11 @@ namespace LocalAIAgent.API
     {
         public static void Main(string[] args)
         {
+            if (args is ["--article-reader-debug-watchdog"])
+            {
+                ArticleReaderDebugLifetime.WatchAsync().GetAwaiter().GetResult();
+                return;
+            }
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
@@ -89,6 +94,16 @@ namespace LocalAIAgent.API
                     options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
                 });
                 builder.Services.AddApplicationServices();
+                if (!builder.Environment.IsEnvironment("IntegrationTests") && !builder.Environment.IsEnvironment("SwaggerGeneration"))
+                {
+                    string articleCachePath = builder.Configuration["ArticleReader:CachePath"]
+                        ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(connectionString))!, "article-reader-cache.db");
+                    builder.Services.AddSingleton<LocalAIAgent.Application.News.Reader.IArticleReaderPersistentCache>(services =>
+                        new ArticleReaderPersistentCache(articleCachePath, services.GetRequiredService<TimeProvider>(),
+                            services.GetRequiredService<ILogger<ArticleReaderPersistentCache>>()));
+                }
+                if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("ArticleReader:AutoStartLocalServices"))
+                    builder.Services.AddHostedService<ArticleReaderDevelopmentStartup>();
                 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
                 builder.Services.AddScoped<IGetUserUseCase, GetUserUseCase>();
                 builder.Services.AddScoped<IGetDatasetUseCase, GetDatasetUseCase>();

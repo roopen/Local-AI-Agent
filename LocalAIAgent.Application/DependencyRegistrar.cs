@@ -14,6 +14,11 @@ namespace LocalAIAgent.Application
             services.AddMemoryCache();
             services.TryAddSingleton(TimeProvider.System);
             services.AddSingleton<ILlmRuntimeManager, LlmRuntimeManager>();
+            services.AddSingleton<News.Reader.ArticleReaderResources>();
+            services.AddSingleton<News.Reader.IArticleBrowserFactory, News.Reader.PlaywrightArticleBrowserFactory>();
+            services.AddScoped<News.Reader.ArticleReaderAgent>();
+            services.AddScoped<News.Reader.ArticleBodyTranslator>();
+            services.AddScoped<News.Reader.IReadArticleUseCase, News.Reader.ReadArticleUseCase>();
 
             services.AddScoped<IGetNewsUseCase, GetNewsUseCase>();
             services.AddSingleton<INewsService, NewsService>();

@@ -25,9 +25,10 @@ export interface ArticleCardProps {
     article: NewsArticle;
     feedback: Record<string, boolean>;
     onFeedbackClick: (isLiked: boolean) => void;
+    onReadArticle: () => void;
 }
 
-export default function ArticleCard({ article, feedback, onFeedbackClick }: ArticleCardProps) {
+export default function ArticleCard({ article, feedback, onFeedbackClick, onReadArticle }: ArticleCardProps) {
     const liked = feedback[article.Link] === true;
     const disliked = feedback[article.Link] === false;
     return (
@@ -46,6 +47,12 @@ export default function ArticleCard({ article, feedback, onFeedbackClick }: Arti
                             className="read-article-btn">
                             Read the article at {article.Source} <span>&#x1F5D7;</span>
                         </a>
+                        <button
+                            type="button"
+                            onClick={onReadArticle}
+                            className="read-article-btn article-reader-btn">
+                            Read in app
+                        </button>
                         <span className="article-card-feedback">
                             <Button
                                 title="I liked this article"

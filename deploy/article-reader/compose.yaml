@@ -1,0 +1,29 @@
+# Local development uses the same enforced internal-network/proxy topology.
+services:
+  article-egress:
+    image: localhost/ainews-article-egress:1
+    restart: unless-stopped
+    build:
+      context: ../..
+      dockerfile: deploy/article-reader/Proxy.Containerfile
+    networks: [reader, internet]
+    read_only: true
+    cap_drop: [ALL]
+  article-mcp:
+    image: localhost/ainews-article-mcp:0.0.80
+    restart: unless-stopped
+    build:
+      context: ../..
+      dockerfile: deploy/article-reader/Mcp.Containerfile
+    depends_on: [article-egress]
+    networks: [reader]
+    ports: ["127.0.0.1:8931:8931"]
+    read_only: true
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    shm_size: 512m
+    cap_drop: [ALL]
+    mem_limit: 2g
+networks:
+  reader:
+    internal: true
+  internet: {}

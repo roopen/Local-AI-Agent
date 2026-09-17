@@ -1,0 +1,24 @@
+[Unit]
+Description=Isolated Playwright article browser
+Requires=article-egress.service
+After=article-egress.service
+
+[Container]
+Image=localhost/ainews-article-mcp:0.0.80
+Pull=never
+ContainerName=article-mcp
+Network=article-reader.network
+NetworkAlias=article-mcp
+ReadOnly=true
+Tmpfs=/tmp:rw,size=512m,mode=1777
+ShmSize=512m
+NoNewPrivileges=true
+DropCapability=all
+Memory=2g
+PidsLimit=512
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

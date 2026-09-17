@@ -28,6 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="LocalAIAgent.Tests" />
 		<ProjectReference Include="..\LocalAIAgent.Domain\LocalAIAgent.Domain.csproj" />
 		<ProjectReference Include="..\LocalAIAgent.Application\LocalAIAgent.Application.csproj" />
 		<ProjectReference Include="..\LocalAIAgent.ServiceDefaults\LocalAIAgent.ServiceDefaults.csproj" />

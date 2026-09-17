@@ -1030,6 +1030,10 @@ button:focus-visible {
   background: rgba(64, 130, 239, 0.22) !important;
 }
 
+.article-reader-btn {
+  margin-left: 10px;
+}
+
 .article-card {
   max-width: 80%;
   margin: auto;

@@ -12,6 +12,7 @@ export type { AiSettingsCatalogResponse } from './models/AiSettingsCatalogRespon
 export type { AiSettingsOptionResponse } from './models/AiSettingsOptionResponse';
 export type { AiSettingsResponse } from './models/AiSettingsResponse';
 export { Algorithm } from './models/Algorithm';
+export type { ArticleContent } from './models/ArticleContent';
 export type { AssertionOptions } from './models/AssertionOptions';
 export type { AssertionResponse } from './models/AssertionResponse';
 export { AttestationConveyancePreference } from './models/AttestationConveyancePreference';
@@ -54,6 +55,8 @@ export type { PublicKeyCredentialDescriptor } from './models/PublicKeyCredential
 export { PublicKeyCredentialHint } from './models/PublicKeyCredentialHint';
 export type { PublicKeyCredentialRpEntity } from './models/PublicKeyCredentialRpEntity';
 export { PublicKeyCredentialType } from './models/PublicKeyCredentialType';
+export type { ReadArticleRequest } from './models/ReadArticleRequest';
+export type { ReadArticleResult } from './models/ReadArticleResult';
 export type { RegisteredPublicKeyCredential } from './models/RegisteredPublicKeyCredential';
 export type { RegistrationOptionsRequest } from './models/RegistrationOptionsRequest';
 export type { RegistrationStatusDto } from './models/RegistrationStatusDto';

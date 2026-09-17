@@ -2508,6 +2508,88 @@ namespace LocalAIAgent.Tests.Generated
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<SwaggerResponse<ReadArticleResult>> ReadArticleAsync(ReadArticleRequest body)
+        {
+            return ReadArticleAsync(body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<SwaggerResponse<ReadArticleResult>> ReadArticleAsync(ReadArticleRequest body, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/News/ReadArticle"
+                    urlBuilder_.Append("api/News/ReadArticle");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ReadArticleResult>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return new SwaggerResponse<ReadArticleResult>(status_, headers_, objectResponse_.Object);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<SwaggerResponse<ExpandedNewsResult>> GetExpandedNewsAsync(string body)
         {
             return GetExpandedNewsAsync(body, System.Threading.CancellationToken.None);
@@ -3218,6 +3300,36 @@ namespace LocalAIAgent.Tests.Generated
         __8 = -8,
 
         __7 = -7,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ArticleContent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("markdown")]
+        public string Markdown { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceUrl")]
+        public string SourceUrl { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("language")]
+        public string Language { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("author")]
+        public string Author { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("publishedAt")]
+        public string PublishedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessRestricted")]
+        public bool AccessRestricted { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; }
 
     }
 
@@ -4024,6 +4136,49 @@ namespace LocalAIAgent.Tests.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"invalid")]
         Invalid = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReadArticleRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(4096, MinimumLength = 1)]
+        public string Url { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceLanguage")]
+        [System.ComponentModel.DataAnnotations.StringLength(35)]
+        public string SourceLanguage { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.4.0.0 (NJsonSchema v11.3.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReadArticleResult
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("original")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public ArticleContent Original { get; set; } = new ArticleContent();
+
+        [System.Text.Json.Serialization.JsonPropertyName("translatedMarkdown")]
+        public string TranslatedMarkdown { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("translatedTitle")]
+        public string TranslatedTitle { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("detectedLanguage")]
+        public string DetectedLanguage { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetLanguage")]
+        public string TargetLanguage { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("translationStatus")]
+        public string TranslationStatus { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("message")]
+        public string Message { get; set; }
 
     }
 

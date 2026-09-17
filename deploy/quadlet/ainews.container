@@ -7,6 +7,10 @@ After=network-online.target
 Image=localhost/ainews:latest
 Pull=never
 ContainerName=ainews
+Network=podman
+Network=article-egress.network
+Network=article-reader.network
+Environment=ArticleReader__McpEndpoint=http://article-mcp:8931/mcp
 EnvironmentFile=/etc/ainews/ainews.env
 PublishPort=127.0.0.1:8180:8080
 Volume=ainews.volume:/data:U

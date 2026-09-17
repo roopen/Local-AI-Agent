@@ -69,8 +69,13 @@ internal static class PublicNetworkHttpHandler
     private static async ValueTask<Stream> ConnectAsync(
         SocketsHttpConnectionContext context,
         CancellationToken cancellationToken)
+        => await ConnectPublicAsync(context.DnsEndPoint, cancellationToken);
+
+    // Also compiled into the reader egress proxy: validation and the actual socket connection
+    // must use the same resolved address to prevent DNS rebinding.
+    internal static async ValueTask<Stream> ConnectPublicAsync(
+        DnsEndPoint endpoint, CancellationToken cancellationToken)
     {
-        DnsEndPoint endpoint = context.DnsEndPoint;
         IPAddress[] resolvedAddresses = await Dns.GetHostAddressesAsync(endpoint.Host, cancellationToken);
         IPAddress[] publicAddresses = [.. resolvedAddresses.Where(IsPublicAddress)];
 

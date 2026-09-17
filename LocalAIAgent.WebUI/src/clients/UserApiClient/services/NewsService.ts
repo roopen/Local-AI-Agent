@@ -4,10 +4,27 @@
 /* eslint-disable */
 import type { ExpandedNewsResult } from '../models/ExpandedNewsResult';
 import type { NewsFeedbackDto } from '../models/NewsFeedbackDto';
+import type { ReadArticleRequest } from '../models/ReadArticleRequest';
+import type { ReadArticleResult } from '../models/ReadArticleResult';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class NewsService {
+    /**
+     * @param requestBody
+     * @returns ReadArticleResult OK
+     * @throws ApiError
+     */
+    public static postApiNewsReadArticle(
+        requestBody?: ReadArticleRequest,
+    ): CancelablePromise<ReadArticleResult> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/News/ReadArticle',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
     /**
      * @param requestBody
      * @returns ExpandedNewsResult OK

@@ -69,6 +69,9 @@ printf 'Installing current Quadlet definitions\n'
 install -d -m 0755 "${quadlet_target_dir}"
 install -m 0644 "${quadlet_source_dir}/ainews.container" "${quadlet_target_dir}/ainews.container"
 install -m 0644 "${quadlet_source_dir}/ainews.volume" "${quadlet_target_dir}/ainews.volume"
+for reader_unit in article-reader.network article-egress.network article-egress.container article-mcp.container; do
+    install -m 0644 "${quadlet_source_dir}/${reader_unit}" "${quadlet_target_dir}/${reader_unit}"
+done
 rm -f -- "${quadlet_target_dir}/ainews.build"
 install -d -m 0755 "${system_bin_dir}"
 install -m 0755 "${repository_dir}/deploy/update-ainews.sh" "${system_bin_dir}/update-ainews"
@@ -86,6 +89,11 @@ podman image exists "${image_name}" \
     || fail "the build completed without creating ${image_name}"
 
 printf 'Restarting %s\n' "${service_name}"
+podman build --tag localhost/ainews-article-egress:1 \
+    --file "${repository_dir}/deploy/article-reader/Proxy.Containerfile" "${repository_dir}"
+podman build --tag localhost/ainews-article-mcp:0.0.80 \
+    --file "${repository_dir}/deploy/article-reader/Mcp.Containerfile" "${repository_dir}"
+systemctl restart article-egress.service article-mcp.service
 systemctl restart "${service_name}"
 
 health_deadline=$((SECONDS + 90))

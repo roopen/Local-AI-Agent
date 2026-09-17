@@ -1,0 +1,20 @@
+[Unit]
+Description=Public-network-only article browser proxy
+
+[Container]
+Image=localhost/ainews-article-egress:1
+Pull=never
+ContainerName=article-egress
+Network=article-reader.network
+Network=article-egress.network
+NetworkAlias=article-egress
+ReadOnly=true
+NoNewPrivileges=true
+DropCapability=all
+Memory=256m
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
