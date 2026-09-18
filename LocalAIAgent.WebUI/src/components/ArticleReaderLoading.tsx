@@ -25,7 +25,6 @@ export default function ArticleReaderLoading({ progress }: { progress: ArticleRe
                 {index < current && <span className="article-reader-sr-only"> (complete)</span>}
             </li>)}
         </ol>
-        <div className="article-reader-skeleton" aria-hidden="true"><span /><span /><span /></div>
-        <p className="article-reader-loading-note">News continues loading in the background. You can close this reader at any time.</p>
+        <p className="article-reader-loading-note">You can keep browsing. The article will open when ready.</p>
     </div>;
 }

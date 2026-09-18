@@ -26,9 +26,10 @@ export interface ArticleCardProps {
     feedback: Record<string, boolean>;
     onFeedbackClick: (isLiked: boolean) => void;
     onReadArticle: () => void;
+    readerBusy?: boolean;
 }
 
-export default function ArticleCard({ article, feedback, onFeedbackClick, onReadArticle }: ArticleCardProps) {
+export default function ArticleCard({ article, feedback, onFeedbackClick, onReadArticle, readerBusy = false }: ArticleCardProps) {
     const liked = feedback[article.Link] === true;
     const disliked = feedback[article.Link] === false;
     return (
@@ -50,6 +51,8 @@ export default function ArticleCard({ article, feedback, onFeedbackClick, onRead
                         <button
                             type="button"
                             onClick={onReadArticle}
+                            disabled={readerBusy}
+                            title={readerBusy ? 'Close the current article request before opening another' : undefined}
                             className="read-article-btn article-reader-btn">
                             Read in app
                         </button>

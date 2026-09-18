@@ -102,25 +102,23 @@ function ReaderRequest({ article, onClose, onRetry }: { article: NewsArticle; on
         return () => { active = false; pending.cancel(); };
     }, [article.Link]);
 
-    if (result) return <ReaderResult result={result} onClose={onClose} onRetry={onRetry} />;
-    return <>
-        <div className="article-reader-chrome">
-            <ReaderHeader title={article.Title} url={article.Link} onClose={onClose} />
-            {error && <div className="article-reader-toolbar">
-                <button type="button" onClick={onRetry}>Retry article</button>
-            </div>}
+    if (result) return <ReaderDialog result={result} onClose={onClose} onRetry={onRetry} />;
+    return <aside className="article-reader-progress" aria-label="Full article request">
+        <div className="article-reader-progress-header">
+            <strong>{article.Title}</strong>
+            <button type="button" onClick={onClose} aria-label="Close article">{error ? 'Dismiss' : 'Cancel'}</button>
         </div>
-        <div className="article-reader-scroll" role="region" aria-label="Article content" tabIndex={0}>
-            {error ? <ArticleReaderFailure error={error} />
-                : <ArticleReaderLoading progress={progress} />}
-        </div>
-    </>;
+        {error && <div className="article-reader-toolbar">
+            <button type="button" onClick={onRetry}>Retry article</button>
+        </div>}
+        {error ? <ArticleReaderFailure error={error} />
+            : <ArticleReaderLoading progress={progress} />}
+    </aside>;
 }
 
-export default function ArticleReaderModal({ article, onClose }: { article: NewsArticle; onClose: () => void }) {
+function ReaderDialog({ result, onClose, onRetry }: { result: ReadArticleResult; onClose: () => void; onRetry: () => void }) {
     const dialog = useRef<HTMLDialogElement>(null);
     const [opener] = useState(() => document.activeElement as HTMLElement | null);
-    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
         const element = dialog.current;
         element?.showModal();
@@ -128,6 +126,11 @@ export default function ArticleReaderModal({ article, onClose }: { article: News
     }, [opener]);
     return <dialog ref={dialog} className="article-reader" aria-labelledby="reader-title"
         onCancel={event => { event.preventDefault(); onClose(); }}>
-        <ReaderRequest key={`${article.Link}:${attempt}`} article={article} onClose={onClose} onRetry={() => setAttempt(value => value + 1)} />
+        <ReaderResult result={result} onClose={onClose} onRetry={onRetry} />
     </dialog>;
+}
+
+export default function ArticleReaderModal({ article, onClose }: { article: NewsArticle; onClose: () => void }) {
+    const [attempt, setAttempt] = useState(0);
+    return <ReaderRequest key={`${article.Link}:${attempt}`} article={article} onClose={onClose} onRetry={() => setAttempt(value => value + 1)} />;
 }

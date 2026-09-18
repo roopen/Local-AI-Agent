@@ -288,7 +288,8 @@ const NewsComponent: React.FC<NewsComponentProps> = ({ onLlmConnectionFailure })
                             <ArticleCard
                                 key={article.Link}
                                 article={article}
-                                onReadArticle={() => setReaderArticle(article)}
+                                onReadArticle={() => setReaderArticle(current => current ?? article)}
+                                readerBusy={readerArticle !== null}
                                 feedback={feedback}
                                 onFeedbackClick={(isLiked) => {
                                     if (feedback[article.Link] === isLiked) {

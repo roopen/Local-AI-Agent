@@ -39,10 +39,13 @@ test('loading animation follows real phases and ignores progress from a previous
     deferred();
     const view = render(<ArticleReaderModal article={first} onClose={jest.fn()} />);
     expect(screen.getByRole('status').textContent).toContain('Connecting');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('complementary', { name: 'Full article request' })).toBeTruthy();
     const firstProgress = jest.mocked(readArticle).mock.calls[0][1]!;
     act(() => firstProgress({ phase: 'translating', completed: 2, total: 5 }));
     expect(screen.getByRole('status').textContent).toContain('2 of 5 sections translated');
     expect(screen.getByLabelText('Article loading phases').querySelector('[aria-current="step"]')?.textContent).toContain('Translating');
+    expect(screen.queryByRole('dialog')).toBeNull();
     view.rerender(<ArticleReaderModal article={second} onClose={jest.fn()} />);
     act(() => firstProgress({ phase: 'translating', completed: 4, total: 5 }));
     expect(screen.getByRole('status').textContent).toContain('Connecting');
@@ -84,12 +87,23 @@ test('reader opening, failure, retry and close leave the feed running and retain
     fireEvent.click(screen.getByRole('button', { name: 'Read in app' }));
     act(() => onArticle(second));
     expect(screen.getByText('Second article')).toBeTruthy();
+    for (const button of screen.getAllByRole('button', { name: 'Read in app' })) {
+        expect((button as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.click(button);
+    }
+    expect(readArticle).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
     await act(async () => pending.reject(new Error('reader failed')));
     expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Retry article' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await act(async () => retry.resolve(result));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close article' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Read in app' }).every(button => !(button as HTMLButtonElement).disabled)).toBe(true);
     expect(screen.getByText('First article')).toBeTruthy();
     expect(screen.getByText('Second article')).toBeTruthy();
     expect(stream.start).toHaveBeenCalledTimes(1);
@@ -99,7 +113,24 @@ test('reader opening, failure, retry and close leave the feed running and retain
     expect(stream.stop).toHaveBeenCalledTimes(1);
 });
 
-test('closing a pending modal cancels only its request and restores focus', async () => {
+test('cancelling a pending article allows another request and ignores the cancelled result', async () => {
+    const pending = deferred();
+    const next = deferred();
+    render(<NewsComponent />);
+    const onArticle = jest.mocked(NewsStreamClient.getInstance().start).mock.calls[0][0];
+    act(() => { onArticle(first); onArticle(second); });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Read in app' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Close article' }));
+    expect(pending.promise.cancel).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Read in app' })[1]);
+    expect(readArticle).toHaveBeenLastCalledWith(second.Link, expect.any(Function));
+    await act(async () => pending.resolve(result));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await act(async () => next.resolve(result));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+});
+
+test('unmounting a pending request cancels it without moving focus', async () => {
     const pending = deferred();
     const opener = document.createElement('button');
     document.body.append(opener);
