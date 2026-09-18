@@ -100,13 +100,15 @@ Statuses: extraction `complete`, `partial`, `blocked`, `unavailable`; translatio
 ## Verification
 
 ```sh
-dotnet test LocalAIAgent.Tests -p:SkipClientBuild=true
+dotnet test --project LocalAIAgent.Tests/LocalAIAgent.Tests.csproj -p:SkipClientBuild=true
 npm --prefix LocalAIAgent.WebUI test -- --runInBand
 npm --prefix LocalAIAgent.WebUI run lint
 npm --prefix LocalAIAgent.WebUI run build
 ```
 
-To include real pinned-MCP tests, first start the local sidecars and set `ARTICLE_READER_MCP_TEST_ENDPOINT=http://localhost:8931/mcp`, then run `dotnet test LocalAIAgent.Tests -p:SkipClientBuild=true --filter FullyQualifiedName~ArticleReader`. On PowerShell use `$env:ARTICLE_READER_MCP_TEST_ENDPOINT='http://localhost:8931/mcp'`.
+Tests use the Microsoft.Testing.Platform runner selected in the root `global.json` and require the .NET 10 SDK or later.
+
+To include real pinned-MCP tests, first start the local sidecars and set `ARTICLE_READER_MCP_TEST_ENDPOINT=http://localhost:8931/mcp`, then run `dotnet test --project LocalAIAgent.Tests/LocalAIAgent.Tests.csproj -p:SkipClientBuild=true --filter-class '*ArticleReader*'`. On PowerShell use `$env:ARTICLE_READER_MCP_TEST_ENDPOINT='http://localhost:8931/mcp'`.
 
 The smoke tests use test-only Playwright routes for rendered article fixtures and a public example.com request for proxy connectivity. They cover extraction, delayed rendering, session separation, recovery buttons, paywall labeling, and blocked private-network navigation/redirects. Frontend regressions verify feed continuity, stale responses, close cancellation, focus restoration, Escape, safe Markdown and translated article display without an original-text toggle.
 
