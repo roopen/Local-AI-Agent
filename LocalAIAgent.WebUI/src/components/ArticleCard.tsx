@@ -41,13 +41,6 @@ export default function ArticleCard({ article, feedback, onFeedbackClick, onRead
                 <p className="article-card-summary">{article.Summary}</p>
                 <CardActions>
                     <div className="article-card-actions">
-                        <a
-                            href={article.Link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="read-article-btn">
-                            Read the article at {article.Source} <span>&#x1F5D7;</span>
-                        </a>
                         <button
                             type="button"
                             onClick={onReadArticle}
@@ -56,6 +49,14 @@ export default function ArticleCard({ article, feedback, onFeedbackClick, onRead
                             className="read-article-btn article-reader-btn">
                             Read in app
                         </button>
+                        <a
+                            href={article.Link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Read the article at ${article.Source}`}
+                            className="read-article-btn article-original-btn">
+                            {article.Source} <span aria-hidden="true">&#x1F5D7;</span>
+                        </a>
                         <span className="article-card-feedback">
                             <Button
                                 title="I liked this article"

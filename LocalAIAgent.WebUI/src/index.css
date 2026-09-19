@@ -1016,6 +1016,7 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   padding: 0.4em 0.75em;
+  border: 1px solid transparent;
   border-radius: 4px;
   background: rgba(64, 130, 239, 0.1);
   color: var(--primary);
@@ -1026,11 +1027,22 @@ button:focus-visible {
   vertical-align: middle;
 }
 
-.read-article-btn:hover {
+.article-original-btn:hover {
   background: rgba(64, 130, 239, 0.22) !important;
 }
 
 .article-reader-btn {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.article-reader-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.article-original-btn {
   margin-left: 10px;
 }
 
