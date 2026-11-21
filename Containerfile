@@ -8,7 +8,7 @@ COPY LocalAIAgent.WebUI/ ./
 COPY LocalAIAgent.API/openapi/LocalAIAgent.API.json /src/LocalAIAgent.API/openapi/LocalAIAgent.API.json
 RUN npm run generate:api && npm run build -- --mode production
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS api-build
 WORKDIR /src
 COPY . ./
 RUN dotnet restore LocalAIAgent.API/LocalAIAgent.API.csproj
@@ -21,7 +21,7 @@ RUN dotnet publish LocalAIAgent.API/LocalAIAgent.API.csproj \
     --property:PublishSingleFile=false \
     --property:RuntimeIdentifier=
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

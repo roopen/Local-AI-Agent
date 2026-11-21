@@ -2,6 +2,8 @@
 
 All migrations target `UserContext` in the `LocalAIAgent.API` project and must be run from the solution root (`F:\Local-AI-Agent`).
 
+Run `dotnet tool restore` from the solution root to install the repository's EF Core 11 CLI before running migrations.
+
 ## Add a migration
 
 ```powershell

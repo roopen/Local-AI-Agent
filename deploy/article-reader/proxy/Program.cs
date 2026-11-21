@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using LocalAIAgent.Application.News;
 
@@ -32,7 +33,7 @@ static async Task HandleAsync(TcpClient client)
             {
                 if (await incoming.ReadAsync(one, headerDeadline.Token) == 0) return;
                 header.Add(one[0]);
-                if (header.Count >= 4 && header[^4] == 13 && header[^3] == 10 && header[^2] == 13 && header[^1] == 10) break;
+                if (CollectionsMarshal.AsSpan(header).EndsWith("\r\n\r\n"u8)) break;
             }
             if (header.Count >= 16384) throw new InvalidOperationException();
             string[] lines = Encoding.ASCII.GetString(header.ToArray()).Split("\r\n");

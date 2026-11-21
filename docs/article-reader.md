@@ -6,7 +6,7 @@ The **Read in app** button opens a native modal dialog. The separate **Read the 
 
 The modal requests `application/x-ndjson` from `POST /api/News/ReadArticle` to receive flushed progress events followed by one result or error. Ordinary JSON callers keep the existing response contract. Phases reflect actual work: waiting for a browser slot, opening the publisher, extracting content, checking language, and translating with completed/total batch counts. Cached results and same-language articles skip unnecessary work. Keep proxy buffering disabled for this response (`X-Accel-Buffering: no`); progress uses the reader's own cancellable HTTP request, never the news hub. The loading animation respects reduced-motion preferences.
 
-The reader requires .NET 10 and the accompanying Playwright MCP service. The sidecar pins `@playwright/mcp` to **0.0.80** and its Playwright/browser dependency versions in `deploy/article-reader/package-lock.json`. The .NET client uses `ModelContextProtocol` **2.2.0**. No browser profile, publisher cookies, or account login is imported.
+The reader requires .NET 11 and the accompanying Playwright MCP service. The sidecar pins `@playwright/mcp` to **0.0.80** and its Playwright/browser dependency versions in `deploy/article-reader/package-lock.json`. The .NET client uses `ModelContextProtocol` **2.2.0**. No browser profile, publisher cookies, or account login is imported.
 
 Build the two images from the repository root:
 
@@ -106,7 +106,7 @@ npm --prefix LocalAIAgent.WebUI run lint
 npm --prefix LocalAIAgent.WebUI run build
 ```
 
-Tests use the Microsoft.Testing.Platform runner selected in the root `global.json` and require the .NET 10 SDK or later.
+Tests use the .NET 11 SDK and the Microsoft.Testing.Platform runner selected in the root `global.json`.
 
 To include real pinned-MCP tests, first start the local sidecars and set `ARTICLE_READER_MCP_TEST_ENDPOINT=http://localhost:8931/mcp`, then run `dotnet test --project LocalAIAgent.Tests/LocalAIAgent.Tests.csproj -p:SkipClientBuild=true --filter-class '*ArticleReader*'`. On PowerShell use `$env:ARTICLE_READER_MCP_TEST_ENDPOINT='http://localhost:8931/mcp'`.
 

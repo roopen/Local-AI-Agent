@@ -2,10 +2,22 @@
   "version": 1,
   "isRoot": true,
   "tools": {
+    "dotnet-ef": {
+      "version": "11.0.0",
+      "commands": [
+        "dotnet-ef"
+      ]
+    },
     "nswag.consolecore": {
-      "version": "14.4.0",
+      "version": "14.8.0",
       "commands": [
         "nswag"
+      ]
+    },
+    "swashbuckle.aspnetcore.cli": {
+      "version": "11.0.1",
+      "commands": [
+        "swagger"
       ]
     }
   }

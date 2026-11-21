@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# NSwag controls whitespace in its generated client.
+LocalAIAgent.Tests/Generated/UserApi.cs -whitespace
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
