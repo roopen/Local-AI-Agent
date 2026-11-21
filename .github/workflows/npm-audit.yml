@@ -17,11 +17,8 @@ jobs:
       with:
         node-version: '22'
 
-    - name: Navigate to WebUI directory
-      run: cd LocalAIAgent.WebUI
-
     - name: Install dependencies
-      run: npm install
+      run: npm ci
       working-directory: LocalAIAgent.WebUI
 
     - name: Run npm audit
